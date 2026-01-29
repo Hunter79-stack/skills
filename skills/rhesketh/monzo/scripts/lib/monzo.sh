@@ -304,12 +304,12 @@ monzo_parse_date() {
   if [[ "$input" =~ ^[0-9]+d$ ]]; then
     # Relative days (e.g., "7d" = 7 days ago)
     local days="${input%d}"
-    date -u -d "$days days ago" --iso-8601=seconds
+    date -u -d "$days days ago" +%Y-%m-%dT%H:%M:%SZ
   elif [[ "$input" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
-    # YYYY-MM-DD to ISO 8601
-    date -u -d "$input" --iso-8601=seconds
+    # YYYY-MM-DD to RFC3339
+    date -u -d "$input" +%Y-%m-%dT%H:%M:%SZ
   else
-    # Assume already ISO 8601 or other valid date format
+    # Assume already RFC3339 or valid date format
     echo "$input"
   fi
 }

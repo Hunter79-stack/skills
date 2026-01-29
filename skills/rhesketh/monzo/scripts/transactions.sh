@@ -12,7 +12,7 @@ OUTPUT_MODE="human"
 ARG_ACCOUNT_ID=""
 SINCE=""
 BEFORE=""
-LIMIT="100"
+LIMIT=""
 SEARCH_TERM=""
 TRANSACTION_ID=""
 ANNOTATE_KEY=""
@@ -57,7 +57,7 @@ while [[ $# -gt 0 ]]; do
     -h|--help)
       echo "Usage: transactions [options] [account-id]"
       echo ""
-      echo "View, search, and annotate transactions"
+      echo "View, search, and annotate transactions (newest first, paginated)"
       echo ""
       echo "Arguments:"
       echo "  account-id          Account ID (uses default if not specified)"
@@ -65,17 +65,19 @@ while [[ $# -gt 0 ]]; do
       echo "Options:"
       echo "  --since DATE        Start date (ISO 8601, YYYY-MM-DD, or '7d' for relative)"
       echo "  --before DATE       End date (ISO 8601 or YYYY-MM-DD)"
-      echo "  --limit N           Max transactions to return (default: 100)"
-      echo "  --search TERM       Filter by description/merchant (client-side)"
+      echo "  --limit N           Max transactions to display"
+      echo "  --search TERM       Filter by description/merchant/notes (client-side)"
       echo "  --id TX_ID          Get specific transaction"
       echo "  --annotate KEY=VAL  Add metadata to transaction (requires --id)"
       echo "  --json              Output raw JSON response"
       echo "  -h, --help          Show this help message"
       echo ""
       echo "Examples:"
-      echo "  transactions --limit 10"
-      echo "  transactions --since 7d"
-      echo "  transactions --search coffee --since 30d"
+      echo "  transactions                      # All available, newest first"
+      echo "  transactions --limit 10           # 10 most recent"
+      echo "  transactions --since 7d           # Last 7 days"
+      echo "  transactions --since 30d --limit 20"
+      echo "  transactions --search coffee"
       echo "  transactions --id tx_... --annotate category=groceries"
       exit 0
       ;;
@@ -101,7 +103,6 @@ if [[ -n "$ANNOTATE_KEY" ]]; then
     exit 1
   fi
 
-  # Annotate the transaction
   response=$(monzo_api_call PATCH "/transactions/$TRANSACTION_ID" \
     -d "metadata[$ANNOTATE_KEY]=$ANNOTATE_VALUE")
 
@@ -122,7 +123,6 @@ if [[ -n "$TRANSACTION_ID" ]]; then
     exit 0
   fi
 
-  # Human-readable single transaction
   tx=$(jq -r '.transaction' <<< "$response")
   created=$(jq -r '.created' <<< "$tx")
   amount=$(jq -r '.amount' <<< "$tx")
@@ -142,7 +142,6 @@ if [[ -n "$TRANSACTION_ID" ]]; then
     echo "Notes: $notes"
   fi
 
-  # Show metadata if any
   metadata=$(jq -r '.metadata // {}' <<< "$tx")
   if [[ "$metadata" != "{}" ]]; then
     echo ""
@@ -156,34 +155,84 @@ fi
 # Get account ID
 ACCOUNT_ID=$(monzo_ensure_account_id "$ARG_ACCOUNT_ID") || exit 1
 
-# Build query parameters
-QUERY="account_id=$ACCOUNT_ID&limit=$LIMIT"
+# Paginated fetch of all transactions
+all_transactions="[]"
+cursor="${SINCE:-}"  # Start from --since if provided, otherwise API default
+page=1
+max_pages=50  # Safety limit (50 pages × 100 = 5000 transactions max)
 
-if [[ -n "$SINCE" ]]; then
-  QUERY="$QUERY&since=$SINCE"
-fi
+while true; do
+  # Build query
+  QUERY="account_id=$ACCOUNT_ID&limit=100"
+  
+  if [[ -n "$cursor" ]]; then
+    QUERY="$QUERY&since=$cursor"
+  fi
+  
+  if [[ -n "$BEFORE" ]]; then
+    QUERY="$QUERY&before=$BEFORE"
+  fi
+  
+  # Fetch page
+  response=$(monzo_api_call GET "/transactions?$QUERY&expand[]=merchant")
+  batch=$(jq -r '.transactions' <<< "$response")
+  batch_count=$(jq 'length' <<< "$batch")
+  
+  # No more transactions
+  if [[ "$batch_count" == "0" ]]; then
+    break
+  fi
+  
+  # Merge into results
+  all_transactions=$(jq -s '.[0] + .[1]' <<< "$all_transactions"$'\n'"$batch")
+  
+  # Progress indicator for large fetches (stderr)
+  total=$(jq 'length' <<< "$all_transactions")
+  if [[ $page -gt 1 || "$batch_count" == "100" ]]; then
+    echo "Fetching... $total transactions" >&2
+  fi
+  
+  # If we got fewer than 100, we've reached the end
+  if [[ "$batch_count" -lt 100 ]]; then
+    break
+  fi
+  
+  # Use last transaction ID as cursor for next page
+  cursor=$(jq -r '.[-1].id' <<< "$batch")
+  ((page++))
+  
+  # Safety limit
+  if [[ $page -gt $max_pages ]]; then
+    echo "Warning: Hit pagination limit ($max_pages pages)" >&2
+    break
+  fi
+done
 
-if [[ -n "$BEFORE" ]]; then
-  QUERY="$QUERY&before=$BEFORE"
-fi
+transactions="$all_transactions"
 
-# Fetch transactions
-response=$(monzo_api_call GET "/transactions?$QUERY&expand[]=merchant")
-
-# JSON mode - output raw response
-if [[ "$OUTPUT_MODE" == "json" ]]; then
-  echo "$response"
-  exit 0
-fi
-
-# Human-readable mode
-transactions=$(jq -r '.transactions' <<< "$response")
+# Sort newest first
+transactions=$(jq 'sort_by(.created) | reverse' <<< "$transactions")
 
 # Apply client-side search filter if specified
 if [[ -n "$SEARCH_TERM" ]]; then
   transactions=$(jq --arg term "$SEARCH_TERM" \
-    '[.[] | select(.description | ascii_downcase | contains($term | ascii_downcase)) or (.merchant.name // "" | ascii_downcase | contains($term | ascii_downcase))]' \
+    '[.[] | select(
+      ((.description // "") | ascii_downcase | contains($term | ascii_downcase)) or
+      ((.merchant.name // "") | ascii_downcase | contains($term | ascii_downcase)) or
+      ((.notes // "") | ascii_downcase | contains($term | ascii_downcase))
+    )]' \
     <<< "$transactions")
+fi
+
+# Apply limit after sorting (so we get the N most recent)
+if [[ -n "$LIMIT" ]]; then
+  transactions=$(jq --argjson n "$LIMIT" '.[:$n]' <<< "$transactions")
+fi
+
+# JSON mode
+if [[ "$OUTPUT_MODE" == "json" ]]; then
+  jq -n --argjson txs "$transactions" '{"transactions": $txs}'
+  exit 0
 fi
 
 # Count transactions

@@ -150,11 +150,14 @@ Use this skill when the user asks about:
 # "How much money do I have?"
 scripts/balance.sh
 
-# "What did I spend yesterday?"
-scripts/transactions.sh --since 1d
+# "Show me recent transactions" / "What did I spend?"
+scripts/transactions.sh              # All available, newest first
 
 # "Show me my last 5 transactions"
-scripts/transactions.sh --limit 5
+scripts/transactions.sh --limit 5    # 5 most recent
+
+# "What did I spend this week?"
+scripts/transactions.sh --since 7d
 
 # "How much did I spend on coffee this month?"
 scripts/transactions.sh --search coffee --since 30d
@@ -208,11 +211,14 @@ Spent today: £12.34
 
 ### transactions - Transaction History
 
+Fetches **all available transactions** (paginated), displayed **newest first**.
+
 ```bash
-scripts/transactions.sh --limit 10              # Last 10 transactions
-scripts/transactions.sh --since 7d              # Last 7 days
+scripts/transactions.sh                         # All transactions, newest first
+scripts/transactions.sh --limit 10              # 10 most recent
+scripts/transactions.sh --since 7d              # Last 7 days only
 scripts/transactions.sh --since 2026-01-01      # Since specific date
-scripts/transactions.sh --search coffee         # Search by merchant/description
+scripts/transactions.sh --search coffee         # Search by merchant/description/notes
 scripts/transactions.sh --search "Pret" --since 30d  # Combined filters
 scripts/transactions.sh --id tx_...             # Get specific transaction
 scripts/transactions.sh --json                  # JSON output
