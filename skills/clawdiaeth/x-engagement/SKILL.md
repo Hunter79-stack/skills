@@ -257,15 +257,39 @@ browser action=open targetUrl="https://example.com"
 browser action=screenshot targetId="<id>"
 
 # 3. Open compose
-browser action=open targetUrl="https://x.com/compose/post"
+browser action=navigate targetUrl="https://x.com/compose/post"
 
-# 4. Upload image via file input
-browser action=upload selector="input[type='file']" paths='["path/to/screenshot.jpg"]'
+# 4. Click "Add photos or video" button first (from modal snapshot)
+browser action=snapshot selector="[aria-labelledby='modal-header']"
+browser action=act request='{"kind": "click", "ref": "<add_photos_button>"}'
 
-# 5. Type text and post
-browser action=type ref="<textbox>" text="Your tweet"
-browser action=click ref="<post_button>"
+# 5. Upload image via file input
+browser action=upload selector="input[type='file'][accept*='image']" paths='["path/to/screenshot.jpg"]'
+
+# 6. WAIT for upload to process
+browser action=act request='{"kind": "wait", "timeMs": 3000}'
+
+# 7. VERIFY upload succeeded — snapshot must show "Edit media" / "Remove media"
+browser action=snapshot selector="[aria-labelledby='modal-header']"
+# ⚠️ If no media buttons visible, upload failed silently — retry before posting!
+
+# 8. Type text and post
+browser action=act request='{"kind": "click", "ref": "<textbox>"}'
+browser action=act request='{"kind": "type", "ref": "<textbox>", "text": "Your tweet"}'
+browser action=act request='{"kind": "click", "ref": "<post_button>"}'
 ```
+
+### ⚠️ CRITICAL: Media Upload Verification
+
+**Uploads can fail silently.** The upload action returns `ok: true` even when the image doesn't attach. 
+
+**Always verify before posting:**
+1. After upload + wait, take a snapshot of the compose modal
+2. Look for "Edit media" / "Remove media" buttons in the snapshot
+3. If these buttons are NOT present, the upload failed
+4. Retry the upload before posting
+
+**Never post without verifying media buttons appear.** This is the #1 cause of "posted without image" bugs.
 
 ### GIF Workflow
 
