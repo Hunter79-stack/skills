@@ -1,0 +1,11 @@
+{
+  "owner": "halthelobster",
+  "slug": "agent-orchestration",
+  "displayName": "Agent Orchestration",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1769775366300,
+    "commit": null
+  },
+  "history": []
+}
