@@ -1,0 +1,11 @@
+{
+  "owner": "dfinzer",
+  "slug": "opensea",
+  "displayName": "OpenSea",
+  "latest": {
+    "version": "1.0.1",
+    "publishedAt": 1769895910283,
+    "commit": null
+  },
+  "history": []
+}
