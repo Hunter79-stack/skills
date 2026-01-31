@@ -1,13 +1,35 @@
 ---
 name: serper
-version: 3.0.0
-description: Google search via Serper API with full page content extraction using trafilatura. Two modes, explicit locale control. API key via .env.
-tags: [search, web-search, serper, google, content-extraction]
+description: Google search via Serper API with full page content extraction. Fast API lookup + concurrent page scraping (3s timeout). One well-crafted query returns rich results — avoid multiple calls. Two modes, explicit locale control. API key via .env.
+metadata: {"version": "3.0.1", "tags": ["search", "web-search", "serper", "google", "content-extraction"]}
 ---
 
 # Serper
 
 Google search via Serper API. Fetches results AND reads the actual web pages to extract clean full-text content via trafilatura. Not just snippets — full article text.
+
+### How It Works
+
+1. **Serper API call** — fast Google search, returns result URLs instantly
+2. **Concurrent page scraping** — all result pages are fetched and extracted in parallel using trafilatura with a **3-second timeout per page**
+3. **Streamed output** — results print one at a time as each page finishes
+
+Each invocation gives you 5 results (default mode) or up to 6 results (current mode), each with full page content. This is already a lot of information.
+
+---
+
+## Query Discipline
+
+**Craft ONE good search query. That is almost always enough.**
+
+Each call returns multiple results with full page text — you get broad coverage from a single query. Do not run multiple searches to "explore" a topic. One well-chosen query with the right mode covers it.
+
+**At most two calls** if the user's request genuinely spans two distinct topics (e.g. "compare X vs Y" where X and Y need separate searches, or one `default` + one `current` call for different aspects). Never more than two.
+
+**Do NOT:**
+- Run the same query with different wording to "get more results"
+- Run sequential searches to "dig deeper" — the full page content is already deep
+- Run one search to find something, then another to follow up — read the content you already have
 
 ---
 
@@ -109,25 +131,23 @@ python3 scripts/search.py -q "meilleur smartphone 2026" --gl fr --hl fr
 
 ## Output Format
 
-The output is **clean JSON only** — no log lines, no markers. Two types of JSON objects are printed, one per line:
+The output is a **streamed JSON array** — elements print one at a time as each page is scraped:
 
-**First line — search results** (printed immediately after API call):
 ```json
-{"query": "...", "mode": "default", "locale": {"gl": "world", "hl": "en"}, "results": [{"title": "...", "url": "...", "source": "web"}, ...]}
+[{"query": "...", "mode": "default", "locale": {"gl": "world", "hl": "en"}, "results": [{"title": "...", "url": "...", "source": "web"}, ...]}
+,{"title": "...", "url": "...", "source": "web", "content": "Full extracted page text..."}
+,{"title": "...", "url": "...", "source": "news", "date": "2 hours ago", "content": "Full article text..."}
+]
 ```
 
-**Following lines — one per page** (printed as each page is scraped):
-```json
-{"title": "...", "url": "...", "source": "web", "content": "Full extracted page text..."}
-{"title": "...", "url": "...", "source": "news", "date": "2 hours ago", "content": "Full article text..."}
-```
+The first element is search metadata. Each following element contains a result with full extracted content.
 
 Result fields:
 - `title` — page title
 - `url` — source URL
 - `source` — `"web"`, `"news"`, or `"knowledge_graph"`
 - `content` — full extracted page text (falls back to search snippet if extraction fails)
-- `date` — only present for news results
+- `date` — present when available (news results always, web results sometimes)
 
 ---
 

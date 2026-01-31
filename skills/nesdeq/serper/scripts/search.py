@@ -12,8 +12,8 @@ Locale is controlled via --gl and --hl flags.
 import argparse
 import json
 import os
-import signal
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
@@ -55,12 +55,16 @@ _load_env_file()
 # Configuration
 # =============================================================================
 
-FETCH_TIMEOUT = 2
+FETCH_TIMEOUT = 3
 USER_AGENT = "Mozilla/5.0 (compatible; Serper/3.0)"
 
-# Serper endpoints
 SERP_SEARCH_URL = "https://google.serper.dev/search"
 SERP_NEWS_URL = "https://google.serper.dev/news"
+
+# Trafilatura config — shared across all threads
+_traf_config = trafilatura.settings.use_config()
+_traf_config.set("DEFAULT", "DOWNLOAD_TIMEOUT", str(FETCH_TIMEOUT))
+
 
 def get_api_key() -> str:
     key = os.environ.get("SERPER_API_KEY") or os.environ.get("SERP_API_KEY")
@@ -83,30 +87,16 @@ def get_api_key() -> str:
 # Content extraction via trafilatura
 # =============================================================================
 
-def _timeout_handler(signum, frame):
-    raise TimeoutError()
-
-
-def fetch_and_extract(url: str) -> Optional[str]:
+def _extract_content(url: str) -> Optional[str]:
     """Fetch a URL and extract clean readable text using trafilatura."""
-    if not url or url.startswith("#"):
-        return None
-    old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
-    signal.alarm(FETCH_TIMEOUT)
     try:
-        config = trafilatura.settings.use_config()
-        config.set("DEFAULT", "DOWNLOAD_TIMEOUT", str(FETCH_TIMEOUT))
-        downloaded = trafilatura.fetch_url(url, config=config)
+        downloaded = trafilatura.fetch_url(url, config=_traf_config)
         if not downloaded:
             return None
-        text = trafilatura.extract(downloaded, include_links=False, include_images=False,
-                                   include_tables=True, deduplicate=True)
-        return text if text else None
+        return trafilatura.extract(downloaded, include_links=False, include_images=False,
+                                   include_tables=True, deduplicate=True) or None
     except Exception:
         return None
-    finally:
-        signal.alarm(0)
-        signal.signal(signal.SIGALRM, old_handler)
 
 
 # =============================================================================
@@ -151,7 +141,6 @@ def serper_web_search(query: str, api_key: str, num: int = 5,
     data = _serper_post(SERP_SEARCH_URL, api_key, payload)
     results = []
 
-    # Knowledge graph first
     kg = data.get("knowledgeGraph")
     if kg and "title" in kg:
         attrs = ""
@@ -159,18 +148,20 @@ def serper_web_search(query: str, api_key: str, num: int = 5,
             attrs = " | ".join(f"{k}: {v}" for k, v in kg["attributes"].items())
         results.append({
             "title": kg["title"],
-            "url": "#knowledge_graph",
             "snippet": attrs or kg.get("description", ""),
             "source": "knowledge_graph",
         })
 
     for item in data.get("organic", [])[:num]:
-        results.append({
+        r = {
             "title": item.get("title", ""),
             "url": item.get("link", ""),
             "snippet": item.get("snippet", ""),
             "source": "web",
-        })
+        }
+        if item.get("date"):
+            r["date"] = item["date"]
+        results.append(r)
 
     return results
 
@@ -185,46 +176,52 @@ def serper_news_search(query: str, api_key: str, num: int = 3,
     data = _serper_post(SERP_NEWS_URL, api_key, payload)
     results = []
     for item in data.get("news", [])[:num]:
-        results.append({
+        r = {
             "title": item.get("title", ""),
             "url": item.get("link", ""),
             "snippet": item.get("snippet", ""),
-            "date": item.get("date", ""),
-            "news_source": item.get("source", ""),
             "source": "news",
-        })
+        }
+        if item.get("date"):
+            r["date"] = item["date"]
+        results.append(r)
     return results
 
 
 # =============================================================================
-# Content enrichment — stream one JSON per page
+# Content enrichment — concurrent fetch, streamed as JSON array
 # =============================================================================
 
 def enrich_and_stream(results: List[Dict[str, Any]]):
-    """Fetch full page content for each result, print each as JSON immediately."""
-    total = len(results)
+    """Fetch full page content concurrently, print each as JSON array element in order."""
+    futures = {}
+    pool = ThreadPoolExecutor(max_workers=max(1, len(results)))
+    for i, r in enumerate(results):
+        if r.get("url"):
+            futures[i] = pool.submit(_extract_content, r["url"])
 
-    for i, r in enumerate(results, 1):
-        out: Dict[str, Any] = {
-            "title": r["title"],
-            "url": r["url"],
-            "source": r["source"],
-        }
+    for i, r in enumerate(results):
+        out: Dict[str, Any] = {"title": r["title"]}
+        if r.get("url"):
+            out["url"] = r["url"]
+        out["source"] = r["source"]
         if r.get("date"):
             out["date"] = r["date"]
 
-        if r["url"] == "#knowledge_graph":
+        if r["source"] == "knowledge_graph":
             out["content"] = r["snippet"]
         else:
-            content = fetch_and_extract(r["url"])
+            content = None
+            if i in futures:
+                try:
+                    content = futures[i].result(timeout=FETCH_TIMEOUT)
+                except Exception:
+                    content = None
             out["content"] = content if content else r["snippet"]
 
-        print(json.dumps(out, ensure_ascii=False), flush=True)
+        print("," + json.dumps(out, ensure_ascii=False), flush=True)
 
-
-def search_default(query: str, api_key: str, locale: Dict[str, Optional[str]]) -> List[Dict[str, Any]]:
-    """Default mode: all-time web search, 5 results."""
-    return serper_web_search(query, api_key, num=5, gl=locale["gl"], hl=locale["hl"])
+    pool.shutdown(wait=False)
 
 
 def search_current(query: str, api_key: str, locale: Dict[str, Optional[str]]) -> List[Dict[str, Any]]:
@@ -233,9 +230,10 @@ def search_current(query: str, api_key: str, locale: Dict[str, Optional[str]]) -
     seen_urls = set()
 
     for r in serper_web_search(query, api_key, num=3, gl=locale["gl"], hl=locale["hl"], tbs="qdr:w"):
-        url = r.get("url", "")
-        if url not in seen_urls:
-            seen_urls.add(url)
+        if r["source"] == "knowledge_graph":
+            all_results.append(r)
+        elif r["url"] not in seen_urls:
+            seen_urls.add(r["url"])
             all_results.append(r)
 
     for r in serper_news_search(query, api_key, num=3, gl=locale["gl"], hl=locale["hl"]):
@@ -269,18 +267,17 @@ def main():
     api_key = get_api_key()
     locale = {"gl": args.gl, "hl": args.hl}
 
-    # Execute search
     if args.mode == "current":
         results = search_current(args.query, api_key, locale)
     else:
-        results = search_default(args.query, api_key, locale)
+        results = serper_web_search(args.query, api_key, num=5, gl=locale["gl"], hl=locale["hl"])
 
     if not results:
         print(json.dumps({"error": "No results found", "query": args.query}), flush=True)
         sys.exit(1)
 
-    # First JSON block: search metadata + result list (titles/urls only)
-    print(json.dumps({
+    # JSON array — first element is search metadata
+    meta = {
         "query": args.query,
         "mode": args.mode,
         "locale": locale,
@@ -288,10 +285,10 @@ def main():
             {k: r[k] for k in ("title", "url", "source") if k in r}
             for r in results
         ],
-    }, ensure_ascii=False), flush=True)
-
-    # One JSON block per page with extracted content
+    }
+    print("[" + json.dumps(meta, ensure_ascii=False), flush=True)
     enrich_and_stream(results)
+    print("]", flush=True)
 
 
 if __name__ == "__main__":
