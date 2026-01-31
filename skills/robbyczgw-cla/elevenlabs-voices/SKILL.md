@@ -1,6 +1,6 @@
 ---
 name: elevenlabs-voices
-version: 2.0.6
+version: 2.0.4
 description: High-quality voice synthesis with 18 personas, 32 languages, sound effects, batch processing, and voice design using ElevenLabs API.
 tags: [tts, voice, speech, elevenlabs, audio, sound-effects, voice-design, multilingual]
 ---
@@ -19,7 +19,7 @@ Comprehensive voice synthesis toolkit using ElevenLabs API.
 - **Cost Tracking** - Monitor character usage and estimated costs
 - **Voice Design** - Create custom voices from descriptions
 - **Pronunciation Dictionary** - Custom word pronunciation rules
-- **OpenClaw Integration** - Works with OpenClaw's built-in TTS
+- **Moltbot Integration** - Works with Moltbot's built-in TTS
 
 ---
 
@@ -240,8 +240,8 @@ Edit `pronunciations.json`:
 {
   "rules": [
     {
-      "word": "OpenClaw",
-      "replacement": "Open Claw",
+      "word": "Moltbot",
+      "replacement": "Clawd bot",
       "comment": "Pronounce as two words"
     },
     {
@@ -256,7 +256,7 @@ Edit `pronunciations.json`:
 Usage:
 ```bash
 # Pronunciations are applied automatically
-python3 scripts/tts.py --text "The OpenClaw API is great" --voice rachel
+python3 scripts/tts.py --text "The Moltbot API is great" --voice rachel
 
 # Disable pronunciations
 python3 scripts/tts.py --text "The API is great" --voice rachel --no-pronunciations
@@ -289,11 +289,11 @@ python3 scripts/tts.py --stats
 
 ---
 
-## 🤖 OpenClaw TTS Integration
+## 🤖 Moltbot TTS Integration
 
-### Using with OpenClaw's Built-in TTS
+### Using with Moltbot's Built-in TTS
 
-OpenClaw has built-in TTS support that can use ElevenLabs. Configure in `~/.openclaw/openclaw.json`:
+Moltbot has built-in TTS support that can use ElevenLabs. Configure in `~/.moltbot/moltbot.json`:
 
 ```json
 {
@@ -311,15 +311,15 @@ OpenClaw has built-in TTS support that can use ElevenLabs. Configure in `~/.open
 
 ### Triggering TTS in Chat
 
-In OpenClaw conversations:
+In Moltbot conversations:
 - Use `/tts on` to enable automatic TTS
 - Use the `tts` tool directly for one-off speech
 - Request "read this aloud" or "speak this"
 
-### Using Skill Scripts from OpenClaw
+### Using Skill Scripts from Moltbot
 
 ```bash
-# OpenClaw can run these scripts directly
+# Moltbot can run these scripts directly
 exec python3 /path/to/skills/elevenlabs-voices/scripts/tts.py --text "Hello" --voice rachel
 ```
 
@@ -330,7 +330,7 @@ exec python3 /path/to/skills/elevenlabs-voices/scripts/tts.py --text "Hello" --v
 The scripts look for API key in this order:
 
 1. `ELEVEN_API_KEY` or `ELEVENLABS_API_KEY` environment variable
-2. OpenClaw config (`~/.openclaw/openclaw.json` → tts.elevenlabs.apiKey)
+2. Moltbot config (`~/.moltbot/moltbot.json` → tts.elevenlabs.apiKey)
 3. Skill-local `.env` file
 
 **Create .env file:**
@@ -402,5 +402,5 @@ elevenlabs-voices/
 - Added cost tracking with `--stats` flag
 - Added voice design tool (`voice-design.py`)
 - Added pronunciation dictionary support
-- Added OpenClaw TTS integration documentation
+- Added Moltbot TTS integration documentation
 - Improved error handling and progress output

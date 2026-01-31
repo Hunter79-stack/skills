@@ -10,7 +10,7 @@
 6. [Cost Tracking](#cost-tracking)
 7. [Voice Design](#voice-design)
 8. [Pronunciation Dictionary](#pronunciation-dictionary)
-9. [OpenClaw Integration](#openclaw-integration)
+9. [Moltbot Integration](#moltbot-integration)
 10. [Advanced Patterns](#advanced-patterns)
 
 ---
@@ -418,11 +418,11 @@ python3 scripts/tts.py --text "Configure your nginx server" --voice rachel --no-
 
 ---
 
-## OpenClaw Integration
+## Moltbot Integration
 
-### Configure OpenClaw TTS
+### Configure Moltbot TTS
 
-Edit `~/.openclaw/openclaw.json`:
+Edit `~/.moltbot/moltbot.json`:
 ```json
 {
   "tts": {
@@ -437,7 +437,7 @@ Edit `~/.openclaw/openclaw.json`:
 }
 ```
 
-### Using in OpenClaw Chat
+### Using in Moltbot Chat
 
 ```
 User: /tts on
