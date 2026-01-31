@@ -1,0 +1,11 @@
+{
+  "owner": "aszelem",
+  "slug": "travel-agent",
+  "displayName": "Bon Travel Agent",
+  "latest": {
+    "version": "1.8.0",
+    "publishedAt": 1769851826562,
+    "commit": null
+  },
+  "history": []
+}
