@@ -1,0 +1,11 @@
+{
+  "owner": "cartoonitunes",
+  "slug": "ethereum-history",
+  "displayName": "Ethereum History",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1769890414909,
+    "commit": null
+  },
+  "history": []
+}
