@@ -1,0 +1,11 @@
+{
+  "owner": "arc-claw-bot",
+  "slug": "openclaw-news",
+  "displayName": "OpenClaw News",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1769977349589,
+    "commit": null
+  },
+  "history": []
+}
