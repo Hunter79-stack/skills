@@ -161,8 +161,8 @@ export class CircleWallet {
     return getUSDCTokenId(chain) || '';
   }
 
-  async requestTestnetTokens(address: string): Promise<void> {
-    const chain = this.config.defaultChain || 'ARC-TESTNET';
+  async requestTestnetTokens(address: string, blockchain?: string): Promise<void> {
+    const chain = blockchain || this.config.defaultChain || 'ARC-TESTNET';
     await this.client.requestTestnetTokens({
       address,
       blockchain: chain as any,

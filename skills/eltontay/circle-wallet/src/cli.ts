@@ -8,7 +8,7 @@ import { Command } from 'commander';
 import { CircleWallet } from './wallet';
 import { loadConfig, saveConfig, ensureConfigDir } from './config';
 import { generateEntitySecret, registerEntitySecret } from './entity';
-import { isValidEthereumAddress, resolveWalletId } from './utils';
+import { isValidEthereumAddress, resolveWalletId, validateUSDCAmount, formatUSDCBalance } from './utils';
 import { SUPPORTED_CHAINS, getMainnetChains, getTestnetChains, getChainInfo, isValidChain } from './chains';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -245,7 +245,7 @@ program
       const balance = await wallet.getBalance(targetWalletId);
 
       // Display balance with proper decimal precision (up to 6 decimals for USDC)
-      const formattedBalance = typeof balance === 'number' ? balance.toFixed(6).replace(/\.?0+$/, '') : balance;
+      const formattedBalance = formatUSDCBalance(balance);
       console.log(`\n💰 Balance: ${formattedBalance} USDC`);
 
     } catch (error) {
@@ -304,10 +304,17 @@ program
         process.exit(1);
       }
 
+      // Validate amount format
+      const validation = validateUSDCAmount(amount);
+      if (!validation.valid) {
+        console.error(`❌ ${validation.error}`);
+        process.exit(1);
+      }
+      const amountNum = validation.value!;
+
       // Check balance before sending
       console.log('Checking balance...');
       const balance = await walletClient.getBalance(fromWalletId);
-      const amountNum = parseFloat(amount);
 
       if (balance < amountNum) {
         console.error(`❌ Insufficient balance: ${balance} USDC < ${amountNum} USDC`);
@@ -376,7 +383,7 @@ program
         let balanceDisplay = 'Loading...';
         try {
           const balance = await wallet.getBalance(w.id);
-          const formattedBalance = typeof balance === 'number' ? balance.toFixed(6).replace(/\.?0+$/, '') : balance;
+          const formattedBalance = formatUSDCBalance(balance);
           balanceDisplay = `${formattedBalance} USDC`;
         } catch (error) {
           balanceDisplay = 'Error fetching balance';
@@ -424,12 +431,37 @@ program
   .command('drip')
   .description('Request testnet USDC from faucet (sandbox only)')
   .argument('[address]', 'Address to fund (uses default wallet if not provided)')
-  .action(async (address?: string) => {
+  .option('--chain <blockchain>', 'Blockchain to request tokens on (e.g., ARC-TESTNET, BASE-SEPOLIA)')
+  .action(async (address?: string, options?: { chain?: string }) => {
     const config = loadConfig();
 
     if (config.env !== 'sandbox') {
       console.error('❌ Faucet only available in sandbox environment');
       process.exit(1);
+    }
+
+    // Determine which chain to use for drip
+    let targetChain = config.defaultChain || 'ARC-TESTNET';
+
+    if (options?.chain) {
+      // User specified chain explicitly
+      const chainUpper = options.chain.toUpperCase();
+
+      // Validate chain exists
+      if (!isValidChain(chainUpper)) {
+        console.error(`❌ Invalid chain: ${chainUpper}`);
+        console.log('Run "circle-wallet chains --testnet" to see supported testnet chains');
+        process.exit(1);
+      }
+
+      // Verify it's a testnet chain
+      const chainInfo = getChainInfo(chainUpper);
+      if (chainInfo?.network !== 'testnet') {
+        console.error(`❌ Chain ${chainUpper} is not a testnet. Faucet only works on testnets.`);
+        process.exit(1);
+      }
+
+      targetChain = chainUpper;
     }
 
     let targetAddress = address;
@@ -448,7 +480,14 @@ program
           defaultWallet = wallets.find(w => w.id === walletId);
         }
 
-        targetAddress = defaultWallet?.address;
+        if (defaultWallet) {
+          targetAddress = defaultWallet.address;
+          // Auto-detect chain from wallet if no explicit chain specified
+          if (!options?.chain) {
+            targetChain = defaultWallet.blockchain;
+            console.log(`🔍 Auto-detected chain from default wallet: ${targetChain}`);
+          }
+        }
       }
     }
 
@@ -458,13 +497,21 @@ program
       process.exit(1);
     }
 
+    // Validate address format
+    if (!isValidEthereumAddress(targetAddress)) {
+      console.error('❌ Invalid Ethereum address format');
+      console.log('Address must be 0x followed by 40 hexadecimal characters');
+      console.log('Run "circle-wallet list" to see your wallet addresses');
+      process.exit(1);
+    }
+
     console.log('💧 Requesting testnet USDC...');
     console.log(`   Address: ${targetAddress}`);
-    console.log(`   Chain: ${config.defaultChain || 'ARC-TESTNET'}`);
+    console.log(`   Chain: ${targetChain}`);
 
     try {
       const wallet = new CircleWallet(config);
-      await wallet.requestTestnetTokens(targetAddress);
+      await wallet.requestTestnetTokens(targetAddress, targetChain);
 
       console.log('\n✅ Testnet USDC requested successfully!');
       console.log('Tokens should arrive in a few moments');
