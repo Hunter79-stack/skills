@@ -226,15 +226,16 @@ class SkillRegistry:
         """
         candidates = set(self.skills.keys())
         
-        # Filter by capabilities
+        # Filter by capabilities (OR logic - match ANY capability)
         if capabilities:
+            cap_matches = set()
             for cap in capabilities:
                 cap_lower = cap.lower()
-                matching = set()
                 for c, skills in self._capability_index.items():
                     if cap_lower in c.lower():
-                        matching.update(skills)
-                candidates &= matching
+                        cap_matches.update(skills)
+            if cap_matches:
+                candidates &= cap_matches
                 
         # Filter by tags
         if tags:

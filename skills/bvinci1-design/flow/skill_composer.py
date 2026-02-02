@@ -242,7 +242,7 @@ class SkillComposer:
         ])
         
         if skills:
-            code_lines.append('    executor.load_components()'))
+            code_lines.append('    executor.load_components()')
             
         code_lines.extend([
             '    ',

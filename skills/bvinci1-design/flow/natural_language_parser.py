@@ -48,15 +48,24 @@ class NaturalLanguageParser:
     # Capability indicators
     CAPABILITY_PATTERNS = {
         'web': ['web', 'website', 'url', 'http', 'browser', 'html'],
+        'web_search': ['search', 'google', 'lookup', 'find online'],
         'api': ['api', 'endpoint', 'rest', 'graphql', 'webhook'],
         'file': ['file', 'document', 'pdf', 'csv', 'excel', 'json'],
         'database': ['database', 'sql', 'mongodb', 'data', 'store'],
         'email': ['email', 'mail', 'smtp', 'inbox'],
+        'email_send': ['send email', 'draft email', 'email outreach', 'cold email'],
         'video': ['video', 'youtube', 'stream', 'media'],
         'image': ['image', 'photo', 'picture', 'screenshot'],
         'text': ['text', 'nlp', 'language', 'content'],
         'ai': ['ai', 'ml', 'model', 'gpt', 'claude', 'llm'],
         'automation': ['cron', 'schedule', 'trigger', 'workflow'],
+        'lead_research': ['lead', 'leads', 'prospect', 'prospects', 'prospecting', 'research leads'],
+        'outreach_generation': ['outreach', 'cold outreach', 'personalized email', 'sales email'],
+        'prospect_scoring': ['qualify', 'score', 'scoring', 'qualification'],
+        'content_generation': ['content', 'post', 'posts', 'article', 'linkedin', 'social media'],
+        'github_issues': ['github', 'issue', 'issues', 'pull request', 'pr'],
+        'notion_pages': ['notion', 'wiki', 'documentation'],
+        'weather_current': ['weather', 'forecast', 'temperature'],
     }
     
     # Tag patterns for categorization
@@ -66,6 +75,10 @@ class NaturalLanguageParser:
         'business': ['business', 'enterprise', 'company', 'work'],
         'personal': ['personal', 'home', 'private'],
         'security': ['security', 'safe', 'protect', 'encrypt'],
+        'sales': ['sales', 'selling', 'prospect', 'lead', 'outreach', 'crm'],
+        'research': ['research', 'investigate', 'intel', 'intelligence'],
+        'marketing': ['marketing', 'content', 'social', 'linkedin', 'post'],
+        'b2b': ['b2b', 'enterprise', 'executive', 'coaching'],
     }
     
     def __init__(self):

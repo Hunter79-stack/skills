@@ -126,7 +126,9 @@ class SkillScannerIntegration:
         # Get files to scan
         files_to_scan = []
         if os.path.isfile(path):
-            files_to_scan = [path]
+            # Only scan Python files, skip docs/markdown
+            if path.endswith('.py'):
+                files_to_scan = [path]
         elif os.path.isdir(path):
             for root, dirs, files in os.walk(path):
                 for file in files:
