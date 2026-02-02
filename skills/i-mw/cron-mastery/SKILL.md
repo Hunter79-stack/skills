@@ -36,12 +36,14 @@ Use this payload structure for "remind me in X minutes" tasks:
     "message": "⏰ Reminder: Drink water!",
     "deliver": true
   },
-  "sessionTarget": "isolated",
-  "wakeMode": "next-heartbeat"
-}
-```
+```  
 
 *Note: Even with `wakeMode: "next-heartbeat"`, the cron system forces an event injection at `atMs`. Use `mode: "now"` in the `cron:wake` tool if you need to force an immediate wake outside of a job payload.*
+
+### ⚠️ The Delivery Rule (CRITICAL)
+When scheduling an `agentTurn` via Cron that is meant to provide an update to the user:
+- **ALWAYS** set `"deliver": true` in the payload.
+- Without `"deliver": true`, the sub-agent will run the task but the output will NEVER be seen by the human. It will be "talking in a dark room."
 
 ## 2. The Janitor (Auto-Cleanup)
 
