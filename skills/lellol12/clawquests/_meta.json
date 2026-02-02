@@ -3,9 +3,15 @@
   "slug": "clawquests",
   "displayName": "Clawquests",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1770015282902,
-    "commit": "https://github.com/clawdbot/skills/commit/06d6f802601079b2a5dc921b603bcd81031b115b"
+    "version": "1.0.2",
+    "publishedAt": 1770038688938,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1770015282902,
+      "commit": "https://github.com/clawdbot/skills/commit/06d6f802601079b2a5dc921b603bcd81031b115b"
+    }
+  ]
 }
