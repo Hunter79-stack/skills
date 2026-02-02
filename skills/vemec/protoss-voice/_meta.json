@@ -1,0 +1,11 @@
+{
+  "owner": "vemec",
+  "slug": "protoss-voice",
+  "displayName": "Generate Protoss-style (StarCraft) voice effects using SoX and FFmpeg.",
+  "latest": {
+    "version": "1.0.1",
+    "publishedAt": 1770065841175,
+    "commit": null
+  },
+  "history": []
+}
