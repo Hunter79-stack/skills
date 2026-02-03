@@ -1,7 +1,7 @@
 ---
 name: api-gateway
 description: |
-  API gateway for calling third-party APIs with managed auth. Use this skill when users want to interact with external services like Slack, HubSpot, Salesforce, Google Workspace, Stripe, Shopify, and more.
+  API gateway for calling third-party APIs with managed auth. Use this skill when users want to interact with external services like Slack, HubSpot, Salesforce, Google Workspace, Stripe, and more.
 compatibility: Requires network access and valid Maton API key
 metadata:
   author: maton
@@ -144,7 +144,11 @@ If omitted, the gateway uses the default (oldest) active connection for that app
 |---------|----------|------------------|
 | Airtable | `airtable` | `api.airtable.com` |
 | Apollo | `apollo` | `api.apollo.io` |
+| Asana | `asana` | `app.asana.com` |
+| Calendly | `calendly` | `api.calendly.com` |
 | Chargebee | `chargebee` | `{subdomain}.chargebee.com` |
+| ClickUp | `clickup` | `api.clickup.com` |
+| Fathom | `fathom` | `api.fathom.ai` |
 | Google Ads | `google-ads` | `googleads.googleapis.com` |
 | Google Analytics Admin | `google-analytics-admin` | `analyticsadmin.googleapis.com` |
 | Google Analytics Data | `google-analytics-data` | `analyticsdata.googleapis.com` |
@@ -161,7 +165,6 @@ If omitted, the gateway uses the default (oldest) active connection for that app
 | Notion | `notion` | `api.notion.com` |
 | QuickBooks | `quickbooks` | `quickbooks.api.intuit.com` |
 | Salesforce | `salesforce` | `{instance}.salesforce.com` |
-| Shopify | `shopify` | `{subdomain}.myshopify.com` (GraphQL API) |
 | Slack | `slack` | `slack.com` |
 | Stripe | `stripe` | `api.stripe.com` |
 | Typeform | `typeform` | `api.typeform.com` |
@@ -170,7 +173,11 @@ If omitted, the gateway uses the default (oldest) active connection for that app
 See [references/](references/) for detailed routing guides per provider:
 - [Airtable](references/airtable.md) - Records, bases, tables
 - [Apollo](references/apollo.md) - People search, enrichment, contacts
+- [Asana](references/asana.md) - Tasks, projects, workspaces, webhooks
+- [Calendly](references/calendly.md) - Event types, scheduled events, availability, webhooks
 - [Chargebee](references/chargebee.md) - Subscriptions, customers, invoices
+- [ClickUp](references/clickup.md) - Tasks, lists, folders, spaces, webhooks
+- [Fathom](references/fathom.md) - Meeting recordings, transcripts, summaries, webhooks
 - [Google Ads](references/google-ads.md) - Campaigns, ad groups, GAQL queries
 - [Google Analytics Admin](references/google-analytics-admin.md) - Reports, dimensions, metrics
 - [Google Analytics Data](references/google-analytics-data.md) - Reports, dimensions, metrics
@@ -187,7 +194,6 @@ See [references/](references/) for detailed routing guides per provider:
 - [Notion](references/notion.md) - Pages, databases, blocks
 - [QuickBooks](references/quickbooks.md) - Customers, invoices, reports
 - [Salesforce](references/salesforce.md) - SOQL, sObjects, CRUD
-- [Shopify](references/shopify.md) - **Uses GraphQL API (read this first)**, products, orders, customers
 - [Slack](references/slack.md) - Messages, channels, users
 - [Stripe](references/stripe.md) - Customers, subscriptions, payments
 - [Typeform](references/typeform.md) - Forms, responses, insights
