@@ -1,0 +1,166 @@
+# SJ-IRAC Trademark Non-Use Workflow
+# Version: 1.0.0
+
+==================================================
+GLOBAL PRINCIPLE
+==================================================
+
+This workflow enforces:
+
+- IRAC mandatory structure
+- SJ-6 evidence chain
+- Risk A–E output
+- Stop-loss mechanism
+- Examiner-readable logic
+
+No fictional facts.
+No assumptions.
+No soft conclusions.
+
+==================================================
+INPUT TEMPLATE
+==================================================
+
+User must provide:
+
+[1] Trademark Information
+- Registration No:
+- Class:
+- Designated Goods/Services:
+
+[2] Use Period (CNIPA Notice)
+- Start:
+- End:
+
+[3] Evidence Inventory
+For each item:
+- ID:
+- Type:
+- Source:
+- Date:
+- Content Summary:
+
+[4] (Optional) Opponent Evidence
+- Exhibit List:
+- Key Screenshots/Files:
+
+==================================================
+INVOKE COMMANDS
+==================================================
+
+invoke: jiang-nonuse.build
+mode: Defensive
+purpose: Build use-evidence chain
+
+invoke: jiang-nonuse.audit
+mode: Offensive
+purpose: Cross-examination audit
+
+==================================================
+MODE: jiang-nonuse.build
+(DEFENSIVE TRACK)
+==================================================
+
+Step 1 — Issue
+- Define cancellation focus
+- Define burden of proof
+
+Step 2 — Rule
+- Map CNIPA standards
+- Extract guideline thresholds
+
+Step 3 — Application
+- Match evidence → elements
+- Check:
+  * period
+  * goods
+  * trademark form
+  * transaction logic
+
+Step 4 — SJ-6 Scoring
+- Score each evidence item
+- Identify weakest node
+
+Step 5 — Risk Rating
+- Output A–E
+- Tag risk dimension
+
+Step 6 — Action Plan
+- Supplementation list
+- Stop-loss trigger
+
+Output:
+- Evidence Index Table
+- Timeline Table
+- Risk Report
+- Submission Outline
+
+==================================================
+MODE: jiang-nonuse.audit
+(OFFENSIVE TRACK)
+==================================================
+
+Step 1 — Evidence Classification
+- Contract / Invoice / Platform / Self-made / Other
+
+Step 2 — Authenticity Audit
+- Issuer
+- Tax info
+- Traceability
+
+Step 3 — Relevance Audit
+- Goods match
+- Business scope
+- Channel logic
+
+Step 4 — Time Audit
+- Period overlap
+- Continuity
+
+Step 5 — Completeness Audit
+- Missing chain links
+- Isolated proof
+
+Step 6 — Logic Audit
+- Transaction rationality
+- Commercial reality
+
+Step 7 — SJ-6 Resistance Test
+- Cross-exam vulnerability
+
+Step 8 — Risk Evaluation
+- Fatal defect detection
+- Kill-point identification
+
+Output:
+- Structured 质证要点
+- Evidence Weakness Map
+- Examiner-Facing Argument Set
+
+==================================================
+OUTPUT FORMAT
+==================================================
+
+All outputs must include:
+
+[1] IRAC Section
+[2] SJ-6 Table
+[3] Risk Rating
+[4] Stop-Loss Gate
+[5] Next-Step Plan
+
+Language:
+- Objective
+- Neutral
+- Verifiable
+
+==================================================
+FAIL-SAFE RULE
+==================================================
+
+If:
+- Evidence gap > threshold
+- Cost > Expected Value
+
+→ Recommend termination
+→ Provide alternative strategy

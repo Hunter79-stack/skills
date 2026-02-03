@@ -1,0 +1,29 @@
+SJ-IRAC Non-Use (撤三) Risk Engine
+Version: 1.0.0
+Last Updated: 2026-02-03
+
+Risk Levels
+A: Strong chain; multiple third-party/objective proofs; high resistance.
+B: Solid chain; minor gaps; can be cured by supplementation.
+C: Core proof targets partially missing; outcome uncertain.
+D: Heavy discretion; evidence mostly self-produced; weak transaction logic.
+E: Fatal defects or multiple kill gates; likely lose.
+
+Kill Gates (Stop-Loss)
+G1: Time fatal — key evidence cannot prove use within the CNIPA-defined use period.
+G2: Goods/services fatal — evidence describes goods/services unclear or mismatched to designated items.
+G3: Mark fatal — evidence does not show the mark, or shows unacceptable variation; cannot link mark to goods/services.
+G4: Subject fatal — user identity inconsistent (registrant/authorized user not proven).
+G5: Chain fatal — no commercial loop; only isolated materials without transaction linkage (cannot resist cross-exam).
+G6: Authenticity fatal — unverifiable documents, inconsistent stamps/signatures, no traceable source, obvious anomalies.
+
+Decision Rules
+- If any of G1/G2/G3/G4 triggered and cannot be cured → Stop-loss or change strategy.
+- If G5 triggered → must add at least one objective commercial-link evidence, otherwise downgrade to D/E.
+- If G6 triggered → treat exhibit as non-counting; rebuild package with verifiable items.
+
+Output
+- Decision: Proceed / Cautious Proceed / Stop-loss
+- Risk level: A–E
+- Triggered gates: G1–G6
+- Top 3 risk points + supplementation/attack actions
