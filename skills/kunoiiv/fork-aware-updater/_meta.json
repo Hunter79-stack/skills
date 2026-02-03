@@ -1,0 +1,11 @@
+{
+  "owner": "kunoiiv",
+  "slug": "fork-aware-updater",
+  "displayName": "Fork-Aware Updater - Antifragile Skill Evolution",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1770045360912,
+    "commit": null
+  },
+  "history": []
+}
