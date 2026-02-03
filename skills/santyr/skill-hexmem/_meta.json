@@ -3,9 +3,15 @@
   "slug": "skill-hexmem",
   "displayName": "hexmem",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1770051583320,
-    "commit": "https://github.com/clawdbot/skills/commit/2386d613bdb5880df872b659ba4299ff629f38f6"
+    "version": "1.0.2",
+    "publishedAt": 1770135429643,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1770051583320,
+      "commit": "https://github.com/clawdbot/skills/commit/2386d613bdb5880df872b659ba4299ff629f38f6"
+    }
+  ]
 }
