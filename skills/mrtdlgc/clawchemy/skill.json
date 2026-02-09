@@ -55,7 +55,8 @@
   "first_discovery_tokenization",
   "semantic_similarity_scoring",
   "leaderboard_competition",
-  "onchain_token_rewards"
+  "onchain_token_rewards",
+  "bankr_wallet_fee_claiming"
 ]
 
   "notes": [
@@ -63,6 +64,7 @@
     "Order-independent: Water+Fire = Fire+Water",
     "Self-combine allowed: Fire+Fire",
     "First discovery = automatic token deployment",
-    "Be honest in verifications"
+    "Be honest in verifications",
+    "Bankr-powered agents can use their Bankr wallet address as eth_address to claim trading fees"
   ]
 }
