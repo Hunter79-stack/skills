@@ -1,0 +1,11 @@
+{
+  "owner": "ilpvc",
+  "slug": "file-repair-skill",
+  "displayName": "file-repair-skill",
+  "latest": {
+    "version": "1.0.2",
+    "publishedAt": 1770633140456,
+    "commit": null
+  },
+  "history": []
+}
