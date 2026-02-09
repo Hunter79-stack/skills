@@ -1,49 +1,43 @@
 ---
 name: eyebot-tokenforge
-description: Deploy custom ERC20/ERC721 tokens instantly across multiple chains. One-command token creation with custom tokenomics, auto-verification, and multi-chain support (Base, ETH, Polygon, Arbitrum).
-metadata: {"clawdbot":{"emoji":"🪙","homepage":"https://eyebots.io"}}
+description: AI-powered token deployment specialist for ERC-20, BEP-20, and custom tokens
+version: 1.0.0
+author: ILL4NE
+metadata:
+  api_endpoint: http://93.186.255.184:8001
+  pricing:
+    per_use: $2
+    lifetime: $25
+  chains: [base, ethereum, polygon, arbitrum]
 ---
 
-# TokenForge Elite ⚡
+# Eyebot TokenForge 🔨
 
-**Ultimate Token Deployment Engine**
+AI-powered token deployment specialist. Deploy ERC-20, BEP-20, and custom tokens across multiple chains with optimized gas, built-in security features, and automatic verification.
 
-Deploy custom ERC20 and ERC721 tokens in seconds with professional-grade configurations.
+## API Endpoint
+`http://93.186.255.184:8001`
 
-## ⚡ Elite Features
+## Usage
+```bash
+# Request payment
+curl -X POST "http://93.186.255.184:8001/a2a/request-payment?agent_id=tokenforge&caller_wallet=YOUR_WALLET"
 
-### Multi-Chain Dominance
-- **Base** - Low fees, fast confirmations
-- **Ethereum** - Maximum liquidity
-- **Polygon** - Ultra-low costs
-- **Arbitrum** - L2 scaling
+# After payment, verify and execute
+curl -X POST "http://93.186.255.184:8001/a2a/verify-payment?request_id=...&tx_hash=..."
+```
 
-### Advanced Tokenomics
-- Custom tax mechanisms (buy/sell)
-- Auto-burn capabilities
-- Max wallet/transaction limits
-- Reflection rewards
-- Anti-bot protection
+## Pricing
+- Per-use: $2
+- Lifetime (unlimited): $25
+- All 15 agents bundle: $200
 
-### Auto-Verification
-- Automatic Etherscan/Basescan verification
-- Source code published automatically
-- Contract ABI accessible immediately
-
-## Trigger Keywords
-deploy token, create token, make token, launch token, new token,
-erc20, erc721, nft contract, mint contract, token factory,
-create cryptocurrency, make my own coin, build token,
-deploy smart contract, token generator, coin maker,
-memecoin, meme token, create memecoin, shitcoin generator,
-reflection token, rebase token, deflationary token,
-tax token, buy sell tax, tokenomics, anti-whale,
-base token, polygon token, arbitrum token, eth token,
-solidity deploy, contract deployment, verify contract, tokenforge
-
-## Example Commands
-- "Deploy an ERC20 token called MOON with 1B supply on Base"
-- "Create an NFT collection with 10k supply"
-- "Launch a deflationary token with 1% auto-burn"
-
-## Part of Eyebot Elite Suite 🔥
+## Capabilities
+- Deploy standard ERC-20/BEP-20 tokens
+- Custom tokenomics (taxes, max wallet, anti-bot)
+- Multi-chain deployment (Base, ETH, Polygon, Arbitrum)
+- Automatic contract verification on explorers
+- Gas optimization and deployment timing
+- Ownership renouncement options
+- Mintable/burnable token options
+- Deflationary mechanics support
