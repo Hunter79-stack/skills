@@ -1,0 +1,7 @@
+{
+  "name": "epstein-files-skill",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "Search 44,886+ DOJ-released Jeffrey Epstein documents (free, no payment required)"
+}
