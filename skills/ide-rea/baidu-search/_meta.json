@@ -3,11 +3,16 @@
   "slug": "baidu-search",
   "displayName": "Baidu Search",
   "latest": {
-    "version": "1.0.5",
-    "publishedAt": 1770608945826,
-    "commit": "https://github.com/openclaw/skills/commit/bdd5f50cacff140f3ebbb6f3ac0e088d7975ea86"
+    "version": "1.0.6",
+    "publishedAt": 1770655751929,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.5",
+      "publishedAt": 1770608945826,
+      "commit": "https://github.com/openclaw/skills/commit/bdd5f50cacff140f3ebbb6f3ac0e088d7975ea86"
+    },
     {
       "version": "1.0.4",
       "publishedAt": 1770564501972,

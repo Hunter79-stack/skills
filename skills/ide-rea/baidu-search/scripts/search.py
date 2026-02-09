@@ -16,7 +16,16 @@ def baidu_search(api_key, requestBody: dict):
     # 使用POST方法发送JSON数据
     response = requests.post(url, json=requestBody, headers=headers)
     response.raise_for_status()
-    return response.json()
+    results = response.json()
+    if "code" in results:
+        raise Exception(results["message"])
+    datas = results["references"]
+    keys_to_remove = {"snippet"}
+    for item in datas:
+        for key in keys_to_remove:
+            if key in item:
+                del item[key]
+    return datas
 
 
 if __name__ == "__main__":
