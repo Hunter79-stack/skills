@@ -1,0 +1,11 @@
+{
+  "owner": "alti-systems",
+  "slug": "yt-transcript",
+  "displayName": "YouTube Transcript Extractor",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1770623629878,
+    "commit": null
+  },
+  "history": []
+}
