@@ -5,9 +5,9 @@ Bilibili视频下载器
 """
 
 import subprocess
+import argparse
 import json
 import sys
-import os
 from typing import Dict, List, Optional
 
 
@@ -196,12 +196,17 @@ def download_playlist(url: str, format_choice: Optional[str] = None, output_dir:
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("用法: python download_bilibili.py <B站链接> [格式ID]")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description="Bilibili Video Downloader")
+    parser.add_argument("url", help="Bilibili video URL")
+    parser.add_argument("--format", "-f", dest="format_choice", help="Video format ID")
+    parser.add_argument("--batch", action="store_true", help="Download entire series/playlist if detected")
+    parser.add_argument("--no-batch", action="store_true", help="Only download single video even if playlist detected")
+    parser.add_argument("--interactive", "-i", action="store_true", help="Enable interactive prompts")
+
+    args = parser.parse_args()
     
-    url = sys.argv[1]
-    format_choice = sys.argv[2] if len(sys.argv) > 2 else None
+    url = args.url
+    format_choice = args.format_choice
     
     print("正在分析视频信息...")
     
@@ -225,16 +230,26 @@ def main():
             print(f"实际视频数量: {playlist_info.get('count', '未知')}")
         
         # 询问是否批量下载
-        while True:
-            choice = input("\n是否批量下载整个系列? (y/n): ").lower()
-            if choice in ['y', 'yes']:
-                batch_download = True
-                break
-            elif choice in ['n', 'no']:
-                batch_download = False
-                break
-            else:
-                print("请输入 y 或 n")
+        batch_download = False
+        if args.batch:
+            batch_download = True
+        elif args.no_batch:
+            batch_download = False
+        elif args.interactive:
+            while True:
+                choice = input("\n是否批量下载整个系列? (y/n): ").lower()
+                if choice in ['y', 'yes']:
+                    batch_download = True
+                    break
+                elif choice in ['n', 'no']:
+                    batch_download = False
+                    break
+                else:
+                    print("请输入 y 或 n")
+        else:
+            # Default to no batch in non-interactive mode unless specified
+            print("检测到播放列表，但未指定 --batch，默认仅下载当前视频。")
+            batch_download = False
         
         if batch_download:
             # 获取格式信息
@@ -243,8 +258,12 @@ def main():
                 display_formats(formats)
                 
                 if not format_choice:
-                    format_choice = input("\n请选择格式ID (直接回车使用最佳格式): ").strip()
-                    if not format_choice:
+                    if args.interactive:
+                        format_choice = input("\n请选择格式ID (直接回车使用最佳格式): ").strip()
+                        if not format_choice:
+                            format_choice = None
+                    else:
+                        print("\n未指定格式，使用最佳格式。")
                         format_choice = None
                 
                 # 执行批量下载
@@ -270,8 +289,12 @@ def main():
                 display_formats(formats)
                 
                 if not format_choice:
-                    format_choice = input("\n请选择格式ID (直接回车使用最佳格式): ").strip()
-                    if not format_choice:
+                    if args.interactive:
+                        format_choice = input("\n请选择格式ID (直接回车使用最佳格式): ").strip()
+                        if not format_choice:
+                            format_choice = None
+                    else:
+                        print("\n未指定格式，使用最佳格式。")
                         format_choice = None
                 
                 # 执行下载
@@ -299,8 +322,12 @@ def main():
             display_formats(formats)
             
             if not format_choice:
-                format_choice = input("\n请选择格式ID (直接回车使用最佳格式): ").strip()
-                if not format_choice:
+                if args.interactive:
+                    format_choice = input("\n请选择格式ID (直接回车使用最佳格式): ").strip()
+                    if not format_choice:
+                        format_choice = None
+                else:
+                    print("\n未指定格式，使用最佳格式。")
                     format_choice = None
             
             # 执行下载
