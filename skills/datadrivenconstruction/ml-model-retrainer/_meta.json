@@ -1,0 +1,11 @@
+{
+  "owner": "datadrivenconstruction",
+  "slug": "ml-model-retrainer",
+  "displayName": "Ml Model Retrainer",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1770475868892,
+    "commit": null
+  },
+  "history": []
+}
