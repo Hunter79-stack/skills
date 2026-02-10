@@ -1,0 +1,11 @@
+{
+  "owner": "gemini2027",
+  "slug": "pwnclaw-security-scan",
+  "displayName": "PwnClaw Security Scan",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1770672386926,
+    "commit": null
+  },
+  "history": []
+}
