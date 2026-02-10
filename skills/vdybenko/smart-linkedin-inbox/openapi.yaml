@@ -3,7 +3,7 @@ info:
   title: Smart LinkedIn Inbox from Linxa
   version: 1.0.0
   description: |
-    Smart LinkedIn Inbox from Linxa adds **structure, context, and reasoning** to LinkedIn conversations.
+    **Smart LinkedIn Inbox from Linxa** adds **structure, context, and reasoning** to LinkedIn conversations.
 
     This MCP server provides programmatic access to your LinkedIn Inbox through Linxa. 
     It enables agents to list, search, and read conversations with rich metadata (labels, sentiment, intent).
@@ -31,7 +31,7 @@ components:
       bearerFormat: JWT
 
 paths:
-  /api/current-li-user:
+  /api/mcp/current-li-user:
     get:
       operationId: getCurrentLiUser
       summary: Verify auth and get current LinkedIn user
@@ -42,68 +42,70 @@ paths:
             application/json:
               schema: { type: object }
 
-  /api/conversations:
+  /api/mcp/conversations:
     get:
       operationId: listConversations
-      summary: List inbox conversations with filtering and search
+      summary: List inbox conversations
+      description: Retrieve a list of conversations with filtering and search capabilities.
+      security:
+        - bearerAuth: []
       parameters:
         - name: limit
           in: query
-          required: false
+          description: Max number of conversations (default 50)
           schema:
             type: integer
             default: 50
-            maximum: 200
-          description: Number of conversations to return
         - name: search
           in: query
-          required: false
+          description: Keyword search in messages/participants
           schema:
             type: string
-          description: Search by name or content
         - name: label
           in: query
-          required: false
+          description: Filter by label (e.g., 'Hot', 'Inbox', 'Need Follow Up')
           schema:
             type: string
-            enum: [Inbox, Hot, Need Follow Up, Personal, Investors, Clients, Hiring, Junk, Partnership, archived]
-          description: Filter by label name
         - name: sentiment
           in: query
-          required: false
+          description: Filter by sentiment (POSITIVE, NEGATIVE, NEUTRAL)
           schema:
             type: string
-            enum: [POSITIVE, NEGATIVE, NEUTRAL]
-          description: Filter by sentiment
         - name: primary_intent
           in: query
-          required: false
+          description: Filter by primary intent (e.g., 'sales', 'recruitment')
           schema:
             type: string
-          description: Filter by primary intent (e.g., "sales_inquiry", "support")
-        - name: product
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Filter by product name reference
         - name: intent_direction
           in: query
-          required: false
+          description: Filter by intent direction (to_me, from_me)
           schema:
             type: string
-            enum: [to_me, from_me]
-          description: Filter by intent direction
+        - name: product
+          in: query
+          description: Filter by detected product interest
+          schema:
+            type: string
       responses:
-        "200":
-          description: OK
+        '200':
+          description: List of conversations
           content:
             application/json:
               schema:
                 type: array
-                items: { type: object }
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    participants:
+                      type: array
+                      items:
+                        type: object
+                    lastMessage:
+                      type: object
 
-  /api/messages/{chatId}:
+  /api/mcp/messages/{chatId}:
     get:
       operationId: getMessagesByChatId
       summary: Get messages for a specific conversation

@@ -1,72 +1,124 @@
-# Smart LinkedIn Inbox from Linxa — MCP Skill
+---
+name: smart-linkedin-inbox
+description: Access your LinkedIn inbox through Linxa using MCP.
+List and search neriched conversations, and fetch messages — without sharing LinkedIn passwords.
+summary: Access your LinkedIn inbox through Linxa using MCP.
+---
+
+#Smart LinkedIn Inbox from Linxa
+
+## What this skill does
 
 This skill connects OpenClaw to your Linxa Smart Inbox and lets you:
-- Verify the current LinkedIn user
-- List/search inbox conversations
-- Fetch messages for a conversation
+	- List and search inbox conversations
+	- Fetch messages from a specific conversation
+
 
 ## Quickstart (3 minutes)
 
-0) Install Skill clawhub install smart-linkedin-inbox
-1) Install the Linxa Chrome Extension  https://chromewebstore.google.com/detail/ai-smart-inbox-for-linked/ggkdnjblijkchfmgapnbhbhnphacmabm
-2) Sign in to Linxa with your LinkedIn account  https://app.uselinxa.com/
-3) Generate an access token in Linxa  https://app.uselinxa.com/setup-mcp
-4) Set the token for OpenClaw:
-   - `export LINXA_TOKEN=...` (recommended via env var)
-5) Run:
-   - `read skills/smart-linkedin-inbox/SKILL.md to understand how to use this skill. This skill is for LinkedIn only. Use valu of LINXA_TOKEN as Bearer token for Authorization header.`
-   - `Who I am on LinkedIn`
-   - `What is my last messages on LinkedIn?`
-   - `What is my last messages on LinkedIn with [Name]?`
 
-## Auth
-
-Send the token as:
-`Authorization: Bearer $LINXA_TOKEN`
-
-✅ No LinkedIn password sharing  
-✅ Works through your existing LinkedIn session via the extension
+### 1) Install the [inxa Chrome Extension](https://chromewebstore.google.com/detail/ai-smart-inbox-for-linked/ggkdnjblijkchfmgapnbhbhnphacmabm)
 
 
-## Endpoints (tools)
-1) GET /api/current-li-user
-   - Verify auth and identify the current LinkedIn user.
+### 2) Sign in to [Linxa](https://app.uselinxa.com/) with LinkedIn
 
-2) GET /api/conversations
-   - List inbox conversations.
-   - **Parameters**:
-     - `limit`: (default 50)
-     - `search`: Keyword search
-     - `label`: Filter by label. 
-       **Available values**: 
-       `Hot`, `Need Follow Up`, `Personal`, `Investors`, `Clients`, `Inbox`, `Hiring`, `Junk`, `Partnership`, `archived`, `scheduled`, `not-contacted`
-     - `sentiment`: POSITIVE, NEGATIVE, NEUTRAL
-     - `primary_intent`: e.g., "sales"
-     - `intent_direction`: "to_me" or "from_me"
 
-3) GET /api/messages/{chatId}
-   - Fetch messages for a specific conversation.
+### 3) [Generate](https://app.uselinxa.com/setup-mcp) an access token
 
-## Quick manual test (curl)
-curl -H "Authorization: Bearer <TOKEN>" \
-  http://app.uselinxa.com/api/current-li-user
+###  4) Install the skill
+```
+clawhub install smart-linkedin-inbox
+```
 
-curl -H "Authorization: Bearer <TOKEN>" \
-  "http://app.uselinxa.com/api/conversations?label=Hot&limit=5"
+### 5) Set the token
+```
+export LINXA_TOKEN=YOUR_TOKEN
+```
 
-## Quick manual test (curl)
+### 6) Tell OpenClaw to run the skill smart-linkedin-inbox read SKILL.md and use for LinkedIn 
 
-# Set your Linxa access token in an environment variable (once per session):
-export LINXA_TOKEN=<YOUR_TOKEN>
+## Using the skill (example prompts)
 
-# Verify identity (follow redirects):
-curl -L -H "Authorization: Bearer $LINXA_TOKEN" \
-  "https://app.uselinxa.com/api/current-li-user"
+You can interact with the skill using natural language:
+- Who am I on LinkedIn?
+- What are my latest LinkedIn messages?
+- Show my last messages with Mahde Shalaby
+- List hot conversations
 
-# List conversations (last 5 messages to you):
-curl -L -H "Authorization: Bearer $LINXA_TOKEN" \
-  "https://app.uselinxa.com/api/conversations?label=Hot&limit=5"
+---
 
-## Notes
-- If chatId contains special characters, ensure it is URL-encoded.
-- This connects to the public Linxa API (app.uselinxa.com).
+Authentication
+
+All requests require an authorization header:
+```
+Authorization: Bearer $LINXA_TOKEN
+```
+Security notes
+- No LinkedIn password sharing
+- Uses your active LinkedIn browser session
+- Token-based access only
+
+---
+
+## Available endpoints (tools)
+
+### 1) Verify current user
+```
+GET /api/mcp/current-li-user
+```
+
+Verifies authentication and returns the current LinkedIn profile.
+
+
+### 2) List conversations
+
+```
+GET /api/mcp/conversations
+```
+
+Query parameters:
+- limit — number of conversations (default: 50)
+- search — keyword search
+- label — filter by category
+Available values:
+Hot, Need Follow Up, Personal, Investors, Clients,
+Inbox, Hiring, Junk, Partnership, archived,
+scheduled, not-contacted
+- sentiment — POSITIVE, NEGATIVE, NEUTRAL
+- primary_intent — e.g. sales
+- intent_direction — to_me | from_me
+
+
+
+### 3) Fetch messages from a conversation
+
+```
+GET /api/mcp/messages/{chatId}
+```
+
+Returns all messages for the specified conversation.
+
+
+## Manual testing (curl)
+
+Verify identity
+```
+curl -L \
+  -H "Authorization: Bearer $LINXA_TOKEN" \
+  https://app.uselinxa.com/api/mcp/current-li-user
+```
+
+
+List hot conversations
+```
+curl -L \
+  -H "Authorization: Bearer $LINXA_TOKEN" \
+  "https://app.uselinxa.com/api/mcp/conversations?label=Hot&limit=5"
+```
+
+---
+
+Notes
+- URL-encode chatId if it contains special characters
+- This skill connects to the public Linxa API (app.uselinxa.com)
+- Message sync depends on an active Linxa + Chrome extension session
