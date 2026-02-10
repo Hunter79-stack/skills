@@ -1,0 +1,11 @@
+{
+  "owner": "ivangdavila",
+  "slug": "dogecoin",
+  "displayName": "Dogecoin",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1770747138470,
+    "commit": null
+  },
+  "history": []
+}
