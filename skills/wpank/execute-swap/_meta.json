@@ -1,0 +1,11 @@
+{
+  "owner": "wpank",
+  "slug": "execute-swap",
+  "displayName": "Uniswap Execute Swap",
+  "latest": {
+    "version": "0.1.0",
+    "publishedAt": 1770745497837,
+    "commit": null
+  },
+  "history": []
+}
