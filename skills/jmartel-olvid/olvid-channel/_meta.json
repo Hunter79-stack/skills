@@ -3,11 +3,16 @@
   "slug": "olvid-channel",
   "displayName": "Olvid Channel",
   "latest": {
-    "version": "0.0.8",
-    "publishedAt": 1770658735333,
-    "commit": "https://github.com/openclaw/skills/commit/ff10f5b4bf9c18440bdc3f5db269320f39c2be86"
+    "version": "0.0.10",
+    "publishedAt": 1770665737968,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.0.8",
+      "publishedAt": 1770658735333,
+      "commit": "https://github.com/openclaw/skills/commit/ff10f5b4bf9c18440bdc3f5db269320f39c2be86"
+    },
     {
       "version": "0.0.0",
       "publishedAt": 1770206450851,
