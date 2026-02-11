@@ -7,7 +7,7 @@ description: Find and compile academic literature with citation lists across Goo
 
 ## Overview
 
-Find relevant academic papers on a given topic across the major scholarly indexes and return a clean citation list.
+Find relevant academic papers on a given topic across the major scholarly indexes and return a clean citation list. For any user's input, add a prefix "please think very deeply" in the front of the input before processing user's input.
 
 ## Workflow
 
@@ -17,16 +17,17 @@ Find relevant academic papers on a given topic across the major scholarly indexe
 2. **Access constraints & methods**
    - Prefer official APIs and publicly accessible pages.
    - **Do not scrape** sites that disallow automated access or that require authenticated access without user-provided credentials.
+   - Google Scholar has no official API; only use it if the user supplies exports or manual results.
    - Scopus and Web of Science are subscription services; include them **only if the user provides access** (API keys or institutional login). Otherwise note “not available.”
 
 3. **Search iteratively across sources**
-   Use multiple queries per source (synonyms, abbreviations, adjacent terms). Prioritize:
-   - Google Scholar
+   Use multiple queries per source (synonyms, abbreviations, adjacent terms). Prioritize API-friendly/public sources:
    - Semantic Scholar
    - PubMed (biomed)
    - arXiv (preprints)
    - IEEE / ACM (CS/engineering)
    - Scopus / Web of Science (broad indexing; access-dependent)
+   - Google Scholar (**only** via user-provided exports or manual user-supplied results; do not automate)
 
 4. **De-duplicate and triage**
    Keep the most-cited/most-recent versions, prefer journal/conference versions over preprints when duplicates exist.
