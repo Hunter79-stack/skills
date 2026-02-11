@@ -1,6 +1,9 @@
 const { execSync, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const { sleepSync } = require('./utils/sleep'); // New helper
+const { sendReport } = require('./report.js'); // Use optimized internal report function
 
 // [2026-02-03] WRAPPER REFACTOR: PURE PROXY
 // This wrapper now correctly delegates to the core 'evolver' plugin.
@@ -21,12 +24,7 @@ function sleepSeconds(sec) {
             try { fs.unlinkSync(wakeFile); } catch (e) {}
             return;
         }
-        try {
-            execSync(`sleep ${interval}`);
-        } catch (_) {
-            const waitStart = Date.now();
-            while (Date.now() - waitStart < interval * 1000) {}
-        }
+        sleepSync(interval * 1000);
     }
 }
 
@@ -64,13 +62,243 @@ function tailText(buf, maxChars) {
     return s.slice(-maxChars);
 }
 
+// --- FAILURE LEARNING + RETRY POLICY ---
+const FAILURE_LESSONS_FILE = path.resolve(__dirname, '../../memory/evolution/failure_lessons.jsonl');
+const HAND_MAX_RETRIES_PER_CYCLE = Number.parseInt(process.env.EVOLVE_HAND_MAX_RETRIES || '3', 10);
+const HAND_RETRY_BACKOFF_SECONDS = Number.parseInt(process.env.EVOLVE_HAND_RETRY_BACKOFF_SECONDS || '15', 10);
+
+function appendFailureLesson(cycleTag, reason, details) {
+    try {
+        const dir = path.dirname(FAILURE_LESSONS_FILE);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        const entry = {
+            at: new Date().toISOString(),
+            cycle: String(cycleTag),
+            reason: String(reason || 'unknown'),
+            details: String(details || '').slice(0, 1200),
+        };
+        fs.appendFileSync(FAILURE_LESSONS_FILE, JSON.stringify(entry) + '\n');
+    } catch (e) {
+        console.warn('[Wrapper] Failed to write failure lesson:', e.message);
+    }
+}
+
+function readRecentFailureLessons(limit) {
+    try {
+        if (!fs.existsSync(FAILURE_LESSONS_FILE)) return [];
+        const n = Number.isFinite(Number(limit)) ? Number(limit) : 5;
+        const lines = fs.readFileSync(FAILURE_LESSONS_FILE, 'utf8').split('\n').filter(Boolean);
+        return lines.slice(-n).map((l) => {
+            try { return JSON.parse(l); } catch (_) { return null; }
+        }).filter(Boolean);
+    } catch (_) {
+        return [];
+    }
+}
+
+function cleanStatusText(raw) {
+    return String(raw || '').replace(/\r/g, '').trim();
+}
+
+function isGenericStatusText(text) {
+    const t = cleanStatusText(text).toLowerCase();
+    if (!t) return true;
+    const genericPatterns = [
+        'status: [complete] cycle finished.',
+        '状态: [完成] 周期已完成。',
+        'status: [complete] cycle finished',
+        '状态: [完成] 周期已完成',
+        'step complete',
+        'completed.',
+        'done.',
+    ];
+    for (const p of genericPatterns) {
+        if (t === p || t.includes(p)) return true;
+    }
+    // Too short + only completion semantics => still considered generic.
+    if (t.length < 40 && (t.includes('完成') || t.includes('complete') || t.includes('finished'))) {
+        return true;
+    }
+    return false;
+}
+
+function buildFallbackStatus(lang, cycleTag, gitInfo, latestEvent) {
+    const evt = latestEvent || readLatestEvolutionEvent();
+    const intent = evt && evt.intent ? String(evt.intent) : null;
+    const signals = evt && Array.isArray(evt.signals) ? evt.signals.slice(0, 3).map(String) : [];
+    const geneId = evt && Array.isArray(evt.genes_used) && evt.genes_used.length ? String(evt.genes_used[0]) : null;
+    const mutation = evt && evt.meta && evt.meta.mutation ? evt.meta.mutation : null;
+    const expectedEffect = mutation && mutation.expected_effect ? String(mutation.expected_effect) : null;
+    const blastFiles = evt && evt.blast_radius ? evt.blast_radius.files : null;
+    const blastLines = evt && evt.blast_radius ? evt.blast_radius.lines : null;
+    const hasGit = !!(gitInfo && gitInfo.shortHash);
+
+    if (lang === 'zh') {
+        const intentLabel = intentLabelByLang(intent, 'zh');
+        const parts = [`状态: [${intentLabel}]`];
+        if (expectedEffect) {
+            parts.push(`目标：${expectedEffect}。`);
+        }
+        if (signals.length) {
+            parts.push(`触发信号：${signals.join(', ')}。`);
+        }
+        if (geneId) {
+            parts.push(`使用基因：${geneId}。`);
+        }
+        if (blastFiles != null) {
+            parts.push(`影响范围：${blastFiles} 个文件 / ${blastLines || 0} 行。`);
+        }
+        if (hasGit) {
+            parts.push(`提交：${gitInfo.fileCount} 个文件，涉及 ${gitInfo.areaStr}。`);
+        } else {
+            parts.push(`无可提交代码变更。`);
+        }
+        return parts.join(' ');
+    }
+    const intentLabel = intentLabelByLang(intent, 'en');
+    const parts = [`Status: [${intentLabel}]`];
+    if (expectedEffect) {
+        parts.push(`Goal: ${expectedEffect}.`);
+    }
+    if (signals.length) {
+        parts.push(`Signals: ${signals.join(', ')}.`);
+    }
+    if (geneId) {
+        parts.push(`Gene: ${geneId}.`);
+    }
+    if (blastFiles != null) {
+        parts.push(`Blast radius: ${blastFiles} files / ${blastLines || 0} lines.`);
+    }
+    if (hasGit) {
+        parts.push(`Committed ${gitInfo.fileCount} files in ${gitInfo.areaStr}.`);
+    } else {
+        parts.push(`No committable code diff.`);
+    }
+    return parts.join(' ');
+}
+
+function withOutcomeLine(statusText, success, lang) {
+    const s = cleanStatusText(statusText);
+    const enPrefix = 'Result: ';
+    const zhPrefix = '结果: ';
+    if (lang === 'zh') {
+        if (s.startsWith(zhPrefix)) return s;
+        return `${zhPrefix}${success ? '成功' : '失败'}\n${s}`;
+    }
+    if (s.startsWith(enPrefix)) return s;
+    return `${enPrefix}${success ? 'SUCCESS' : 'FAILED'}\n${s}`;
+}
+
+function ensureDetailedStatus(rawText, lang, cycleTag, gitInfo, latestEvent) {
+    const s = cleanStatusText(rawText);
+    if (!s || isGenericStatusText(s)) return buildFallbackStatus(lang, cycleTag, gitInfo, latestEvent);
+    return s;
+}
+
+function readLatestEvolutionEvent() {
+    try {
+        const eventsFile = path.resolve(__dirname, '../../assets/gep/events.jsonl');
+        if (!fs.existsSync(eventsFile)) return null;
+        const lines = fs.readFileSync(eventsFile, 'utf8').split('\n').filter(Boolean);
+        for (let i = lines.length - 1; i >= 0; i--) {
+            try {
+                const obj = JSON.parse(lines[i]);
+                if (obj && obj.type === 'EvolutionEvent') return obj;
+            } catch (_) {}
+        }
+        return null;
+    } catch (_) {
+        return null;
+    }
+}
+
+function intentLabelByLang(intent, lang) {
+    const i = String(intent || '').toLowerCase();
+    if (lang === 'zh') {
+        if (i === 'innovate') return '创新';
+        if (i === 'optimize') return '优化';
+        return '修复';
+    }
+    if (i === 'innovate') return 'INNOVATION';
+    if (i === 'optimize') return 'OPTIMIZE';
+    return 'REPAIR';
+}
+
+function enforceStatusIntent(statusText, intent, lang) {
+    const s = cleanStatusText(statusText);
+    if (!intent) return s;
+    const label = intentLabelByLang(intent, lang);
+    if (lang === 'zh') {
+        if (/^状态:\s*\[[^\]]+\]/.test(s)) return s.replace(/^状态:\s*\[[^\]]+\]/, `状态: [${label}]`);
+        return `状态: [${label}] ${s}`;
+    }
+    if (/^Status:\s*\[[^\]]+\]/.test(s)) return s.replace(/^Status:\s*\[[^\]]+\]/, `Status: [${label}]`);
+    return `Status: [${label}] ${s}`;
+}
+
 // --- FEATURE 2: HEARTBEAT SUMMARY (Option 2: Real-time Error, Summary Info) ---
 let sessionLogs = { infoCount: 0, errorCount: 0, startTime: 0, errors: [] };
+const LOG_DEDUP_FILE = path.resolve(__dirname, '../../memory/evolution/log_dedup.json');
+const LOG_DEDUP_WINDOW_MS = Number.parseInt(process.env.EVOLVE_LOG_DEDUP_WINDOW_MS || '600000', 10); // 10 minutes
+const LOG_DEDUP_MAX_KEYS = Number.parseInt(process.env.EVOLVE_LOG_DEDUP_MAX_KEYS || '800', 10);
 
 // Lifecycle log target group (set via env or hardcode for reliability)
 const FEISHU_LOG_GROUP = process.env.LOG_TARGET || 'oc_ab79ebbe224701d0288891d6f8ddb10e';
 const FEISHU_CN_REPORT_GROUP = process.env.FEISHU_CN_REPORT_GROUP || 'oc_86ff5e0d40cb49c777a24156f379c48c';
 process.env.LOG_TARGET = FEISHU_LOG_GROUP;
+
+function normalizeLogForDedup(msg) {
+    return String(msg || '')
+        .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z/g, '<ts>')
+        .replace(/PID=\d+/g, 'PID=<id>')
+        .replace(/Cycle #\d+/g, 'Cycle #<id>')
+        .replace(/evolver_hand_[\w_:-]+/g, 'evolver_hand_<id>')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 500);
+}
+
+function shouldSuppressForwardLog(msg, type) {
+    if (String(process.env.EVOLVE_LOG_DEDUP || '').toLowerCase() === '0') return false;
+    const normalized = normalizeLogForDedup(msg);
+    if (!normalized) return false;
+    const keyRaw = `${String(type || 'INFO')}::${normalized}`;
+    const key = crypto.createHash('md5').update(keyRaw).digest('hex');
+    const now = Date.now();
+    try {
+        const dir = path.dirname(LOG_DEDUP_FILE);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        let cache = {};
+        if (fs.existsSync(LOG_DEDUP_FILE)) {
+            cache = JSON.parse(fs.readFileSync(LOG_DEDUP_FILE, 'utf8'));
+        }
+        for (const k of Object.keys(cache)) {
+            const ts = Number(cache[k] && cache[k].at);
+            if (!Number.isFinite(ts) || now - ts > LOG_DEDUP_WINDOW_MS) delete cache[k];
+        }
+        if (cache[key] && Number.isFinite(Number(cache[key].at)) && now - Number(cache[key].at) <= LOG_DEDUP_WINDOW_MS) {
+            cache[key].hits = Number(cache[key].hits || 1) + 1;
+            const tmpHit = `${LOG_DEDUP_FILE}.tmp.${process.pid}`;
+            fs.writeFileSync(tmpHit, JSON.stringify(cache, null, 2));
+            fs.renameSync(tmpHit, LOG_DEDUP_FILE);
+            return true;
+        }
+        cache[key] = { at: now, hits: 1, type: String(type || 'INFO') };
+        const keys = Object.keys(cache);
+        if (keys.length > LOG_DEDUP_MAX_KEYS) {
+            keys
+                .sort((a, b) => Number(cache[a].at || 0) - Number(cache[b].at || 0))
+                .slice(0, keys.length - LOG_DEDUP_MAX_KEYS)
+                .forEach((k) => { delete cache[k]; });
+        }
+        const tmp = `${LOG_DEDUP_FILE}.tmp.${process.pid}`;
+        fs.writeFileSync(tmp, JSON.stringify(cache, null, 2));
+        fs.renameSync(tmp, LOG_DEDUP_FILE);
+        return false;
+    } catch (_) {
+        return false;
+    }
+}
 
 function forwardLogToFeishu(msg, type = 'INFO') {
     // Avoid re-forwarding Feishu forward errors
@@ -80,12 +308,15 @@ function forwardLogToFeishu(msg, type = 'INFO') {
     if (type === 'ERROR') {
         sessionLogs.errorCount++;
         sessionLogs.errors.push(msg.slice(0, 300));
+        if (shouldSuppressForwardLog(msg, type)) return;
         sendCardInternal(msg, 'ERROR');
     } else if (type === 'WARNING') {
         // Non-critical issues: yellow card
+        if (shouldSuppressForwardLog(msg, type)) return;
         sendCardInternal(msg, 'WARNING');
     } else if (type === 'LIFECYCLE') {
         // Key lifecycle events: always forward
+        if (shouldSuppressForwardLog(msg, type)) return;
         sendCardInternal(msg, 'INFO');
     } else {
         sessionLogs.infoCount++;
@@ -522,16 +753,28 @@ async function run() {
       \`\`\`
     - Target: Auto-detects context (Evolution group or master) unless overridden.`;
 
+        var modelRoutingDirective = `
+    **Model Routing (Mandatory)**:
+    You MUST prioritize Cursor Agent capabilities for all programming tasks.
+    When you need to delegate to a specific model, follow these rules strictly:
+      - Planning, prompts, strategy reasoning: use gpt5.3
+      - Code implementation, refactoring, bug fixes: use gpt5.3codex
+      - Documentation, reports, human-readable files (README, SKILL.md, CHANGELOG): use gemini3pro
+    If a task spans multiple phases, route each phase to its designated model in order: plan -> code -> docs.
+    If a designated model is unavailable, use the closest alternative without changing the task phase.`;
+
         if (isLoop) {
             process.env.EVOLVE_EXTRA_MODES = `- Mode B (Wrapper Loop):
       - You are running under a wrapper-managed continuous loop.
       - Action: Perform ONE evolution cycle, then exit cleanly.
       - Do NOT call sessions_spawn. Do NOT try to self-schedule.
-      - The wrapper handles cycling, reporting delivery, and git sync.`;
+      - The wrapper handles cycling, reporting delivery, and git sync.
+${modelRoutingDirective}`;
         } else {
             process.env.EVOLVE_EXTRA_MODES = `- Mode A (Atomic/Cron):
       - Do NOT call sessions_spawn.
-      - Goal: Complete ONE generation, update state, and exit gracefully.`;
+      - Goal: Complete ONE generation, update state, and exit gracefully.
+${modelRoutingDirective}`;
         }
 
         let attempts = 0;
@@ -624,18 +867,32 @@ async function run() {
                                         // The GEP protocol prompt buries the report in "Notes:" which the agent ignores.
                                         // This injection ensures the report command is the LAST thing the agent sees.
                                         if (taskContent) {
+                                            const recentLessons = readRecentFailureLessons(5);
+                                            if (recentLessons.length > 0) {
+                                                const lessonText = recentLessons.map((x, i) =>
+                                                    `${i + 1}. cycle#${x.cycle} reason=${x.reason} details=${x.details}`
+                                                ).join('\n');
+                                                taskContent += `\n\n` +
+                                                    `RECENT FAILURE LESSONS (MUST LEARN):\n` +
+                                                    `${lessonText}\n` +
+                                                    `Apply these lessons to avoid repeating known failure patterns.\n`;
+                                            }
+
                                             // Status file path for post-push reporting
                                             const statusFile = path.resolve(path.dirname(lifecycleLog), `status_${cycleTag}.json`);
                                             taskContent += `\n\n` +
                                                 `━━━━━━━━━━━━━━━━━━━━━━\n` +
                                                 `MANDATORY POST-SOLIDIFY STEP (Wrapper Authority -- Cannot Be Skipped)\n` +
                                                 `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-                                                `After solidify, you MUST write a status summary file. The wrapper will handle reporting AFTER git push.\n` +
-                                                `This is NOT optional. Skipping it is a protocol violation.\n\n` +
+                                                `After solidify, a status summary file MUST exist for this cycle.\n` +
+                                                `Preferred path: evolver core auto-writes it during solidify.\n` +
+                                                `The wrapper will handle reporting AFTER git push.\n` +
+                                                `If core write is unavailable for any reason, create fallback status JSON manually.\n\n` +
                                                 `Write a JSON file with your status:\n` +
                                                 `\`\`\`bash\n` +
                                                 `cat > ${statusFile} << 'STATUSEOF'\n` +
                                                 `{\n` +
+                                                `  "result": "success|failed",\n` +
                                                 `  "en": "Status: [INTENT] <describe what you did in 1-2 sentences, in English>",\n` +
                                                 `  "zh": "状态: [意图] <用中文描述你做了什么，1-2句>"\n` +
                                                 `}\n` +
@@ -643,10 +900,11 @@ async function run() {
                                                 `\`\`\`\n\n` +
                                                 `Rules:\n` +
                                                 `- "en" field: English status. "zh" field: Chinese status. Content must match (different language).\n` +
+                                                `- Add "result" with value success or failed.\n` +
                                                 `- INTENT must be one of: INNOVATION, REPAIR, OPTIMIZE (or Chinese: 创新, 修复, 优化)\n` +
-                                                `- Do NOT use generic text like "Step Complete". Describe the actual work.\n` +
+                                                `- Do NOT use generic text like "Step Complete", "Cycle finished", "周期已完成". Describe the actual work.\n` +
                                                 `- Example:\n` +
-                                                `  {"en":"Status: [INNOVATION] Created auto-scheduler that syncs calendar to HEARTBEAT.md","zh":"状态: [创新] 创建了自动调度器，将日历同步到 HEARTBEAT.md"}\n`;
+                                                `  {"result":"success","en":"Status: [INNOVATION] Created auto-scheduler that syncs calendar to HEARTBEAT.md","zh":"状态: [创新] 创建了自动调度器，将日历同步到 HEARTBEAT.md"}\n`;
 
                                             console.log('[Wrapper] Spawning Hand Agent via CLI...');
                                             forwardLogToFeishu('[Wrapper] 🖐️ Spawning Hand Agent (Executor)...', 'INFO');
@@ -682,58 +940,90 @@ async function run() {
                                                 throw new Error(`Task file creation failed: ${taskFile}`);
                                             }
 
-                                            // Execute Hand Agent
-                                            // [FIX 2026-02-08] Use -m (message) instead of --file (unsupported).
-                                            // Use --session-id with a unique ID to isolate evolver cycles from the main session.
-                                            const sessionId = `evolver_hand_${cycleTag}_${Date.now()}`;
-                                            await new Promise((resolveHand, rejectHand) => {
-                                                console.log(`[Wrapper] Executing: ${openclawPath} agent --agent main --session-id ${sessionId} -m <task> --timeout 600`);
-                                                const handChild = spawn(openclawPath, ['agent', '--agent', 'main', '--session-id', sessionId, '-m', taskContent, '--timeout', '600'], {
-                                                    env: { ...process.env },
-                                                    stdio: ['ignore', 'pipe', 'pipe'] // Pipe stdio to capture logs
-                                                });
+                                            // Execute Hand Agent with retries.
+                                            // Retries trigger on: non-zero exit, missing status file, or explicit SOLIDIFY failure markers.
+                                            let handSucceeded = false;
+                                            let lastHandFailure = '';
+                                            for (let handAttempt = 1; handAttempt <= HAND_MAX_RETRIES_PER_CYCLE && !handSucceeded; handAttempt++) {
+                                                const sessionId = `evolver_hand_${cycleTag}_${Date.now()}_${handAttempt}`;
+                                                const retryHint = handAttempt > 1
+                                                    ? `\n\nRETRY CONTEXT:\nThis is retry attempt ${handAttempt}/${HAND_MAX_RETRIES_PER_CYCLE} for the same cycle.\nYou MUST reduce blast radius and keep changes small/reversible.\nPrioritize fixing the specific previous failure and producing a valid status JSON file.\n`
+                                                    : '';
+                                                const attemptTask = taskContent + retryHint;
+                                                if (fs.existsSync(statusFile)) {
+                                                    try { fs.unlinkSync(statusFile); } catch (_) {}
+                                                }
 
-                                                handChild.stdout.on('data', (d) => {
-                                                    const s = d.toString();
-                                                    process.stdout.write(`[Hand] ${s}`);
-                                                    // forwardLogToFeishu(`[Hand] ${s}`, 'INFO'); // verbose?
-                                                });
+                                                await new Promise((resolveHand, rejectHand) => {
+                                                    console.log(`[Wrapper] Executing: ${openclawPath} agent --agent main --session-id ${sessionId} -m <task> --timeout 600 (attempt ${handAttempt}/${HAND_MAX_RETRIES_PER_CYCLE})`);
+                                                    const handChild = spawn(openclawPath, ['agent', '--agent', 'main', '--session-id', sessionId, '-m', attemptTask, '--timeout', '600'], {
+                                                        env: {
+                                                            ...process.env,
+                                                            EVOLVE_CYCLE_TAG: String(cycleTag),
+                                                            EVOLVE_STATUS_FILE: statusFile,
+                                                        },
+                                                        stdio: ['ignore', 'pipe', 'pipe']
+                                                    });
 
-                                                handChild.stderr.on('data', (d) => {
-                                                    const s = d.toString();
-                                                    const severity = classifyStderrSeverity(s);
-                                                    const tag = severity === 'WARNING' ? '[Hand WARN]' : '[Hand ERR]';
-                                                    process.stderr.write(`${tag} ${s}`);
-                                                    forwardLogToFeishu(`${tag} ${s}`, severity);
-                                                });
+                                                    let stdoutBuf = '';
+                                                    let stderrBuf = '';
 
-                                                handChild.on('error', (err) => {
+                                                    handChild.stdout.on('data', (d) => {
+                                                        const s = d.toString();
+                                                        stdoutBuf += s;
+                                                        process.stdout.write(`[Hand] ${s}`);
+                                                    });
+
+                                                    handChild.stderr.on('data', (d) => {
+                                                        const s = d.toString();
+                                                        stderrBuf += s;
+                                                        const severity = classifyStderrSeverity(s);
+                                                        const tag = severity === 'WARNING' ? '[Hand WARN]' : '[Hand ERR]';
+                                                        process.stderr.write(`${tag} ${s}`);
+                                                        forwardLogToFeishu(`${tag} ${s}`, severity);
+                                                    });
+
+                                                    handChild.on('error', (err) => {
+                                                        const severity = err.code === 'ENOENT' ? 'WARNING' : 'ERROR';
+                                                        console.error(`[Wrapper] Hand Agent spawn error: ${err.message}`);
+                                                        forwardLogToFeishu(`[Wrapper] Hand Agent spawn error: ${err.message}`, severity);
+                                                        rejectHand(err);
+                                                    });
+
+                                                    handChild.on('close', (handCode) => {
+                                                        const combined = `${stdoutBuf}\n${stderrBuf}`;
+                                                        const hasSolidifyFail = combined.includes('[SOLIDIFY] FAILED');
+                                                        const hasStatusFile = fs.existsSync(statusFile);
+                                                        if (handCode === 0 && !hasSolidifyFail && hasStatusFile) {
+                                                            resolveHand();
+                                                            return;
+                                                        }
+                                                        const reason = `code=${handCode}; solidify_failed=${hasSolidifyFail}; status_file=${hasStatusFile}`;
+                                                        const details = tailText(combined, 1200);
+                                                        rejectHand(new Error(`${reason}\n${details}`));
+                                                    });
+                                                }).then(() => {
+                                                    handSucceeded = true;
+                                                    consecutiveHandFailures = 0;
+                                                    console.log('[Wrapper] Hand Agent finished successfully.');
+                                                    forwardLogToFeishu(`🧬 Cycle #${cycleTag} Hand Agent completed successfully.`, 'LIFECYCLE');
+                                                }).catch((handErr) => {
                                                     consecutiveHandFailures++;
-                                                    const severity = err.code === 'ENOENT' ? 'WARNING' : 'ERROR';
-                                                    console.error(`[Wrapper] Hand Agent spawn error: ${err.message}`);
-                                                    forwardLogToFeishu(`[Wrapper] Hand Agent spawn error: ${err.message}`, severity);
-                                                    rejectHand(err);
-                                                });
-
-                                                handChild.on('close', (handCode) => {
-                                                    if (handCode === 0) {
-                                                        console.log('[Wrapper] Hand Agent finished successfully.');
-                                                        forwardLogToFeishu(`🧬 Cycle #${cycleTag} Hand Agent completed successfully.`, 'LIFECYCLE');
-                                                        consecutiveHandFailures = 0; // Reset on success
-                                                        resolveHand();
-                                                    } else {
-                                                        consecutiveHandFailures++;
-                                                        const msg = `[Wrapper] Hand Agent failed with code ${handCode}`;
-                                                        forwardLogToFeishu(`🧬 Cycle #${cycleTag} Hand Agent failed (code ${handCode})`, 'LIFECYCLE');
-                                                        console.error(msg);
-                                                        forwardLogToFeishu(msg, 'ERROR');
-                                                        // We resolve instead of reject to allow the cycle to complete "successfully" 
-                                                        // (the brain worked, the hand failed)
-                                                        // But let's log it clearly.
-                                                        resolveHand(); 
+                                                    lastHandFailure = handErr && handErr.message ? handErr.message : 'unknown';
+                                                    appendFailureLesson(cycleTag, `hand_attempt_${handAttempt}_failed`, lastHandFailure);
+                                                    console.error(`[Wrapper] Hand Agent attempt ${handAttempt}/${HAND_MAX_RETRIES_PER_CYCLE} failed: ${lastHandFailure}`);
+                                                    forwardLogToFeishu(`🧬 Cycle #${cycleTag} Hand attempt ${handAttempt} failed.`, 'ERROR');
+                                                    if (handAttempt < HAND_MAX_RETRIES_PER_CYCLE) {
+                                                        const waitSec = HAND_RETRY_BACKOFF_SECONDS * handAttempt;
+                                                        console.log(`[Wrapper] Retrying Hand Agent in ${waitSec}s...`);
+                                                        sleepSeconds(waitSec);
                                                     }
                                                 });
-                                            });
+                                            }
+
+                                            if (!handSucceeded) {
+                                                throw new Error(`Hand Agent failed after ${HAND_MAX_RETRIES_PER_CYCLE} attempts. Last failure: ${lastHandFailure}`);
+                                            }
 
                                         } else {
                                             console.warn('[Wrapper] Could not extract task content from sessions_spawn');
@@ -773,9 +1063,14 @@ async function run() {
                     var statusFilePath = path.resolve(path.dirname(lifecycleLog), 'status_' + cycleTag + '.json');
                     var enStatus = 'Status: [COMPLETE] Cycle finished.';
                     var zhStatus = '状态: [完成] 周期已完成。';
+                    var statusResult = 'success';
                     if (fs.existsSync(statusFilePath)) {
                         try {
                             var statusData = JSON.parse(fs.readFileSync(statusFilePath, 'utf8'));
+                            if (statusData.result) {
+                                var r = String(statusData.result).toLowerCase();
+                                if (r === 'failed' || r === 'success') statusResult = r;
+                            }
                             if (statusData.en) enStatus = statusData.en;
                             if (statusData.zh) zhStatus = statusData.zh;
                         } catch (parseErr) {
@@ -785,35 +1080,52 @@ async function run() {
                         console.warn('[Wrapper] No status file found for cycle ' + cycleTag + '. Using default.');
                     }
 
+                    // Canonical source of truth: latest EvolutionEvent (intent/outcome).
+                    // This keeps "Status" and dashboard "Recent" aligned.
+                    var latestEvent = readLatestEvolutionEvent();
+                    if (latestEvent && latestEvent.outcome && latestEvent.outcome.status) {
+                        var evStatus = String(latestEvent.outcome.status).toLowerCase();
+                        if (evStatus === 'failed' || evStatus === 'success') statusResult = evStatus;
+                    }
+                    if (latestEvent && latestEvent.intent) {
+                        enStatus = enforceStatusIntent(enStatus, latestEvent.intent, 'en');
+                        zhStatus = enforceStatusIntent(zhStatus, latestEvent.intent, 'zh');
+                    }
+
+                    // Enforce non-generic evolution description and explicit cycle outcome.
+                    enStatus = ensureDetailedStatus(enStatus, 'en', cycleTag, gitInfo, latestEvent);
+                    zhStatus = ensureDetailedStatus(zhStatus, 'zh', cycleTag, gitInfo, latestEvent);
+                    enStatus = withOutcomeLine(enStatus, statusResult !== 'failed', 'en');
+                    zhStatus = withOutcomeLine(zhStatus, statusResult !== 'failed', 'zh');
+
                     // Append git commit info to status
                     var gitSuffix = '';
                     if (gitInfo && gitInfo.shortHash) {
                         gitSuffix = '\n\nGit: ' + gitInfo.commitMsg + ' (' + gitInfo.shortHash + ')';
                     }
 
-                    // Send EN report
+                    // Send EN report (Optimized: Internal call)
                     try {
-                        execSync(
-                            'node skills/feishu-evolver-wrapper/report.js' +
-                            ' --cycle "Cycle #' + cycleTag + '"' +
-                            ' --title "🧬 Evolution #' + cycleTag + '"' +
-                            ' --status "' + enStatus.replace(/"/g, '\\"') + gitSuffix.replace(/"/g, '\\"') + '"',
-                            { cwd: path.resolve(__dirname, '../../'), encoding: 'utf8', timeout: 30000, stdio: 'pipe' }
-                        );
+                        await sendReport({
+                            cycle: cycleTag,
+                            title: `🧬 Evolution #${cycleTag}`,
+                            status: enStatus + gitSuffix,
+                            lang: 'en'
+                        });
                     } catch (reportErr) {
                         console.warn('[Wrapper] EN report failed:', reportErr.message);
                     }
 
-                    // Send CN report
+                    // Send CN report (Optimized: Internal call)
                     try {
-                        execSync(
-                            'node skills/feishu-evolver-wrapper/report.js' +
-                            ' --cycle "Cycle #' + cycleTag + '"' +
-                            ' --title "🧬 进化 #' + cycleTag + '"' +
-                            ' --status "' + zhStatus.replace(/"/g, '\\"') + gitSuffix.replace(/"/g, '\\"') + '"' +
-                            ' --target "' + FEISHU_CN_REPORT_GROUP + '"',
-                            { cwd: path.resolve(__dirname, '../../'), encoding: 'utf8', timeout: 30000, stdio: 'pipe' }
-                        );
+                        const FEISHU_CN_REPORT_GROUP = process.env.FEISHU_CN_REPORT_GROUP || 'oc_86ff5e0d40cb49c777a24156f379c48c';
+                        await sendReport({
+                            cycle: cycleTag,
+                            title: `🧬 进化 #${cycleTag}`,
+                            status: zhStatus + gitSuffix,
+                            target: FEISHU_CN_REPORT_GROUP,
+                            lang: 'cn'
+                        });
                     } catch (reportErr) {
                         console.warn('[Wrapper] CN report failed:', reportErr.message);
                     }
@@ -852,10 +1164,58 @@ async function run() {
                     `🧬 [${new Date().toISOString()}] ERROR Wrapper PID=${process.pid} Cycle=#${cycleTag} Duration=${duration}s: ${e.message}\n`
                 );
                 console.error(`Wrapper proxy failed (Attempt ${attempts}) Cycle #${cycleTag}:`, e.message);
+                appendFailureLesson(cycleTag, 'wrapper_cycle_failed', String(e && e.message ? e.message : e));
                 
                 // On failure, we might send a summary OR let the real-time errors speak for themselves.
                 // Sending a FAILURE summary is good practice.
                 sendSummary(cycleTag, duration, false); 
+
+                // Ensure evolution reports explicitly reflect failure when retries are exhausted.
+                if (attempts >= MAX_RETRIES) {
+                    try {
+                        var reason = String(e && e.message ? e.message : 'unknown failure').split('\n')[0].slice(0, 240);
+                        var enFail = withOutcomeLine(
+                            ensureDetailedStatus(
+                                `Status: [REPAIR] Evolution failed in this cycle after retry exhaustion. Root cause: ${reason}`,
+                                'en',
+                                cycleTag,
+                                null
+                            ),
+                            false,
+                            'en'
+                        );
+                        var zhFail = withOutcomeLine(
+                            ensureDetailedStatus(
+                                `状态: [修复] 本轮进化在重试耗尽后失败。根因：${reason}`,
+                                'zh',
+                                cycleTag,
+                                null
+                            ),
+                            false,
+                            'zh'
+                        );
+                        try {
+                            await sendReport({
+                                cycle: cycleTag,
+                                title: `🧬 Evolution #${cycleTag}`,
+                                status: enFail,
+                                lang: 'en'
+                            });
+                        } catch (_) {}
+                        try {
+                            const FEISHU_CN_REPORT_GROUP = process.env.FEISHU_CN_REPORT_GROUP || 'oc_86ff5e0d40cb49c777a24156f379c48c';
+                            await sendReport({
+                                cycle: cycleTag,
+                                title: `🧬 进化 #${cycleTag}`,
+                                status: zhFail,
+                                target: FEISHU_CN_REPORT_GROUP,
+                                lang: 'cn'
+                            });
+                        } catch (_) {}
+                    } catch (reportErr) {
+                        console.error('[Wrapper] Failure report dispatch failed:', reportErr.message);
+                    }
+                }
 
                 if (attempts < MAX_RETRIES) {
                     const delay = Math.min(60, 5 * attempts);

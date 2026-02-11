@@ -6,6 +6,7 @@ const { program } = require('commander');
 const { execSync } = require('child_process');
 const { sendCard } = require('./feishu-helper.js');
 const { fetchWithAuth } = require('../common/feishu-client.js');
+const { generateDashboardCard } = require('./utils/dashboard-generator.js');
 const crypto = require('crypto');
 
 // --- REPORT DEDUP ---
@@ -97,18 +98,6 @@ try {
     };
 }
 
-program
-  .option('-s, --status <text>', 'Status text/markdown content')
-  .option('-f, --file <path>', 'Path to markdown file content')
-  .option('-c, --cycle <id>', 'Evolution Cycle ID')
-  .option('--title <text>', 'Card Title override')
-  .option('--color <color>', 'Header color (blue/red/green/orange)', 'blue')
-  .option('--target <id>', 'Target User/Chat ID')
-  .option('--lang <lang>', 'Language (en|cn)', 'en')
-  .parse(process.argv);
-
-const options = program.opts();
-
 const STATE_FILE = path.resolve(__dirname, '../../memory/evolution_state.json');
 
 function getCycleInfo() {
@@ -182,7 +171,7 @@ async function findEvolutionGroup() {
             if (data.data && data.data.items) {
                 const group = data.data.items.find(c => c.name && c.name.includes('🧬'));
                 if (group) {
-                    console.log(`[Wrapper] Found Evolution Group: ${group.name} (${group.chat_id})`);
+                    // console.log(`[Wrapper] Found Evolution Group: ${group.name} (${group.chat_id})`);
                     return group.chat_id;
                 }
             }
@@ -195,40 +184,38 @@ async function findEvolutionGroup() {
     return null;
 }
 
-// Resolve content
-let content = options.status || '';
-if (options.file) {
-    try {
-        content = fs.readFileSync(options.file, 'utf8');
-    } catch (e) {
-        console.error(`Failed to read file: ${options.file}`);
-        process.exit(1);
+async function sendReport(options) {
+    // Resolve content
+    let content = options.status || options.content || '';
+    if (options.file) {
+        try {
+            content = fs.readFileSync(options.file, 'utf8');
+        } catch (e) {
+            console.error(`Failed to read file: ${options.file}`);
+            throw e;
+        }
     }
-}
 
-if (!content) {
-    console.error('Error: Must provide --status or --file');
-    process.exit(1);
-}
-
-// Prepare Title
-const cycleInfo = options.cycle ? { id: options.cycle, duration: 'Manual' } : getCycleInfo();
-const cycleId = cycleInfo.id;
-let title = options.title;
-
-if (!title) {
-    // Default title based on lang
-    if (options.lang === 'cn') {
-        title = `🧬 进化 #${cycleId} 日志`;
-    } else {
-        title = `🧬 Evolution #${cycleId} Log`;
+    if (!content && !options.dashboard) {
+        throw new Error('Must provide --status or --file (unless --dashboard is set)');
     }
-}
 
-// Resolve Target
-const MASTER_ID = process.env.OPENCLAW_MASTER_ID || '';
+    // Prepare Title
+    const cycleInfo = options.cycle ? { id: options.cycle, duration: 'Manual' } : getCycleInfo();
+    const cycleId = cycleInfo.id;
+    let title = options.title;
 
-(async () => {
+    if (!title) {
+        // Default title based on lang
+        if (options.lang === 'cn') {
+            title = `🧬 进化 #${cycleId} 日志`;
+        } else {
+            title = `🧬 Evolution #${cycleId} Log`;
+        }
+    }
+
+    // Resolve Target
+    const MASTER_ID = process.env.OPENCLAW_MASTER_ID || '';
     let target = options.target;
 
     // Priority: CLI Target > Evolution Group (🧬) > Master ID
@@ -242,8 +229,7 @@ const MASTER_ID = process.env.OPENCLAW_MASTER_ID || '';
     }
 
     if (!target) {
-        console.error('[Wrapper] Error: No target ID found (Env OPENCLAW_MASTER_ID missing and no --target).');
-        process.exit(1);
+        throw new Error('No target ID found (Env OPENCLAW_MASTER_ID missing and no --target).');
     }
 
     // --- DASHBOARD SNAPSHOT ---
@@ -272,7 +258,21 @@ const MASTER_ID = process.env.OPENCLAW_MASTER_ID || '';
         try {
             procCount = sysMon.getProcessCount();
             memUsage = Math.round(process.memoryUsage().rss / 1024 / 1024);
-            uptime = Math.round(process.uptime());
+            // Use wrapper daemon uptime, not this short-lived report process uptime.
+            const wrapperPidFile = path.resolve(__dirname, '../../memory/evolver_wrapper.pid');
+            if (fs.existsSync(wrapperPidFile)) {
+                const pid = parseInt(fs.readFileSync(wrapperPidFile, 'utf8').trim(), 10);
+                if (Number.isFinite(pid) && pid > 1) {
+                    try {
+                        const et = execSync(`ps -o etimes= -p ${pid}`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+                        const secs = parseInt(et, 10);
+                        if (Number.isFinite(secs) && secs >= 0) uptime = secs;
+                    } catch (_) {
+                        uptime = Math.round(process.uptime());
+                    }
+                }
+            }
+            if (uptime === '?') uptime = Math.round(process.uptime());
             loadAvg = os.loadavg()[0].toFixed(2);
             diskUsage = sysMon.getDiskUsage('/');
         } catch(e) {
@@ -344,7 +344,6 @@ const MASTER_ID = process.env.OPENCLAW_MASTER_ID || '';
         // --- LOOP STATUS CHECK ---
         let loopStatus = 'UNKNOWN';
         try {
-            const lifecycle = require('./lifecycle.js');
             // Mock status call to avoid exec/logs spam if possible, or use status --json?
             // Actually lifecycle.status() prints to console. We should export a helper.
             // For now, assume if pid file exists, it's running.
@@ -364,21 +363,48 @@ const MASTER_ID = process.env.OPENCLAW_MASTER_ID || '';
 
         const finalContent = `${content}${errorAlert}${healthAlert}${dashboardMd}`;
 
+        // --- DASHBOARD MODE ---
+        let cardData = null;
+        if (options.dashboard) {
+            console.log('[Wrapper] Generating rich dashboard card...');
+            // Normalize stats if null (stats is already defined above from getDashboardStats())
+            const safeStats = stats || { total: 0, successRate: '0.0', intents: { innovate:0, repair:0, optimize:0 }, recent: [] };
+            
+            cardData = generateDashboardCard(
+                safeStats,
+                {
+                    proc: procCount, mem: memUsage, uptime: uptime, load: loadAvg, disk: diskUsage, loopStatus: loopStatus,
+                    errorAlert: errorAlert, healthAlert: healthAlert
+                },
+                { id: cycleId, duration: cycleInfo.duration }
+            );
+        }
+
         // --- DEDUP CHECK ---
         var statusHash = crypto.createHash('md5').update(options.status || '').digest('hex').slice(0, 12);
         var reportKey = `${cycleId}:${target}:${title}:${statusHash}`;
         if (isDuplicateReport(reportKey)) {
             console.log('[Wrapper] Duplicate report suppressed.');
-            process.exit(0);
+            return;
         }
 
-        await sendCard({
-            target: target,
-            title: title,
-            text: finalContent,
-            note: footerStats,
-            color: options.color || 'blue'
-        });
+        if (options.dashboard && cardData) {
+            // Dashboard mode: use cardData elements
+            await sendCard({
+                target: target,
+                cardData: cardData,
+                note: footerStats // Keep footer
+            });
+        } else {
+            // Standard mode: text + dashboard snapshot
+            await sendCard({
+                target: target,
+                title: title,
+                text: finalContent,
+                note: footerStats,
+                color: options.color || 'blue'
+            });
+        }
         
         console.log('[Wrapper] Report sent successfully.');
 
@@ -393,6 +419,29 @@ const MASTER_ID = process.env.OPENCLAW_MASTER_ID || '';
         }
     } catch (e) {
         console.error('[Wrapper] Report failed:', e.message);
-        process.exit(1);
+        throw e;
     }
-})();
+}
+
+// CLI Logic
+if (require.main === module) {
+    program
+      .option('-s, --status <text>', 'Status text/markdown content')
+      .option('--content <text>', 'Alias for --status (compatibility)')
+      .option('-f, --file <path>', 'Path to markdown file content')
+      .option('-c, --cycle <id>', 'Evolution Cycle ID')
+      .option('--title <text>', 'Card Title override')
+      .option('--color <color>', 'Header color (blue/red/green/orange)', 'blue')
+      .option('--target <id>', 'Target User/Chat ID')
+      .option('--lang <lang>', 'Language (en|cn)', 'en')
+      .option('--dashboard', 'Send rich dashboard card instead of plain text')
+      .parse(process.argv);
+
+    const options = program.opts();
+    sendReport(options).catch(err => {
+        console.error(err);
+        process.exit(1);
+    });
+}
+
+module.exports = { sendReport };

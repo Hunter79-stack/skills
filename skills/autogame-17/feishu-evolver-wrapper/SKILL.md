@@ -11,10 +11,16 @@ node skills/feishu-evolver-wrapper/index.js
 
 # Generate Evolution Dashboard (Markdown)
 node skills/feishu-evolver-wrapper/visualize_dashboard.js
+
+# Lifecycle Management (Start/Stop/Status/Ensure)
+node skills/feishu-evolver-wrapper/lifecycle.js status
 ```
 
-## Features
+## Architecture
 
 - **Evolution Loop**: Runs the GEP evolution cycle with Feishu reporting.
-- **Dashboard**: visualizing metrics and history from `assets/gep/events.jsonl`.
+- **Dashboard**: Visualizing metrics and history from `assets/gep/events.jsonl`.
 - **Export History**: Exports raw history to Feishu Docs.
+- **Watchdog**: Managed via OpenClaw Cron job `evolver_watchdog_robust` (runs `lifecycle.js ensure` every 10 min).
+  - Replaces fragile system crontab logic.
+  - Ensures the loop restarts if it crashes or hangs.

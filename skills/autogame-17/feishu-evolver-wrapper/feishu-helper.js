@@ -17,7 +17,7 @@ function scanForSecrets(content) {
     }
 }
 
-async function sendCard({ target, title, text, color, note }) {
+async function sendCard({ target, title, text, color, note, cardData }) {
     if (!target) {
         throw new Error("Target ID is required");
     }
@@ -64,6 +64,14 @@ async function sendCard({ target, title, text, color, note }) {
             title: { tag: 'plain_text', content: title },
             template: color || 'blue'
         };
+    } else if (cardData && cardData.header) {
+        // Allow pre-built header from dashboard
+        card.header = cardData.header;
+    }
+
+    // Allow passing raw 'elements' array via cardData
+    if (cardData && cardData.elements) {
+        card.elements = cardData.elements;
     }
 
     var payload = {
