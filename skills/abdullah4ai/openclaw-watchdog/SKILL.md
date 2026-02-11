@@ -1,6 +1,39 @@
+---
+name: openclaw-watchdog
+description: Self-healing monitoring system for OpenClaw gateway. Auto-detects failures, fixes crashes, and sends Telegram alerts.
+homepage: https://github.com/Abdullah4AI/openclaw-watchdog
+metadata:
+  openclaw:
+    emoji: "🐕"
+    disableModelInvocation: true
+    requires:
+      bins: ["python3", "openssl"]
+      env:
+        - name: TELEGRAM_TOKEN
+          description: "Telegram bot token from @BotFather for sending alerts"
+          required: true
+        - name: TELEGRAM_CHAT_ID
+          description: "User's Telegram chat ID for receiving alerts"
+          required: true
+    install:
+      - id: setup
+        kind: script
+        script: "scripts/setup.sh"
+        args: ["--telegram-token", "$TELEGRAM_TOKEN", "--telegram-chat-id", "$TELEGRAM_CHAT_ID"]
+        label: "Install watchdog service (LaunchAgent/systemd user)"
+        persistence: "user-level"
+        service: true
+---
+
 # openclaw-watchdog
 
-**Description:** Self-healing monitoring system for OpenClaw gateway. Monitors health, auto-restarts on failure, and sends Telegram alerts. All diagnostics run locally — no data leaves the device. Use when user wants to set up gateway monitoring, watchdog, or auto-recovery.
+**Description:** Self-healing monitoring system for OpenClaw gateway. Monitors health, auto-restarts on failure, and sends Telegram alerts. Diagnostics and log analysis run locally on-device. Alert notifications are sent to the user's Telegram bot. Use when user wants to set up gateway monitoring, watchdog, or auto-recovery.
+
+## Prerequisites
+- **Telegram Bot Token** — Create via [@BotFather](https://t.me/BotFather)
+- **Telegram Chat ID** — Your personal chat ID for receiving alerts
+- **Python 3** — Required for the watchdog service
+- **OpenClaw** — Installed and running
 
 ## Trigger Keywords
 - watchdog, monitoring, auto-fix, gateway health, self-healing, auto-recovery, watch dog
@@ -46,7 +79,7 @@ print('Token valid:', resp['result']['username'])
 chmod +x ~/.openclaw/workspace/openclaw-watchdog/scripts/setup.sh
 ~/.openclaw/workspace/openclaw-watchdog/scripts/setup.sh \
   --telegram-token "$TELEGRAM_TOKEN" \
-  --telegram-chat-id "$CHAT_ID"
+  --telegram-chat-id "$TELEGRAM_CHAT_ID"
 ```
 
 ### 3. Connect via Telegram (Pairing)
@@ -60,7 +93,7 @@ req = urllib.request.Request(f'https://api.telegram.org/bot{token}/sendMessage',
 resp = json.loads(urllib.request.urlopen(req).read())
 assert resp.get('ok'), 'Failed to send message'
 print('Test message sent!')
-" "$TELEGRAM_TOKEN" "$CHAT_ID"
+" "$TELEGRAM_TOKEN" "$TELEGRAM_CHAT_ID"
 ```
 Wait for user to confirm they received the Telegram message before proceeding.
 

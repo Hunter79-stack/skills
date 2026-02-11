@@ -1,13 +1,18 @@
 {
   "owner": "abdullah4ai",
   "slug": "openclaw-watchdog",
-  "displayName": "OpenClaw Watch Dog",
+  "displayName": "OpenClaw Watchdog",
   "latest": {
-    "version": "1.0.5",
-    "publishedAt": 1770755399488,
-    "commit": "https://github.com/openclaw/skills/commit/eaf7797a5c8e8bf082ba8ea60d696530bb0ba8cd"
+    "version": "1.1.2",
+    "publishedAt": 1770783639924,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.5",
+      "publishedAt": 1770755399488,
+      "commit": "https://github.com/openclaw/skills/commit/eaf7797a5c8e8bf082ba8ea60d696530bb0ba8cd"
+    },
     {
       "version": "1.0.2",
       "publishedAt": 1770743692443,
