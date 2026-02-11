@@ -1,6 +1,8 @@
 ---
 name: supabase
 description: Query Supabase projects - count users, list signups, check stats. Use for database queries and user analytics.
+user-invocable: true
+disable-model-invocation: true
 triggers:
   - supabase
   - database
@@ -10,6 +12,10 @@ triggers:
 metadata:
   clawdbot:
     emoji: "⚡"
+    primaryEnv: SUPABASE_SERVICE_KEY
+    requires:
+      bins: [python3]
+      env: [SUPABASE_URL, SUPABASE_SERVICE_KEY]
 ---
 
 # Supabase ⚡
@@ -154,6 +160,33 @@ Last 5 signups:
 • Jordan Taylor <jordan@acme.co> (github) - 2026-01-22
 ```
 
+## GraphQL API (pg_graphql)
+
+⚠️ **pg_graphql is disabled by default** on new Supabase projects (as of late 2025).
+
+If you need the GraphQL API:
+
+### Enable pg_graphql
+```sql
+-- Run in SQL Editor
+create extension if not exists pg_graphql;
+```
+
+### Endpoint
+```
+https://<PROJECT_REF>.supabase.co/graphql/v1
+```
+
+### Example Query
+```bash
+curl -X POST https://<PROJECT_REF>.supabase.co/graphql/v1 \
+  -H 'apiKey: <API_KEY>' \
+  -H 'Content-Type: application/json' \
+  --data-raw '{"query": "{ accountCollection(first: 1) { edges { node { id } } } }"}'
+```
+
+Note: GraphQL automatically reflects your database schema. Tables/views in `public` schema become queryable. See [Supabase GraphQL docs](https://supabase.com/docs/guides/graphql) for configuration.
+
 ## Troubleshooting
 
 ### "list-users requires a JWT service_role key"
@@ -166,11 +199,26 @@ The new `sb_secret_` keys don't work with all endpoints. Switch to the JWT key.
 ### Keys not showing
 Make sure you're on the **"Legacy anon, service_role API keys"** tab, not the new API keys tab.
 
-## Security Note
+## Security & Permissions
 
-The `service_role` key has **full admin access** to your database. Keep it secure:
-- Never commit to git
+The `service_role` key has **full admin access** to your database. This skill requires it for the Auth Admin API (listing/counting users).
+
+**What this skill does:**
+- Makes GET requests to your Supabase project's Auth Admin API
+- Reads user metadata (email, name, provider, signup date)
+- All requests stay between your machine and your Supabase instance
+
+**What this skill does NOT do:**
+- Does not write, modify, or delete any data
+- Does not send credentials to any third party
+- Does not access any endpoints outside your Supabase project
+- Cannot be invoked autonomously by the agent (`disable-model-invocation: true`)
+
+**Least-privilege alternative:** Create a read-only Postgres role scoped to `auth.users` and use the Supabase SQL API instead of the Admin API.
+
+**Key safety:**
+- Never commit keys to git
 - Don't expose in client-side code
 - Only use on trusted machines
-
-The config file is automatically set to mode 600 (owner read/write only).
+- Config file is automatically set to mode 600 (owner read/write only)
+- Review `scripts/supabase.py` before first use
