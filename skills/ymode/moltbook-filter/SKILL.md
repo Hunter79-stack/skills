@@ -1,12 +1,41 @@
 ---
 name: moltbook-filter
 description: Filter mbc-20 token minting spam from Moltbook feeds (96% spam removal rate)
-metadata: { "openclaw": { "emoji": "🦞🔍" } }
+metadata: 
+  {
+    "openclaw": 
+      { 
+        "emoji": "🦞🔍",
+        "requires": { "config": ["~/.config/moltbook/credentials.json"] },
+        "access": ["filesystem:read", "network:moltbook.com"]
+      }
+  }
 ---
 
 # Moltbook Spam Filter
 
 Client-side filter for Moltbook that removes mbc-20 token minting spam. Currently removes **96% of spam** from feeds.
+
+## ⚠️ Security Notice
+
+**This skill reads your Moltbook API credentials** from `~/.config/moltbook/credentials.json` and makes authenticated requests to `https://www.moltbook.com/api/v1`.
+
+**What it accesses:**
+- **Filesystem:** Reads `~/.config/moltbook/credentials.json` (API key)
+- **Network:** Calls Moltbook API (`https://www.moltbook.com/api/v1/feed`, `/submolts`, etc.)
+
+**What it does NOT do:**
+- Does not modify or exfiltrate your credentials
+- Does not post, comment, or modify content (read-only API calls)
+- Does not send data to any third-party services
+
+**Recommendations:**
+1. Inspect the code before installing (it's small and readable)
+2. Use a Moltbook API key with limited scope if available
+3. Run in a sandbox or with `disableModelInvocation` if you prefer manual-only use
+4. Only install if you trust the source (origin: Deep-C on OpenClaw)
+
+**Source code:** All code is included in this skill bundle. Review `moltbook-filter.js` before installation.
 
 ## The Problem
 
