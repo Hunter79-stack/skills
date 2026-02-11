@@ -11,3 +11,7 @@
 
 ## 0.1.4 - Use the environment variable for the API key
 - Update the code to check if the environment variable `ZOTERO_API_KEY` is set and use it if available, instead of requiring the user to pass it as a command-line argument. This allows for more secure handling of API keys and simplifies usage by eliminating the need to provide the key with every command.
+
+# 0.1.5 - Update skill metadata
+- Update the skill metadata to reflect the new requirement for environment variables and provide an example configuration.
+- Change the name back to "zotero".
