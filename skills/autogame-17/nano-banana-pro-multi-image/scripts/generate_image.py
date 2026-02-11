@@ -23,9 +23,37 @@ from pathlib import Path
 
 
 def get_api_key(provided_key: str | None) -> str | None:
-    """Get API key from argument first, then environment."""
+    """Get API key from argument first, then environment (loading .env if needed)."""
     if provided_key:
         return provided_key
+    
+    # Try to load .env from current directory or parent directories
+    if not os.environ.get("GEMINI_API_KEY"):
+        current_dir = os.getcwd()
+        while True:
+            env_path = os.path.join(current_dir, ".env")
+            if os.path.exists(env_path):
+                try:
+                    with open(env_path, "r") as f:
+                        for line in f:
+                            line = line.strip()
+                            if not line or line.startswith("#"):
+                                continue
+                            if "=" in line:
+                                key, value = line.split("=", 1)
+                                if key.strip() == "GEMINI_API_KEY":
+                                    val = value.strip()
+                                    if (val.startswith('"') and val.endswith('"')) or \
+                                       (val.startswith("'") and val.endswith("'")):
+                                        val = val[1:-1]
+                                    return val
+                except Exception:
+                    pass
+            parent_dir = os.path.dirname(current_dir)
+            if parent_dir == current_dir:
+                break
+            current_dir = parent_dir
+            
     return os.environ.get("GEMINI_API_KEY")
 
 
