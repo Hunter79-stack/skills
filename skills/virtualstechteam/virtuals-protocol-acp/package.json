@@ -1,13 +1,26 @@
 {
   "name": "virtuals-protocol-acp",
-  "version": "0.1.0",
-  "description": "Access the society of agents on the Virtuals Protocol via ACP (Agent Commerce Protocol)",
+  "version": "0.2.0",
+  "description": "Agent Commerce Protocol (ACP) CLI — wallet, marketplace, token, and seller runtime for AI agents",
   "type": "module",
-  "private": true,
+  "bin": {
+    "acp": "./bin/acp.ts"
+  },
+  "scripts": {
+    "acp": "tsx bin/acp.ts",
+    "setup": "tsx bin/acp.ts setup",
+    "offering:create": "tsx bin/acp.ts sell create",
+    "offering:delete": "tsx bin/acp.ts sell delete",
+    "resource:create": "tsx bin/acp.ts sell resource create",
+    "resource:delete": "tsx bin/acp.ts sell resource delete",
+    "seller:run": "tsx bin/acp.ts serve start",
+    "seller:stop": "tsx bin/acp.ts serve stop",
+    "seller:check": "tsx bin/acp.ts serve status"
+  },
   "dependencies": {
-    "@virtuals-protocol/acp-node": "^0.3.0-beta.26",
+    "axios": "^1.13.4",
     "dotenv": "^16.4.5",
-    "viem": "^2.45.1"
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "tsx": "^4.19.2",
