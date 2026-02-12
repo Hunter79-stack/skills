@@ -6,6 +6,16 @@
 
 Companion skill for the [OpenClaw Unity Plugin](https://github.com/TomLeeLive/openclaw-unity-plugin). Provides AI workflow patterns and gateway extension for Unity Editor control.
 
+## ⚠️ Disclaimer
+
+This software is in **beta**. Use at your own risk.
+
+- Always backup your project before using
+- Test in a separate project first
+- The authors are not responsible for any data loss or project corruption
+
+See [LICENSE](LICENSE) for full terms.
+
 ## Installation
 
 ```bash
@@ -24,8 +34,8 @@ openclaw gateway restart
 
 ```
 unity-plugin/
-├── SKILL.md           # AI workflow guide (52 tools)
-├── extension/         # Gateway extension (required)
+├── SKILL.md           # AI workflow guide (~82 tools)
+├── extension/         # Gateway extension (for OpenClaw channels)
 │   ├── index.ts
 │   ├── openclaw.plugin.json
 │   └── package.json
@@ -35,13 +45,31 @@ unity-plugin/
     └── tools.md       # Detailed tool documentation
 ```
 
+## Connection Modes
+
+| Mode | Use Case | Setup |
+|------|----------|-------|
+| **Gateway** | Telegram, Discord, OpenClaw channels | Extension install + Gateway restart |
+| **MCP Bridge** | Claude Code, Cursor, local AI | Unity: Window → OpenClaw Plugin → MCP Bridge → Start |
+
+### MCP Setup (for Claude Code)
+
+```bash
+# Add to Claude Code
+claude mcp add unity -- node /path/to/unity-plugin/MCP~/index.js
+
+# Verify connection
+curl http://127.0.0.1:27182/status
+```
+
 ## Components
 
 | Component | Purpose | Location |
 |-----------|---------|----------|
 | **Gateway Extension** | Enables `unity_execute` tool | `~/.openclaw/extensions/unity/` |
 | **Skill** | AI workflow patterns | `~/.openclaw/workspace/skills/unity-plugin/` |
-| **Unity Package** | Unity Editor plugin | [openclaw-unity-plugin](https://github.com/TomLeeLive/openclaw-unity-plugin) |
+| **Unity Package** | Unity Editor plugin + MCP Bridge | [openclaw-unity-plugin](https://github.com/TomLeeLive/openclaw-unity-plugin) |
+| **MCP Server** | Local stdio server for Claude Code | Plugin's `MCP~/index.js` |
 
 ## Quick Verify
 
