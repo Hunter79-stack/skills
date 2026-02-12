@@ -3,11 +3,16 @@
   "slug": "competitor-analysis",
   "displayName": "Competitor Analysis",
   "latest": {
-    "version": "1.0.2",
-    "publishedAt": 1770739800137,
-    "commit": "https://github.com/openclaw/skills/commit/192c031ee1fe8c415ba70d419e288db106b60e88"
+    "version": "1.0.3",
+    "publishedAt": 1770824331499,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.2",
+      "publishedAt": 1770739800137,
+      "commit": "https://github.com/openclaw/skills/commit/192c031ee1fe8c415ba70d419e288db106b60e88"
+    },
     {
       "version": "1.0.1",
       "publishedAt": 1770559649013,
