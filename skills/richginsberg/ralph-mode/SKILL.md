@@ -464,3 +464,88 @@ Common anti-patterns observed:
 | Path assumptions | Wrong directory, wrong files | Explicit verification |
 | No completion signal | Parent waits indefinitely | Clear COMPLETE status |
 | Infinite iteration | Resource waste, no progress | Time limits + blockers |
+| Complex initial prompts | Sub-agent never starts (empty session logs) | SIMPLIFY instructions |
+
+## NEW: Session Initialization Best Practices (2025-02-07)
+
+### Problem: Sub-agents spawn but don't execute
+**Evidence:** Empty session logs (2 bytes), no tool calls, 0 tokens used
+
+### Root Causes
+1. **Instructions too complex** - Overwhelms isolated session initialization
+2. **No clear execution trigger** - Agent doesn't know to start
+3. **Branching logic** - "If X do Y, if Z do W" confuses task selection
+4. **Multiple files mentioned** - Can't decide which to start with
+
+### Fix: SIMPLIFIED Ralph Task Template
+
+```markdown
+## Task: [ONE specific thing]
+
+**File:** exact/path/to/file.ts
+**What:** Exact description of change
+**Validate:** Exact command to run
+**Then:** Update PROGRESS.md and exit
+
+## Rules
+1. Do NOT look at other files
+2. Do NOT "check first"
+3. Make the change, validate, exit
+```
+
+### BEFORE (Bad - causes stalls):
+```
+Fix all TypeScript errors across these files:
+- lib/db.ts has 2 errors
+- lib/proposal-service.ts has 5 errors
+- route.ts has errors
+Check which ones to fix first, then...
+```
+
+### AFTER (Good - executes):
+```
+Fix lib/db.ts line 27:
+Change: PoolClient to pg.PoolClient
+Validate: npm run typecheck
+Exit immediately after
+```
+
+### CRITICAL: Single File Rule
+Each Ralph iteration gets ONE file. Not "all errors", not "check then decide". ONE file, ONE change, validate, exit.
+
+### CRITICAL: Update PROGRESS.md
+**MANDATORY:** After EVERY iteration, update PROGRESS.md with:
+```markdown
+## Iteration [N] - [Timestamp]
+
+### Status: Complete ✅ | Blocked ⛔ | Failed ❌
+
+### What Was Done
+- [Specific changes made]
+
+### Validation
+- [Test/lint/typecheck results]
+
+### Next Step
+- [What should happen next]
+```
+
+**Why this matters:** Cron job reads PROGRESS.md for status updates. If not updated, status appears stale/repetitive.
+
+### Debugging Ralph Stalls
+If Ralph stalls:
+1. Check session logs (should show tool calls within 60s)
+2. If empty after spawn → instructions too complex
+3. Reduce: ONE file, ONE line number, ONE change
+4. Shorter timeout forces smaller tasks (300s not 600s)
+
+### Fixing Stale Status Reports
+If cron reports same status repeatedly:
+1. Check PROGRESS.md was updated by sub-agent
+2. If not updated → sub-agent skipped documentation step
+3. Update skill: Add "MANDATORY PROGRESS.md update" to prompt
+4. Manual fix: Update PROGRESS.md to reflect actual state
+
+## Summary
+Ralph works when: Single file focus + explicit change + validate + exit
+Ralph stalls when: Complex decisions + multiple files + conditional logic
