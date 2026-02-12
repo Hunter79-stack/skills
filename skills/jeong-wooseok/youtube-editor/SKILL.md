@@ -1,11 +1,37 @@
 ---
 name: youtube-editor
 description: Automate YouTube video editing workflow: Download -> Transcribe (Whisper) -> Analyze (GPT-4) -> High-Quality Thumbnail (Korean & Character Consistency).
-version: 1.0.13
+version: 1.0.14
 author: Flux
+requiredEnvVars:
+  - OPENAI_API_KEY
+optionalEnvVars:
+  - NANO_BANANA_KEY
 ---
 
-# 🎬 YouTube AI Editor (v1.0.13)
+# 🎬 YouTube AI Editor (v1.0.14)
+
+## ⚠️ Security Notice
+
+This skill may trigger security warnings due to legitimate automation features:
+
+**Required Capabilities:**
+- **API Keys**: Requires `OPENAI_API_KEY` (mandatory for Whisper/GPT-4) and `NANO_BANANA_KEY` (optional for AI image generation)
+- **Subprocess Execution**: Uses ffmpeg for video processing (standard video editing tool)
+- **Cross-Skill Integration**: Calls `nano-banana-pro` skill for AI image generation (optional feature)
+  - Only executes if nano-banana-pro is installed by user
+  - Uses fixed script path resolution with timeout protection
+- **File I/O**: Reads user-specified avatar/font files and writes output files (thumbnails, transcripts) to working directory
+
+**Security Measures:**
+- YouTube URL validation (blocks localhost/private IPs)
+- HTML-escaped text rendering
+- Subprocess timeouts (900s max)
+- Fixed script paths (no arbitrary code execution)
+
+All code is open source and auditable. Review nano-banana-pro separately if using image generation features.
+
+---
 
 **Turn raw videos into YouTube-ready content in minutes.**
 

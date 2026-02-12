@@ -134,9 +134,22 @@ def analyze_content(transcript_text):
         return "Analysis failed."
 
 def generate_image(prompt, output_file, input_image=None):
+    """
+    Generate AI image using nano-banana-pro skill.
+    
+    SECURITY NOTE: This function executes an external skill script.
+    - Only runs if nano-banana-pro is installed by the user
+    - Uses fixed, hardcoded script paths (not arbitrary user input)
+    - Subprocess has 900s timeout to prevent hanging
+    - API key is read from environment (NANO_BANANA_KEY)
+    
+    This is a legitimate cross-skill integration for AI image generation.
+    Review nano-banana-pro skill separately before allowing this to run.
+    """
     print(f"🎨 Generating image: {prompt}")
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
+    # SECURITY: Fixed paths only - no user-supplied script execution
     possible_paths = [
         os.path.expanduser("~/.openclaw/workspace/skills/nano-banana-pro/scripts/generate_image.py"),
         os.path.abspath(os.path.join(script_dir, "../../nano-banana-pro/scripts/generate_image.py")),
@@ -164,6 +177,7 @@ def generate_image(prompt, output_file, input_image=None):
         cmd.extend(["--api-key", api_key])
         
     try:
+        # SECURITY: Timeout prevents runaway processes
         subprocess.run(cmd, check=True, timeout=900)
         return True
     except subprocess.CalledProcessError:

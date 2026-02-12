@@ -3,11 +3,16 @@
   "slug": "youtube-editor",
   "displayName": "Youtube Editor",
   "latest": {
-    "version": "1.0.13",
-    "publishedAt": 1770776892544,
-    "commit": "https://github.com/openclaw/skills/commit/b1ad58ed182a711ae6d10b5e306fd0466cdb387a"
+    "version": "1.0.14",
+    "publishedAt": 1770815342011,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.13",
+      "publishedAt": 1770776892544,
+      "commit": "https://github.com/openclaw/skills/commit/b1ad58ed182a711ae6d10b5e306fd0466cdb387a"
+    },
     {
       "version": "1.0.12",
       "publishedAt": 1770722805234,
