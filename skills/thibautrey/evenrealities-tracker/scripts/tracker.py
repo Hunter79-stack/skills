@@ -2,6 +2,27 @@
 """
 Evenrealities Order Tracker
 Checks order status and notifies on changes
+
+DEPENDENCIES:
+- playwright (pip install playwright && playwright install)
+- No environment variables required for the tracker script itself
+- Telegram notifications handled by OpenClaw cron delivery mechanism
+
+MULTI-SHIPMENT SUPPORT:
+- Orders can have multiple shipments (e.g., smart ring sizing kit + final ring)
+- Tracking page shows combined status across all shipments
+- Status changes trigger notifications only when current status differs from history
+- Supports PENDING, SHIPPED, PROCESSING, DELIVERED, IN_PRODUCTION statuses
+
+SECURITY:
+- Input validation: Email and order_id are validated before use
+- No credential handling: This script only reads/writes local files and accesses public tracking page
+- Notifications: Handled by cron delivery mechanism (not embedded in script)
+
+Usage:
+  python3 tracker.py --check        # Check all orders now
+  python3 tracker.py --config       # Show configured orders
+  python3 tracker.py --history      # Show status history
 """
 
 import json
@@ -21,6 +42,19 @@ class EventrealitiesTracker:
         self.memory_dir.mkdir(exist_ok=True)
         self.config_file = self.memory_dir / "evenrealities-orders.json"
         self.status_history = self.memory_dir / "evenrealities-status-history.json"
+    
+    def _is_valid_email(self, email: str) -> bool:
+        """Validate email format to prevent injection"""
+        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        return bool(re.match(pattern, email))
+    
+    def _is_valid_order_id(self, order_id: str) -> bool:
+        """Validate order ID format (alphanumeric and common separators)"""
+        # Allow digits, letters, hyphens, underscores (typical order ID formats)
+        pattern = r'^[a-zA-Z0-9\-_]+$'
+        if len(order_id) > 50:  # Reasonable length limit
+            return False
+        return bool(re.match(pattern, order_id))
     
     def load_orders(self) -> List[Dict]:
         """Load orders from config file"""
@@ -66,8 +100,13 @@ class EventrealitiesTracker:
             email = order.get("email")
             order_id = order.get("order_id")
             
-            if not email or not order_id:
-                print(f"⚠️ Invalid order entry: {order}")
+            # Validate inputs
+            if not email or not self._is_valid_email(email):
+                print(f"⚠️ Invalid email in order entry: {order}")
+                continue
+            
+            if not order_id or not self._is_valid_order_id(order_id):
+                print(f"⚠️ Invalid order ID in entry: {order}")
                 continue
             
             key = self.get_order_key(email, order_id)

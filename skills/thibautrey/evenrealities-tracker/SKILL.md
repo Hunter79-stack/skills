@@ -8,11 +8,70 @@ description: Automate Evenrealities order monitoring (daily checks, status histo
 ## Summary
 
 - **Automatic monitoring**: checks each saved order every morning at 9 AM using `memory/evenrealities-orders.json`.
-- **Signal-only alerts**: Telegram notifications are sent only when an order’s status changed since the last run.
+- **Signal-only alerts**: Telegram notifications are sent only when an order's status changed since the last run.
 - **Persistent history**: every order keeps the last known status plus timestamp so you can spot regressions.
 - **Scriptable CLI**: `python3 scripts/tracker.py [--check|--config|--history]` lets you run the tracker or inspect config/history on demand.
+- **Multi-shipment support**: Orders can have multiple shipments (e.g., smart rings with optional sizing kits).
 
-The script quietly polls https://track.evenrealities.com, recomputes each order’s status, and only speaks up when there’s a meaningful change.
+The script quietly polls https://track.evenrealities.com, recomputes each order's status, and only speaks up when there's a meaningful change.
+
+## Prerequisites & Installation
+
+**System requirements:**
+- Python 3.7+
+- ~300-500MB disk space (for Playwright browser binaries)
+- Internet access (to reach track.evenrealities.com)
+
+**Install dependencies:**
+
+```bash
+# Install Python packages
+pip install -r skills/evenrealities-tracker/requirements.txt
+
+# Install Playwright browsers (one-time, required for browser automation)
+playwright install
+```
+
+**Security notes:**
+- Playwright will download chromium binaries (~300-500MB)
+- Review Playwright's installation docs: https://playwright.dev/python/docs/intro
+- No credentials are embedded in the script — it only accesses public tracking pages
+- Telegram notifications are handled by OpenClaw cron delivery mechanism (not in script)
+- All sensitive files (history, config) are stored locally in `memory/` directory
+
+## Understanding Evenrealities Smart Ring Orders
+
+Evenrealities manufactures **smart rings** in different sizes. When ordering, customers can optionally request a **sizing kit** — a collection of all sizes to try on and find the correct fit.
+
+### Order Workflow
+
+1. **Order 1: Sizing Kit (Optional)**
+   - Customer receives ring in all available sizes
+   - Status tracked separately from main order
+   - Typically ships first
+
+2. **Order 2: Final Ring (After Sizing)**
+   - Once customer determines correct size, they return to Evenrealities
+   - Specify the correct size on the order tracking page
+   - Final ring ships separately with the customer's size
+   - Typically ships after sizing kit is returned/processed
+
+### How This Affects Tracking
+
+- **Single Shipment Orders**: Only one status to track (no sizing kit requested)
+  - Example: Direct purchase of known size → Single "SHIPPED" status
+
+- **Multi-Shipment Orders**: Two separate shipments with independent statuses
+  - Sizing kit shipment: `PROCESSING` → `SHIPPED`
+  - Final ring shipment: `PENDING` (waiting for size confirmation) → `PROCESSING` → `SHIPPED`
+
+### Important Note
+
+The tracker will show the **combined order status** — if the order has been split into multiple shipments:
+- First shipment status (sizing kit or direct ring)
+- You may see: "SHIPPED (sizing kit received, waiting for final ring)"
+
+Monitor both statuses for complete visibility of your order fulfillment.
 
 ## Quick Start
 
@@ -88,7 +147,7 @@ Output example:
 📦 Checking: other@example.com / Order #ORD-789012
    Status: PROCESSING
    ✨ CHANGED: PENDING → PROCESSING
-   
+
 ✨ 1 change(s) detected!
    📦 ORD-789012: PENDING → PROCESSING
 ```
@@ -168,18 +227,27 @@ Time: 2026-02-02 09:00 AM
 ✓ First check (no previous status to compare)
 ✓ No orders configured
 
-## Browser Automation (Fast Browser Use)
+## Browser Automation (Playwright)
 
-The skill uses the `fast-browser-use` skill to:
+The skill uses **Playwright** (direct, not via fast-browser-use) for browser automation:
 
 1. Navigate to https://track.evenrealities.com
-2. Fill email field
-3. Fill order ID field
+2. Fill email field (validated before use)
+3. Fill order ID field (validated before use)
 4. Click confirmation button
 5. Wait 1-2 seconds for page response
 6. Extract status text from result
+7. Close browser gracefully
 
-No manual intervention needed — fully automated.
+**Why Playwright directly?**
+- Dedicated, well-tested library for headless browser control
+- No extra skill dependencies needed
+- Direct access to page content and timing control
+
+**Security:**
+- Email and order ID are validated before being sent to the browser
+- No sensitive credentials passed to browser
+- Browser session is ephemeral (created/destroyed per check)
 
 ## Workflow
 
