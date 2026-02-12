@@ -1,0 +1,11 @@
+{
+  "owner": "operator-auteng-ai",
+  "slug": "auteng-docs-curl-publish",
+  "displayName": "Auteng Docs Curl Publish",
+  "latest": {
+    "version": "1.0.2",
+    "publishedAt": 1770870542392,
+    "commit": null
+  },
+  "history": []
+}
