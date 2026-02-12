@@ -9,7 +9,6 @@ import json
 import os
 import signal
 import random
-import re
 import time
 import urllib.parse
 import urllib.request
@@ -140,38 +139,6 @@ def _env(name: str) -> str | None:
     return v or None
 
 
-def _load_creds_from_html(path: str) -> Creds | None:
-    """Optional helper: extract ConsumerKey/Secret + TokenValue/Secret from the saved registration HTML."""
-    try:
-        html = open(path, "r", encoding="utf-8", errors="ignore").read()
-    except Exception:
-        return None
-
-    def grab(label: str) -> str | None:
-        # The registration page uses inconsistent markup; be flexible.
-        # Strategy: find the label cell, then capture the next hex token in the following <td>.
-        patterns = [
-            # e.g. <b> ConsumerKey </b> </td><td ...> 74F... </td>
-            rf"{re.escape(label)}\s*<\/b>\s*<\/td>\s*<td[^>]*>\s*([0-9A-F]+)",
-            # e.g. TokenValue</td> <td ...> 3F... </td>
-            rf"{re.escape(label)}\s*<\/td>\s*<td[^>]*>\s*([0-9A-F]+)",
-        ]
-        for pat in patterns:
-            m = re.search(pat, html, re.I)
-            if m:
-                return m.group(1).strip()
-        return None
-
-    ck = grab("ConsumerKey")
-    cs = grab("ConsumerSecret")
-    tv = grab("TokenValue")
-    ts = grab("TokenSecret")
-
-    if ck and cs and tv and ts:
-        return Creds(ck, cs, tv, ts)
-    return None
-
-
 def _load_creds_from_json(path: str) -> Creds | None:
     try:
         obj = json.loads(open(path, "r", encoding="utf-8").read())
@@ -195,24 +162,14 @@ def _load_creds_from_json(path: str) -> Creds | None:
 
 
 def load_creds(args) -> Creds:
-    # 1) Optional: config JSON
-    cfg = getattr(args, "config", None) or _env("BRICKLINK_CONFIG")
-    if not cfg:
-        default_cfg = str(_find_workspace_root() / "bricklink" / "config.json")
-        if os.path.exists(default_cfg):
-            cfg = default_cfg
-    if cfg:
+    # 1) Config JSON from workspace/bricklink/config.json only
+    cfg = str(_find_workspace_root() / "bricklink" / "config.json")
+    if os.path.exists(cfg):
         c = _load_creds_from_json(cfg)
         if c:
             return c
 
-    # 2) Optional: parse creds from saved registration HTML
-    if getattr(args, "creds_html", None):
-        c = _load_creds_from_html(args.creds_html)
-        if c:
-            return c
-
-    # 3) Env vars
+    # 2) Env vars
     ck = _env("BRICKLINK_CONSUMER_KEY")
     cs = _env("BRICKLINK_CONSUMER_SECRET")
     tv = _env("BRICKLINK_TOKEN_VALUE")
@@ -227,8 +184,8 @@ def load_creds(args) -> Creds:
 
     if missing:
         raise SystemExit(
-            "Missing BrickLink OAuth env vars: " + ", ".join(missing) +
-            "\nTip: set them or pass --creds-html to parse the saved registration HTML."
+            "Missing BrickLink OAuth creds: " + ", ".join(missing) +
+            "\nTip: set env vars or place config.json in workspace/bricklink/"
         )
 
     return Creds(ck, cs, tv, ts)  # type: ignore[arg-type]
@@ -614,7 +571,7 @@ def _compose_include_exclude(raw: str | None, include: list[str] | None, exclude
 
 def cmd_get_orders(args) -> int:
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
 
     params: dict[str, str] = {}
     if args.direction:
@@ -637,7 +594,7 @@ def cmd_get_orders(args) -> int:
 
 def cmd_get_order(args) -> int:
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
     url = f"{base}/orders/{int(args.order_id)}"
     data = api_call(creds, "GET", url)
     print(json.dumps(data, ensure_ascii=False, indent=2))
@@ -647,7 +604,7 @@ def cmd_get_order(args) -> int:
 def cmd_get_inventories(args) -> int:
     """GET /inventories with optional filters."""
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
 
     params: dict[str, str] = {}
 
@@ -678,7 +635,7 @@ def cmd_get_inventories(args) -> int:
 def cmd_get_inventory(args) -> int:
     """GET /inventories/{inventory_id}"""
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
     url = f"{base}/inventories/{int(args.inventory_id)}"
     data = api_call(creds, "GET", url)
     print(json.dumps(data, ensure_ascii=False, indent=2))
@@ -693,7 +650,7 @@ def _item_type_path(t: str) -> str:
 def cmd_get_item(args) -> int:
     """GET /items/{type}/{no}"""
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
     url = f"{base}/items/{_item_type_path(args.type)}/{urllib.parse.quote(str(args.no))}"
     data = api_call(creds, "GET", url)
     print(json.dumps(data, ensure_ascii=False, indent=2))
@@ -703,7 +660,7 @@ def cmd_get_item(args) -> int:
 def cmd_get_supersets(args) -> int:
     """GET /items/{type}/{no}/supersets"""
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
 
     params: dict[str, str] = {}
     if args.color_id is not None:
@@ -720,7 +677,7 @@ def cmd_get_supersets(args) -> int:
 def cmd_get_subsets(args) -> int:
     """GET /items/{type}/{no}/subsets"""
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
 
     params: dict[str, str] = {}
     if args.color_id is not None:
@@ -745,7 +702,7 @@ def cmd_get_subsets(args) -> int:
 def cmd_get_price_guide(args) -> int:
     """GET /items/{type}/{no}/price"""
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
 
     params: dict[str, str] = {}
     if args.color_id is not None:
@@ -774,7 +731,7 @@ def cmd_get_price_guide(args) -> int:
 def cmd_get_known_colors(args) -> int:
     """GET /items/{type}/{no}/colors"""
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
     url = f"{base}/items/{_item_type_path(args.type)}/{urllib.parse.quote(str(args.no))}/colors"
     data = api_call(creds, "GET", url)
     print(json.dumps(data, ensure_ascii=False, indent=2))
@@ -783,7 +740,7 @@ def cmd_get_known_colors(args) -> int:
 
 def cmd_get_order_items(args) -> int:
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
     url = f"{base}/orders/{int(args.order_id)}/items"
     data = api_call(creds, "GET", url)
     print(json.dumps(data, ensure_ascii=False, indent=2))
@@ -792,7 +749,7 @@ def cmd_get_order_items(args) -> int:
 
 def cmd_get_order_messages(args) -> int:
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
     url = f"{base}/orders/{int(args.order_id)}/messages"
     data = api_call(creds, "GET", url)
     print(json.dumps(data, ensure_ascii=False, indent=2))
@@ -801,7 +758,7 @@ def cmd_get_order_messages(args) -> int:
 
 def cmd_get_order_feedback(args) -> int:
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
     url = f"{base}/orders/{int(args.order_id)}/feedback"
     data = api_call(creds, "GET", url)
     print(json.dumps(data, ensure_ascii=False, indent=2))
@@ -811,7 +768,7 @@ def cmd_get_order_feedback(args) -> int:
 def cmd_get_feedback(args) -> int:
     """GET /feedback"""
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
 
     params: dict[str, str] = {}
     if args.direction:
@@ -827,7 +784,7 @@ def cmd_get_feedback(args) -> int:
 def cmd_get_feedback_item(args) -> int:
     """GET /feedback/{feedback_id}"""
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
     url = f"{base}/feedback/{int(args.feedback_id)}"
     data = api_call(creds, "GET", url)
     print(json.dumps(data, ensure_ascii=False, indent=2))
@@ -839,7 +796,7 @@ def cmd_post_feedback(args) -> int:
         raise SystemExit("Refusing to post feedback without --yes")
 
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
 
     body: dict[str, Any] = {}
     if args.json:
@@ -870,7 +827,7 @@ def cmd_reply_feedback(args) -> int:
         raise SystemExit("Refusing to reply to feedback without --yes")
 
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
 
     body: dict[str, Any] = {}
     if args.json:
@@ -896,7 +853,7 @@ def cmd_reply_feedback(args) -> int:
 def cmd_get_notifications(args) -> int:
     """GET /notifications"""
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
     url = f"{base}/notifications"
     data = api_call(creds, "GET", url)
     print(json.dumps(data, ensure_ascii=False, indent=2))
@@ -906,7 +863,7 @@ def cmd_get_notifications(args) -> int:
 def cmd_get_categories(args) -> int:
     """GET /categories"""
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
     url = f"{base}/categories"
     data = api_call(creds, "GET", url)
     print(json.dumps(data, ensure_ascii=False, indent=2))
@@ -916,7 +873,7 @@ def cmd_get_categories(args) -> int:
 def cmd_get_colors(args) -> int:
     """GET /colors"""
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
     url = f"{base}/colors"
     data = api_call(creds, "GET", url)
     print(json.dumps(data, ensure_ascii=False, indent=2))
@@ -926,7 +883,7 @@ def cmd_get_colors(args) -> int:
 def cmd_get_color(args) -> int:
     """GET /colors/{color_id}"""
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
     url = f"{base}/colors/{int(args.color_id)}"
     data = api_call(creds, "GET", url)
     print(json.dumps(data, ensure_ascii=False, indent=2))
@@ -936,7 +893,7 @@ def cmd_get_color(args) -> int:
 def cmd_get_category(args) -> int:
     """GET /categories/{category_id}"""
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
     url = f"{base}/categories/{int(args.category_id)}"
     data = api_call(creds, "GET", url)
     print(json.dumps(data, ensure_ascii=False, indent=2))
@@ -948,7 +905,7 @@ def cmd_create_inventory(args) -> int:
         raise SystemExit("Refusing to create inventory without --yes")
 
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
 
     body: dict[str, Any] = {}
     if args.json:
@@ -973,7 +930,7 @@ def cmd_create_inventories(args) -> int:
         raise SystemExit("Refusing to create inventories without --yes")
 
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
 
     items: list[dict[str, Any]] = []
     if args.json:
@@ -1008,7 +965,7 @@ def cmd_update_inventory(args) -> int:
         raise SystemExit("Refusing to update inventory without --yes")
 
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
 
     body: dict[str, Any] = {}
     if args.json:
@@ -1033,7 +990,7 @@ def cmd_delete_inventory(args) -> int:
         raise SystemExit("Refusing to delete inventory without --yes")
 
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
     inv_id = int(args.inventory_id)
     url = f"{base}/inventories/{inv_id}"
     data = api_call(creds, "DELETE", url)
@@ -1046,7 +1003,7 @@ def cmd_update_order(args) -> int:
         raise SystemExit("Refusing to modify an order without --yes")
 
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
 
     body: dict[str, Any] = {}
 
@@ -1099,7 +1056,7 @@ def cmd_update_order_status(args) -> int:
         raise SystemExit("Refusing to modify order status without --yes")
 
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
     oid = int(args.order_id)
     url = f"{base}/orders/{oid}/status"
     body = {"field": "status", "value": args.status}
@@ -1113,7 +1070,7 @@ def cmd_update_payment_status(args) -> int:
         raise SystemExit("Refusing to modify payment status without --yes")
 
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
     oid = int(args.order_id)
     url = f"{base}/orders/{oid}/payment_status"
     body = {"field": "payment_status", "value": args.payment_status}
@@ -1127,7 +1084,7 @@ def cmd_send_drive_thru(args) -> int:
         raise SystemExit("Refusing to send drive-thru email without --yes")
 
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
     oid = int(args.order_id)
 
     params = {}
@@ -1144,7 +1101,7 @@ def cmd_send_drive_thru(args) -> int:
 
 def cmd_order_detail_html(args) -> int:
     creds = load_creds(args)
-    base = (args.base or API_BASE_DEFAULT).rstrip("/")
+    base = API_BASE_DEFAULT
 
     oid = int(args.order_id)
     order = api_call(creds, "GET", f"{base}/orders/{oid}")
@@ -1163,9 +1120,10 @@ def cmd_order_detail_html(args) -> int:
 
     html = render_order_detail_html(order_data, norm_batches, inline_images=bool(getattr(args, "inline_images", False)))
 
-    out_path = args.out
-    if not out_path:
-        out_path = f"/tmp/bricklink_order_{oid}_detail.html"
+    from _pathguard import safe_output_path
+
+    raw_out = args.out or f"/tmp/bricklink_order_{oid}_detail.html"
+    out_path = str(safe_output_path(raw_out))
 
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(html)
@@ -1176,9 +1134,6 @@ def cmd_order_detail_html(args) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="BrickLink Store API CLI (OAuth 1.0)")
-    ap.add_argument("--base", default=API_BASE_DEFAULT, help=f"API base URL (default: {API_BASE_DEFAULT})")
-    ap.add_argument("--config", default=None, help="Path to config JSON containing BrickLink OAuth creds")
-    ap.add_argument("--creds-html", default=None, help="Optional: parse saved BrickLink consumer registration HTML")
 
     sub = ap.add_subparsers(dest="cmd", required=True)
 
