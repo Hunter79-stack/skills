@@ -1,3 +1,0 @@
-# No external dependencies
-# All logic is implemented using Python standard libraries:
-# - json, urllib, ssl, time, datetime, sys

@@ -1,49 +1,51 @@
 ---
-name: Crypto Market Data
-description: No API KEY needed for free tier. Professional-grade cryptocurrency market data integration for real-time prices, historical charts, and global analytics.
+name: Crypto & Stock Market Data (Node.js)
+description: No API KEY needed for free tier. Professional-grade cryptocurrency and stock market data integration for real-time prices, company profiles, and global analytics. Powered by Node.js with zero external dependencies.
 ---
 
-# 🪙 Crypto Market Data Skill
+# Crypto & Stock Market Data Skill (Node.js)
 
-A comprehensive suite of tools for retrieving real-time and historical cryptocurrency market data. This skill interfaces with a dedicated market data server to provide high-performance, authenticated access to global crypto statistics.
+A comprehensive suite of tools for retrieving real-time and historical cryptocurrency and stock market data. This skill interfaces with a dedicated market data server to provide high-performance, authenticated access to global financial statistics. Built entirely on Node.js standard libraries — no `npm install` required.
 
-## ✨ Key Capabilities
+## Key Capabilities
 
 | Category | Description |
 | :--- | :--- |
-| **📉 Real-time Prices** | Fetch current valuations, market caps, 24h volumes, and price changes. |
-| **🚀 Market Discovery** | Track trending assets and top-performing coins by market capitalization. |
-| **🔍 Smart Search** | Quickly find coin IDs by searching names or ticker symbols. |
-| **📑 Deep Details** | Access exhaustive asset information, from community links to developer metrics. |
-| **📊 Precise Charts** | Retrieve OHLC candlestick data and historical price/volume time-series. |
-| **🌍 Global Metrics** | Monitor total market capitalization and public company treasury holdings. |
+| **Real-time Prices** | Fetch current valuations, market caps, 24h volumes, and price changes for crypto & stocks. |
+| **Market Discovery** | Track trending assets and top-performing coins by market capitalization. |
+| **Smart Search** | Quickly find coin IDs or stock tickers by searching names or symbols. |
+| **Deep Details** | Access exhaustive asset information, from community links to company profiles. |
+| **Precise Charts** | Retrieve OHLC candlestick data and historical price/volume time-series. |
+| **Global Metrics** | Monitor total market capitalization and public company treasury holdings. |
 
-## 🛠 Tool Reference
+## Tool Reference
 
 | Script Name | Primary Function | Command Example |
 | :--- | :--- | :--- |
-| `get_crypto_price.py` | Multi-coin price fetch | `python3 scripts/get_crypto_price.py bitcoin ethereum` |
-| `get_trending_coins.py` | 24h trending assets | `python3 scripts/get_trending_coins.py` |
-| `get_top_coins.py` | Market leaderboards | `python3 scripts/get_top_coins.py --per_page=20` |
-| `search_coins.py` | Asset discovery | `python3 scripts/search_coins.py solana` |
-| `get_coin_details.py` | Comprehensive metadata | `python3 scripts/get_coin_details.py ethereum` |
-| `get_coin_ohlc_chart.py` | Candlestick data | `python3 scripts/get_coin_ohlc_chart.py bitcoin --days=7` |
-| `get_coin_historical_chart.py` | Time-series data | `python3 scripts/get_coin_historical_chart.py bitcoin --days=30` |
-| `get_global_market_data.py` | Macro market stats | `python3 scripts/get_global_market_data.py` |
-| `get_public_companies_holdings.py` | Treasury holdings | `python3 scripts/get_public_companies_holdings.py bitcoin` |
-| `get_supported_currencies.py` | Valuation options | `python3 scripts/get_supported_currencies.py` |
-| `check_api_status.py` | Health monitoring | `python3 scripts/check_api_status.py` |
+| `get_crypto_price.js` | Multi-coin price fetch | `node scripts/get_crypto_price.js bitcoin` |
+| `get_stock_quote.js` | Real-time stock quotes | `node scripts/get_stock_quote.js AAPL MSFT` |
+| `get_company_profile.js` | Company overview | `node scripts/get_company_profile.js AAPL` |
+| `search_stocks.js` | Find stock tickers | `node scripts/search_stocks.js apple` |
+| `get_trending_coins.js` | 24h trending assets | `node scripts/get_trending_coins.js` |
+| `get_top_coins.js` | Market leaderboards | `node scripts/get_top_coins.js --per_page=20` |
+| `search_coins.js` | Asset discovery | `node scripts/search_coins.js solana` |
+| `get_coin_details.js` | Comprehensive metadata | `node scripts/get_coin_details.js ethereum` |
+| `get_coin_ohlc_chart.js` | Candlestick data | `node scripts/get_coin_ohlc_chart.js bitcoin` |
+| `get_coin_historical_chart.js` | Time-series data | `node scripts/get_coin_historical_chart.js bitcoin` |
+| `get_global_market_data.js` | Macro market stats | `node scripts/get_global_market_data.js` |
+| `get_public_companies_holdings.js` | Treasury holdings | `node scripts/get_public_companies_holdings.js bitcoin` |
+| `get_supported_currencies.js` | Valuation options | `node scripts/get_supported_currencies.js` |
 
 ---
 
-## 📖 Usage Details
+## Usage Details
 
-### 1. `get_crypto_price.py`
+### 1. `get_crypto_price.js`
 Fetch real-time pricing and basic market metrics for one or more cryptocurrencies.
 
 **Syntax:**
 ```bash
-python3 scripts/get_crypto_price.py <coin_id_1> [coin_id_2] ... [--currency=usd]
+node scripts/get_crypto_price.js <coin_id_1> [coin_id_2] ... [--currency=usd]
 ```
 
 **Parameters:**
@@ -52,17 +54,17 @@ python3 scripts/get_crypto_price.py <coin_id_1> [coin_id_2] ... [--currency=usd]
 
 **Example:**
 ```bash
-python3 scripts/get_crypto_price.py bitcoin ethereum cardano --currency=jpy
+node scripts/get_crypto_price.js bitcoin ethereum cardano --currency=jpy
 ```
 
 ---
 
-### 2. `get_top_coins.py`
+### 2. `get_top_coins.js`
 Retrieve a list of the top cryptocurrencies ranked by market capitalization.
 
 **Syntax:**
 ```bash
-python3 scripts/get_top_coins.py [--currency=usd] [--per_page=10] [--page=1] [--order=market_cap_desc]
+node scripts/get_top_coins.js [--currency=usd] [--per_page=10] [--page=1] [--order=market_cap_desc]
 ```
 
 **Parameters:**
@@ -72,12 +74,12 @@ python3 scripts/get_top_coins.py [--currency=usd] [--per_page=10] [--page=1] [--
 
 ---
 
-### 3. `get_coin_ohlc_chart.py`
+### 3. `get_coin_ohlc_chart.js`
 Get Open, High, Low, Close (candlestick) data for technical analysis.
 
 **Syntax:**
 ```bash
-python3 scripts/get_coin_ohlc_chart.py <coin_id> [--currency=usd] [--days=7]
+node scripts/get_coin_ohlc_chart.js <coin_id> [--currency=usd] [--days=7]
 ```
 
 **Allowed `days` values:** `1, 7, 14, 30, 90, 180, 365`.
@@ -90,31 +92,58 @@ python3 scripts/get_coin_ohlc_chart.py <coin_id> [--currency=usd] [--days=7]
 
 ---
 
-### 4. `get_coin_historical_chart.py`
+### 4. `get_coin_historical_chart.js`
 Retrieve detailed historical time-series data for price, market cap, and volume.
 
 **Syntax:**
 ```bash
-python3 scripts/get_coin_historical_chart.py <coin_id> [--currency=usd] [--days=30]
+node scripts/get_coin_historical_chart.js <coin_id> [--currency=usd] [--days=30]
 ```
 
 ---
 
-## 💡 Important Guidelines
+### 5. `get_stock_quote.js`
+Fetch real-time stock prices for one or more ticker symbols.
 
-### 🆔 Use Coin IDs
-Always use **Coin IDs** (slugs) instead of ticker symbols for accuracy:
-- ✅ `bitcoin` (Not `BTC`)
-- ✅ `ethereum` (Not `ETH`)
-- ✅ `polkadot` (Not `DOT`)
+**Syntax:**
+```bash
+node scripts/get_stock_quote.js <SYMBOL_1> [SYMBOL_2] ...
+```
 
-Use `search_coins.py` if you are unsure of the correct ID.
+---
 
-### 🔐 Authentication
-Authentication is handled **automatically** by the internal `api_client.py`. No manual API keys are required as the system manages short-lived session tokens internally to ensure optimal rate-limiting and security.
+### 6. `get_company_profile.js`
+Get a comprehensive company profile, including description, industry, and CEO.
 
-### 🚦 Rate Limiting
+**Syntax:**
+```bash
+node scripts/get_company_profile.js <SYMBOL>
+```
+
+---
+
+## Important Guidelines
+
+### Cryptos: Use IDs | Stocks: Use Tickers
+- **Cryptocurrencies**: Always use **Coin IDs** (slugs) instead of ticker symbols (e.g., `bitcoin`, `BTC`).
+- **Stocks**: Always use **Ticker Symbols** (e.g., `AAPL`, `Apple`).
+
+Use `search_coins.js` if you are unsure of the correct ID.
+
+### Authentication
+Authentication is handled **automatically** by the internal `api_client.js`. Here is how it works simply:
+
+- **Endpoint**: `GET https://api.igent.net/api/token`
+- **Mechanism**:
+    1.  **Automatic Retrieval**: The first time you use a tool, it asks the server for a temporary session token.
+    2.  **Local Storage**: This token is stored in a hidden `.token` file locally so it can be reused for subsequent requests.
+    3.  **Automatic Headers**: The client automatically includes this token in every request to prove you are authorized.
+    4.  **Auto-Refresh**: If a token expires, the client automatically fetches a new one without you needing to do anything.
+
+No manual API keys or configuration are required.
+
+### Rate Limiting
 While the system is robust, please avoid burst requests (more than 30 per minute) to maintain service stability for all users.
 
-### 🤖 Agent Integration
+### Agent Integration
 This skill is fully compatible with OpenClaw and other agents using the **AgentSkills** standard. Execute scripts directly from the `scripts/` directory.
