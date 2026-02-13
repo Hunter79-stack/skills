@@ -1,6 +1,6 @@
 {
   "name": "oktk",
-  "version": "1.3.0",
+  "version": "2.4.0",
   "description": "LLM Token Optimizer - Reduce AI API costs by 60-90%. Compresses CLI outputs (git, docker, kubectl) for GPT-4, Claude, OpenAI. By Buba Draugelis.",
   "main": "scripts/oktk.js",
   "bin": {

@@ -1,13 +1,18 @@
 {
   "owner": "satnamra",
   "slug": "oktk",
-  "displayName": "oktk - LLM Token Optimizer | Save up to 90% tokens",
+  "displayName": "Oktk",
   "latest": {
-    "version": "2.3.1",
-    "publishedAt": 1770931393554,
-    "commit": "https://github.com/openclaw/skills/commit/386bd5ababbf8b493399693c015a28735e10519b"
+    "version": "2.4.0",
+    "publishedAt": 1770931665433,
+    "commit": null
   },
   "history": [
+    {
+      "version": "2.3.1",
+      "publishedAt": 1770931393554,
+      "commit": "https://github.com/openclaw/skills/commit/386bd5ababbf8b493399693c015a28735e10519b"
+    },
     {
       "version": "2.0.1",
       "publishedAt": 1770930969046,

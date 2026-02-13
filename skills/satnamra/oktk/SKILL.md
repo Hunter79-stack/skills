@@ -1,6 +1,6 @@
 ---
 name: oktk
-version: 2.3.0
+version: 2.4.0
 description: LLM Token Optimizer - Reduce AI API costs by 60-90%. Compresses CLI outputs (git, docker, kubectl) before sending to GPT-4/Claude. AI auto-learning included. By Buba Draugelis 🇱🇹
 author: Buba Draugelis
 license: MIT
@@ -128,19 +128,64 @@ Return raw output (same as without oktk)
 
 ## Usage
 
+### Global Command (Recommended)
+
+After installation, `oktk` is available globally:
+
 ```bash
-# Instead of raw command:
-git status
+# Pipe any command through oktk
+git status | oktk git status
+docker ps | oktk docker ps
+kubectl get pods | oktk kubectl get pods
 
-# Use through oktk:
-node skills/oktk/scripts/oktk.js git status
+# See your total savings
+oktk --stats
 
-# See your total savings:
-node skills/oktk/scripts/oktk.js gain
-
-# Bypass filter (get raw):
-node skills/oktk/scripts/oktk.js git status --raw
+# Bypass filter (get raw)
+oktk --raw git status
 ```
+
+### Shell Aliases (Auto-Filter)
+
+Source the aliases file for automatic filtering:
+
+```bash
+# Add to ~/.zshrc or ~/.bashrc
+source ~/.openclaw/workspace/skills/oktk/scripts/oktk-aliases.sh
+```
+
+Then use short aliases:
+
+```bash
+gst        # git status (filtered)
+glog       # git log (filtered)
+dps        # docker ps (filtered)
+kpods      # kubectl get pods (filtered)
+
+# Universal wrapper - filter ANY command
+ok git status
+ok docker ps -a
+ok kubectl describe pod my-pod
+```
+
+### OpenClaw Integration
+
+When using OpenClaw's exec tool, pipe outputs through oktk:
+
+```bash
+# In your prompts, ask OpenClaw to:
+git status | oktk git status
+docker logs container | oktk docker logs
+
+# Or use the 'ok' wrapper (if aliases sourced):
+ok git diff HEAD~5
+```
+
+**Note:** OpenClaw doesn't have a built-in exec output transformer yet. 
+The recommended approach is:
+1. Source the aliases file in your shell
+2. Use `ok <command>` wrapper for any command
+3. Or manually pipe: `<command> | oktk <command>`
 
 ## Real Savings Example
 
