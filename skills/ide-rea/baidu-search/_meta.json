@@ -1,13 +1,18 @@
 {
   "owner": "ide-rea",
   "slug": "baidu-search",
-  "displayName": "Baidu Search",
+  "displayName": "baidu web search",
   "latest": {
-    "version": "1.0.6",
-    "publishedAt": 1770655751929,
-    "commit": "https://github.com/openclaw/skills/commit/d1d39c0bd823ba51cb97607cfa8b64c2129bb306"
+    "version": "1.1.0",
+    "publishedAt": 1770955893565,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.6",
+      "publishedAt": 1770655751929,
+      "commit": "https://github.com/openclaw/skills/commit/d1d39c0bd823ba51cb97607cfa8b64c2129bb306"
+    },
     {
       "version": "1.0.5",
       "publishedAt": 1770608945826,
