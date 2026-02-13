@@ -34,9 +34,9 @@ Phase 1
 - **Status:** complete
 
 ### Phase 5: Publish
-- [ ] Publish to ClawHub as `med-info@0.2.0`
-- [ ] Verify listing updates
-- **Status:** in_progress
+- [x] Publish to ClawHub as `med-info@0.2.0`
+- [x] Verify listing updates
+- **Status:** complete
 
 ## Key Questions
 1. What is the most useful candidate summary for `--candidates` (set_id, effective_time, product, ingredients, route, dosage_form)?

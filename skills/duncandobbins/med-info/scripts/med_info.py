@@ -19,11 +19,14 @@ Env:
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import os
 import re
 import sys
 import time
+import zipfile
+from pathlib import Path
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -35,6 +38,38 @@ TIMEOUT_S = 20
 
 # Best-effort request traceability. Stores *redacted* URLs (api_key removed).
 URL_LOG: List[str] = []
+
+# Local cache for bulky public datasets.
+CACHE_DIR = Path(os.environ.get("MED_INFO_CACHE_DIR", os.path.expanduser("~/.cache/med-info")))
+
+
+def ensure_cache_dir() -> None:
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def cache_path(*parts: str) -> Path:
+    ensure_cache_dir()
+    return CACHE_DIR.joinpath(*parts)
+
+
+def cache_is_fresh(p: Path, max_age_days: int) -> bool:
+    if not p.exists():
+        return False
+    age_s = time.time() - p.stat().st_mtime
+    return age_s <= max_age_days * 86400
+
+
+def download_to(url: str, dest: Path) -> None:
+    ensure_cache_dir()
+    _log_url(url)
+    req = urllib.request.Request(url)
+    req.add_header("User-Agent", USER_AGENT)
+    with urllib.request.urlopen(req, timeout=TIMEOUT_S) as resp:
+        data = resp.read()
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_suffix(dest.suffix + ".tmp")
+    tmp.write_bytes(data)
+    tmp.replace(dest)
 
 
 def _redact_url(url: str) -> str:
@@ -114,8 +149,38 @@ def openfda_url(path: str, query: str, limit: int = 1) -> str:
     return base + "?" + urllib.parse.urlencode(params)
 
 
+# openFDA `search` uses a query syntax (Lucene-like). Treat all user-controlled input as untrusted.
+# We always wrap values in double-quotes and escape dangerous characters so the value is interpreted
+# literally, preventing query injection (e.g. closing quotes and adding OR clauses).
+_OPENFDA_CTRL_RE = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def openfda_escape_value(value: str) -> str:
+    v = (value or "").strip()
+    v = _OPENFDA_CTRL_RE.sub(" ", v)
+    # Escape backslashes first, then quotes.
+    v = v.replace("\\", "\\\\").replace('"', '\\"')
+    return v
+
+
+def openfda_qstr(value: str) -> str:
+    return '"' + openfda_escape_value(value) + '"'
+
+
+def openfda_qdigits(value: str, *, min_len: int = 1, max_len: int = 32) -> Optional[str]:
+    d = re.sub(r"\D", "", (value or ""))
+    if not d:
+        return None
+    if len(d) < min_len or len(d) > max_len:
+        return None
+    return d
+
+
 def openfda_label_by_rxcui(rxcui: str) -> Optional[Dict[str, Any]]:
-    q = f'openfda.rxcui:"{rxcui}"'
+    r = openfda_qdigits(rxcui, min_len=1, max_len=16)
+    if not r:
+        return None
+    q = f"openfda.rxcui:{openfda_qstr(r)}"
     url = openfda_url("/drug/label", q, limit=1)
     j = http_get_json(url, allow_404=True)
     res = j.get("results")
@@ -143,9 +208,9 @@ def openfda_label_candidates(name: str, limit: int = 10) -> List[Dict[str, Any]]
     """
     nm = _norm(name)
     q = (
-        f'(openfda.generic_name:"{name}" '
-        f'OR openfda.substance_name:"{name}" '
-        f'OR openfda.brand_name:"{name}")'
+        f"(openfda.generic_name:{openfda_qstr(name)} "
+        f"OR openfda.substance_name:{openfda_qstr(name)} "
+        f"OR openfda.brand_name:{openfda_qstr(name)})"
     )
     url = openfda_url("/drug/label", q, limit=limit)
     j = http_get_json(url, allow_404=True)
@@ -191,7 +256,10 @@ def openfda_label_by_generic_name(name: str) -> Optional[Dict[str, Any]]:
 
 def openfda_label_by_set_id(set_id: str) -> Optional[Dict[str, Any]]:
     # openFDA drug/label supports set_id queries.
-    q = f'set_id:"{set_id}"'
+    sid = (set_id or "").strip()
+    if not is_uuid_like(sid):
+        return None
+    q = f"set_id:{openfda_qstr(sid)}"
     url = openfda_url("/drug/label", q, limit=1)
     j = http_get_json(url, allow_404=True)
     res = j.get("results")
@@ -208,6 +276,8 @@ def openfda_ndc_lookup(ndc: str, limit: int = 5) -> List[Dict[str, Any]]:
     - `package_ndc` lives under `packaging[].package_ndc`.
     """
     ndc = (ndc or "").strip()
+    # Treat NDC input as untrusted. Keep only digits and hyphens.
+    ndc = re.sub(r"[^0-9-]", "", ndc)
     parts = [p for p in ndc.split("-") if p]
 
     product_ndc = None
@@ -221,13 +291,13 @@ def openfda_ndc_lookup(ndc: str, limit: int = 5) -> List[Dict[str, Any]]:
 
     terms: List[str] = []
     if product_ndc:
-        terms.append(f'product_ndc:"{product_ndc}"')
+        terms.append(f"product_ndc:{openfda_qstr(product_ndc)}")
     if package_ndc:
-        terms.append(f'packaging.package_ndc:"{package_ndc}"')
+        terms.append(f"packaging.package_ndc:{openfda_qstr(package_ndc)}")
 
     if not terms:
         # Fallback: best-effort exact match against both fields.
-        terms = [f'product_ndc:"{ndc}"', f'packaging.package_ndc:"{ndc}"']
+        terms = [f"product_ndc:{openfda_qstr(ndc)}", f"packaging.package_ndc:{openfda_qstr(ndc)}"]
 
     q = "(" + " OR ".join(terms) + ")"
     url = openfda_url("/drug/ndc", q, limit=limit)
@@ -247,6 +317,267 @@ def openfda_shortages_search(search: str, limit: int = 5) -> List[Dict[str, Any]
     url = openfda_url("/drug/shortages", search, limit=limit)
     j = http_get_json(url, allow_404=True)
     return j.get("results") or []
+
+
+def openfda_event_count(search: str, count_field: str, limit: int = 10) -> List[Dict[str, Any]]:
+    base = "https://api.fda.gov/drug/event.json"
+    params = {
+        "search": search,
+        "count": count_field,
+        "limit": str(limit),
+    }
+    api_key = os.environ.get("OPENFDA_API_KEY")
+    if api_key:
+        params["api_key"] = api_key
+    url = base + "?" + urllib.parse.urlencode(params)
+    j = http_get_json(url, allow_404=True)
+    return j.get("results") or []
+
+
+def rxclass_by_rxcui(rxcui: str) -> List[Dict[str, Any]]:
+    # https://rxnav.nlm.nih.gov/REST/rxclass/class/byRxcui.json?rxcui=...
+    url = "https://rxnav.nlm.nih.gov/REST/rxclass/class/byRxcui.json?" + urllib.parse.urlencode({"rxcui": rxcui})
+    j = http_get_json(url)
+    classes = (((j or {}).get("rxclassDrugInfoList") or {}).get("rxclassDrugInfo")) or []
+    if isinstance(classes, dict):
+        classes = [classes]
+    out = []
+    for c in classes:
+        ci = c.get("rxclassMinConceptItem") or {}
+        out.append({
+            "classId": ci.get("classId"),
+            "className": ci.get("className"),
+            "classType": ci.get("classType"),
+            "relaSource": ci.get("relaSource"),
+        })
+    return out
+
+
+def dailymed_history(setid: str) -> Dict[str, Any]:
+    # Note: /spls/{setid}.json returns 415, so use /history.json + /media.json.
+    url = f"https://dailymed.nlm.nih.gov/dailymed/services/v2/spls/{urllib.parse.quote(setid)}/history.json"
+    return http_get_json(url)
+
+
+def dailymed_media(setid: str) -> Dict[str, Any]:
+    url = f"https://dailymed.nlm.nih.gov/dailymed/services/v2/spls/{urllib.parse.quote(setid)}/media.json"
+    return http_get_json(url)
+
+
+def dailymed_enrich(setid: str, media_max: int = 10) -> Dict[str, Any]:
+    hist = dailymed_history(setid)
+    med = dailymed_media(setid)
+    out: Dict[str, Any] = {
+        "setid": setid,
+        "history": (hist.get("data") or {}).get("history") or [],
+        "media": (med.get("data") or {}).get("media") or [],
+        "spl_version": (med.get("data") or {}).get("spl_version"),
+        "published_date": (med.get("data") or {}).get("published_date"),
+        "title": (med.get("data") or {}).get("title"),
+    }
+    if media_max is not None:
+        try:
+            out["media"] = out["media"][: int(media_max)]
+        except Exception:
+            pass
+    return out
+
+
+def orangebook_load(max_age_days: int = 30) -> List[Dict[str, str]]:
+    """Load Orange Book products.txt as a list of dicts."""
+    p_zip = cache_path("orangebook", "orangebook.zip")
+    p_products = cache_path("orangebook", "products.txt")
+
+    if not cache_is_fresh(p_products, max_age_days):
+        # Download zip
+        url = "https://www.fda.gov/media/76860/download?attachment"
+        download_to(url, p_zip)
+        with zipfile.ZipFile(p_zip) as z:
+            with z.open("products.txt") as f:
+                p_products.write_bytes(f.read())
+
+    raw = p_products.read_bytes().decode("latin1", errors="replace")
+    lines = raw.splitlines()
+    if not lines:
+        return []
+    header = lines[0].split("~")
+    out: List[Dict[str, str]] = []
+    for line in lines[1:]:
+        if not line.strip():
+            continue
+        parts = line.split("~")
+        # pad
+        if len(parts) < len(header):
+            parts = parts + [""] * (len(header) - len(parts))
+        row = {header[i]: parts[i] for i in range(len(header))}
+        out.append(row)
+    return out
+
+
+def orangebook_search(term: str, max_results: int = 10) -> List[Dict[str, Any]]:
+    term_n = _norm(term)
+    if not term_n:
+        return []
+    rows = orangebook_load(max_age_days=30)
+
+    hits: List[Dict[str, Any]] = []
+    for r in rows:
+        ing = _norm(r.get("Ingredient", ""))
+        trade = _norm(r.get("Trade_Name", ""))
+        if term_n in ing or term_n in trade:
+            hits.append({
+                "ingredient": r.get("Ingredient"),
+                "trade_name": r.get("Trade_Name"),
+                "strength": r.get("Strength"),
+                "df_route": r.get("DF;Route"),
+                "applicant": r.get("Applicant_Full_Name") or r.get("Applicant"),
+                "appl_type": r.get("Appl_Type"),
+                "appl_no": r.get("Appl_No"),
+                "product_no": r.get("Product_No"),
+                "te_code": r.get("TE_Code"),
+                "rld": r.get("RLD"),
+                "rs": r.get("RS"),
+                "type": r.get("Type"),
+            })
+            if len(hits) >= max_results:
+                break
+    return hits
+
+
+def purplebook_download_latest(max_age_days: int = 30) -> Path:
+    """Download a Purple Book monthly CSV, returning the cached path."""
+
+    def looks_like_csv(p: Path) -> bool:
+        try:
+            head = p.read_text(encoding="utf-8", errors="replace")[:5000]
+        except Exception:
+            return False
+        if "<!DOCTYPE html>" in head or head.lstrip().startswith("<"):
+            return False
+        return "N/R/U,Applicant,BLA Number" in head
+
+    # Try current month and walk backwards up to 18 months.
+    months = [
+        "january",
+        "february",
+        "march",
+        "april",
+        "may",
+        "june",
+        "july",
+        "august",
+        "september",
+        "october",
+        "november",
+        "december",
+    ]
+
+    now = time.localtime()
+    y = now.tm_year
+    m = now.tm_mon - 1
+
+    for back in range(0, 18):
+        yy = y
+        mm = m - back
+        while mm < 0:
+            mm += 12
+            yy -= 1
+        month = months[mm]
+        url = f"https://purplebooksearch.fda.gov/files/{yy}/purplebook-search-{month}-data-download.csv"
+        dest = cache_path("purplebook", f"{yy}-{month}.csv")
+        if cache_is_fresh(dest, max_age_days):
+            if looks_like_csv(dest):
+                return dest
+            try:
+                dest.unlink(missing_ok=True)
+            except Exception:
+                pass
+        try:
+            download_to(url, dest)
+
+            # Validate we actually got the CSV, not an HTML error page.
+            # Some months return a generic HTML app shell instead of the data export.
+            if not looks_like_csv(dest):
+                raise RuntimeError("Purple Book download missing expected CSV header")
+
+            return dest
+        except Exception:
+            try:
+                dest.unlink(missing_ok=True)
+            except Exception:
+                pass
+            continue
+
+    raise RuntimeError("Unable to download Purple Book CSV (tried 18 months)")
+
+
+def purplebook_load(max_age_days: int = 30) -> List[Dict[str, str]]:
+    p = purplebook_download_latest(max_age_days=max_age_days)
+    text = p.read_text(encoding="utf-8", errors="replace")
+    lines = text.splitlines()
+
+    rows: List[Dict[str, str]] = []
+    header: Optional[List[str]] = None
+
+    for line in lines:
+        if not line.strip():
+            continue
+        if line.startswith("N/R/U,Applicant,BLA Number"):
+            header = next(csv.reader([line]))
+            continue
+        if header is None:
+            continue
+        parts = next(csv.reader([line]))
+        if len(parts) < len(header):
+            parts = parts + [""] * (len(header) - len(parts))
+        row = {header[i].strip(): parts[i].strip() for i in range(len(header))}
+        # Skip empty rows
+        if not any(row.values()):
+            continue
+        rows.append(row)
+
+    return rows
+
+
+def purplebook_search(term: str, max_results: int = 10) -> List[Dict[str, Any]]:
+    term_n = _norm(term)
+    if not term_n:
+        return []
+    rows = purplebook_load(max_age_days=30)
+    hits: List[Dict[str, Any]] = []
+
+    fields = [
+        "Proprietary Name",
+        "Proper Name",
+        "Ref. Product Proprietary Name",
+        "Ref. Product Proper Name",
+        "Applicant",
+    ]
+
+    for r in rows:
+        blob = " ".join([_norm(r.get(f, "")) for f in fields])
+        if term_n in blob:
+            hits.append({
+                "applicant": r.get("Applicant"),
+                "bla_number": r.get("BLA Number"),
+                "proprietary_name": r.get("Proprietary Name"),
+                "proper_name": r.get("Proper Name"),
+                "bla_type": r.get("BLA Type"),
+                "strength": r.get("Strength"),
+                "dosage_form": r.get("Dosage Form"),
+                "route": r.get("Route of Administration"),
+                "presentation": r.get("Product Presentation"),
+                "marketing_status": r.get("Marketing Status"),
+                "licensure": r.get("Licensure"),
+                "approval_date": r.get("Approval Date"),
+                "ref_product_proper_name": r.get("Ref. Product Proper Name"),
+                "ref_product_proprietary_name": r.get("Ref. Product Proprietary Name"),
+                "interchangeable": r.get("Interchangeable"),
+            })
+            if len(hits) >= max_results:
+                break
+
+    return hits
 
 
 def medlineplus_by_rxcui(rxcui: str) -> Dict[str, Any]:
@@ -461,8 +792,27 @@ def main() -> int:
     # Extras
     ap.add_argument("--recalls", action="store_true", help="Include recent recall enforcement matches")
     ap.add_argument("--recalls-max", type=int, default=5, help="Max recall matches (default: 5)")
+
     ap.add_argument("--shortages", action="store_true", help="Include drug shortage matches")
     ap.add_argument("--shortages-max", type=int, default=5, help="Max shortage matches (default: 5)")
+
+    ap.add_argument("--faers", action="store_true", help="Include FAERS adverse event reaction counts (signal only)")
+    ap.add_argument("--faers-max", type=int, default=10, help="Max FAERS reactions to return (default: 10)")
+
+    ap.add_argument("--rxclass", action="store_true", help="Include RxClass drug class info")
+    ap.add_argument("--rxclass-max", type=int, default=15, help="Max RxClass items (default: 15)")
+
+    ap.add_argument("--dailymed", action="store_true", help="Include DailyMed SPL metadata and media links")
+    ap.add_argument("--dailymed-media-max", type=int, default=10, help="Max DailyMed media items (default: 10)")
+
+    ap.add_argument("--images", action="store_true", help="Include DailyMed media images (pill/label images when available)")
+    ap.add_argument("--rximage", action="store_true", help="Alias for --images (RxImage API was retired in 2021)")
+
+    ap.add_argument("--orangebook", action="store_true", help="Lookup FDA Orange Book products (TE codes, NDA/ANDA)")
+    ap.add_argument("--orangebook-max", type=int, default=10, help="Max Orange Book matches (default: 10)")
+
+    ap.add_argument("--purplebook", action="store_true", help="Lookup FDA Purple Book biologics/biosimilars")
+    ap.add_argument("--purplebook-max", type=int, default=10, help="Max Purple Book matches (default: 10)")
 
     # Keyword search
     ap.add_argument(
@@ -480,6 +830,10 @@ def main() -> int:
     )
 
     args = ap.parse_args()
+
+    # RxImage API was retired, treat --rximage as an alias for DailyMed media images.
+    if getattr(args, "rximage", False):
+        args.images = True
 
     q = args.query.strip()
 
@@ -631,11 +985,11 @@ def main() -> int:
 
                     recall_queries: List[str] = []
                     if product_ndc0:
-                        recall_queries.append(f'openfda.product_ndc:"{product_ndc0}"')
+                        recall_queries.append(f"openfda.product_ndc:{openfda_qstr(product_ndc0)}")
                     if brand0:
-                        recall_queries.append(f'product_description:"{brand0}"')
+                        recall_queries.append(f"product_description:{openfda_qstr(brand0)}")
                     if generic0:
-                        recall_queries.append(f'product_description:"{generic0}"')
+                        recall_queries.append(f"product_description:{openfda_qstr(generic0)}")
 
                     recalls: List[Dict[str, Any]] = []
                     used_query = None
@@ -657,12 +1011,12 @@ def main() -> int:
 
                     shortage_queries: List[str] = []
                     if generic0:
-                        shortage_queries.append(f'generic_name:"{generic0}"')
+                        shortage_queries.append(f"generic_name:{openfda_qstr(generic0)}")
                     if brand0:
-                        shortage_queries.append(f'brand_name:"{brand0}"')
+                        shortage_queries.append(f"brand_name:{openfda_qstr(brand0)}")
                     if q and q != generic0:
-                        shortage_queries.append(f'generic_name:"{q}"')
-                        shortage_queries.append(f'brand_name:"{q}"')
+                        shortage_queries.append(f"generic_name:{openfda_qstr(q)}")
+                        shortage_queries.append(f"brand_name:{openfda_qstr(q)}")
 
                     shortages: List[Dict[str, Any]] = []
                     used_query = None
@@ -676,6 +1030,51 @@ def main() -> int:
                         "query": used_query,
                         "results": [_compact_shortage(r) for r in shortages],
                     }
+
+                # Optional: FAERS signal (reaction counts)
+                if args.faers:
+                    brand0 = _first_of(openfda_block.get("brand_name"))
+                    mp = (brand0 or (rx_name or q)).upper()
+                    faers_q = f"patient.drug.medicinalproduct:{openfda_qstr(mp)}"
+                    faers = openfda_event_count(
+                        faers_q,
+                        "patient.reaction.reactionmeddrapt.exact",
+                        limit=max(1, int(args.faers_max)),
+                    )
+                    out["openfda"]["faers"] = {
+                        "query": faers_q,
+                        "reactions": faers,
+                        "note": "FAERS is reporting data, not causality. Use as a signal only.",
+                    }
+
+                # Optional: RxClass
+                if args.rxclass and rxcui:
+                    classes = rxclass_by_rxcui(rxcui)
+                    out["rxclass"] = classes[: max(1, int(args.rxclass_max))]
+
+                # Optional: DailyMed metadata and media
+                if (args.dailymed or args.images) and setid:
+                    dm = dailymed_enrich(setid, media_max=max(1, int(args.dailymed_media_max)))
+                    out["dailymed"] = dm
+                    if args.images:
+                        images = []
+                        for m in (dm.get("media") or []):
+                            mt = (m or {}).get("mime_type") or ""
+                            if isinstance(mt, str) and mt.startswith("image/"):
+                                images.append(m)
+                        out["images"] = images[: max(1, int(args.dailymed_media_max))]
+                elif (args.dailymed or args.images) and not setid:
+                    out["notes"].append("DailyMed set_id not available for this label.")
+
+                # Optional: Orange Book
+                if args.orangebook:
+                    term = _first_of(openfda_block.get("generic_name")) or rx_name or q
+                    out["orangebook"] = orangebook_search(term, max_results=max(1, int(args.orangebook_max)))
+
+                # Optional: Purple Book
+                if args.purplebook:
+                    term = _first_of(openfda_block.get("substance_name")) or _first_of(openfda_block.get("generic_name")) or rx_name or q
+                    out["purplebook"] = purplebook_search(term, max_results=max(1, int(args.purplebook_max)))
 
             else:
                 out["notes"].append("No openFDA label match found.")
@@ -827,6 +1226,69 @@ def main() -> int:
             pres = _compact(r.get("presentation"), 180)
             st = r.get("status")
             print(f"- {st} | {gn} | {pres}")
+
+    faers = out.get("openfda", {}).get("faers")
+    if args.faers and faers:
+        print("\nFAERS (signal)")
+        if faers.get("query"):
+            print(f"- query: {faers['query']}")
+        for r in (faers.get("reactions") or [])[: int(args.faers_max)]:
+            term = r.get("term")
+            cnt = r.get("count")
+            print(f"- {term}: {cnt}")
+
+    rxclass = out.get("rxclass")
+    if args.rxclass and rxclass:
+        print("\nRxClass")
+        for c in rxclass[: int(args.rxclass_max)]:
+            nm = c.get("className")
+            ct = c.get("classType")
+            src = c.get("relaSource")
+            print(f"- {nm} ({ct}, {src})")
+
+    dm = out.get("dailymed")
+    if (args.dailymed or args.images) and dm:
+        print("\nDailyMed")
+        if dm.get("title"):
+            print(f"- title: {dm.get('title')}")
+        if dm.get("published_date"):
+            print(f"- published_date: {dm.get('published_date')}")
+        if dm.get("spl_version") is not None:
+            print(f"- spl_version: {dm.get('spl_version')}")
+        hist = dm.get("history") or []
+        if hist:
+            # show newest first
+            h0 = hist[0]
+            print(f"- versions: {len(hist)} (latest spl_version={h0.get('spl_version')} published_date={h0.get('published_date')})")
+
+    images = out.get("images")
+    if args.images and images:
+        print("\nImages")
+        for im in images[: int(args.dailymed_media_max)]:
+            print(f"- {(im or {}).get('name')}: {(im or {}).get('url')}")
+
+    ob = out.get("orangebook")
+    if args.orangebook and ob:
+        print("\nOrange Book")
+        for r in ob[: int(args.orangebook_max)]:
+            tn = r.get("trade_name")
+            ing = r.get("ingredient")
+            te = r.get("te_code")
+            appl = r.get("appl_type")
+            no = r.get("appl_no")
+            strength = r.get("strength")
+            print(f"- {tn} | {ing} | {strength} | {appl}{no} | TE={te}")
+
+    pb = out.get("purplebook")
+    if args.purplebook and pb:
+        print("\nPurple Book")
+        for r in pb[: int(args.purplebook_max)]:
+            pn = r.get("proprietary_name")
+            pr = r.get("proper_name")
+            bla = r.get("bla_number")
+            bt = r.get("bla_type")
+            inter = r.get("interchangeable")
+            print(f"- {pn} | {pr} | BLA={bla} | {bt} | interchangeable={inter}")
 
     mpl_results = out.get("medlineplus", {}).get("results")
     if mpl_results:

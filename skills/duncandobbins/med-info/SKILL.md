@@ -7,8 +7,12 @@ metadata: {"clawdbot": {"emoji": "💊", "os": ["darwin", "linux"], "requires": 
 # med-info
 
 Fetch medication information with citations from:
-- **openFDA** (drug label, NDC directory, recalls, shortages)
+- **openFDA** (drug label, NDC directory, recalls, shortages, FAERS adverse event reporting)
 - **RxNorm (RxNav API)** for normalization (RxCUI, brand-generic mapping)
+- **RxClass (RxNav)** for drug class membership
+- **DailyMed** for SPL metadata and media (including labeler-submitted images)
+- **Orange Book** data files for TE/RLD context
+- **Purple Book** monthly data for biologics, biosimilars, and interchangeability
 - **MedlinePlus Connect** for patient-friendly summaries
 
 This skill is designed for **accuracy and traceability**: it always reports identifiers and source timestamps when available.
@@ -17,6 +21,7 @@ This skill is designed for **accuracy and traceability**: it always reports iden
 
 - For clinical decisions, **verify against the full official label**. This tool extracts key sections and returns references.
 - Do not input patient-identifying information.
+- The script treats all user input as untrusted and **escapes values** when constructing openFDA `search` queries to prevent query-injection style surprises.
 
 ## Quick start
 
@@ -57,13 +62,30 @@ python3 scripts/med_info.py "05999192-ebc6-4198-bd1e-f46abbfb4f8a"  # set_id
 python3 scripts/med_info.py "metformin" --set-id "05999192-ebc6-4198-bd1e-f46abbfb4f8a"
 ```
 
-### 6) Recalls and shortages (optional)
+### 6) Recalls, shortages, FAERS, and drug classes (optional)
 ```bash
 python3 scripts/med_info.py "metformin" --recalls
 python3 scripts/med_info.py "amphetamine" --shortages
+python3 scripts/med_info.py "Eliquis" --faers --faers-max 10
+python3 scripts/med_info.py "Eliquis" --rxclass
 ```
 
-### 7) Output shaping (optional)
+### 7) DailyMed and images (optional)
+```bash
+python3 scripts/med_info.py "Eliquis" --dailymed
+python3 scripts/med_info.py "Eliquis" --images
+
+# Note: RxImage was retired in 2021, so --rximage is an alias for --images.
+python3 scripts/med_info.py "Eliquis" --rximage
+```
+
+### 8) Orange Book and Purple Book (optional)
+```bash
+python3 scripts/med_info.py "metformin" --orangebook
+python3 scripts/med_info.py "adalimumab" --purplebook
+```
+
+### 9) Output shaping (optional)
 ```bash
 # only print a couple sections
 python3 scripts/med_info.py "Eliquis" --sections contraindications,drug_interactions
