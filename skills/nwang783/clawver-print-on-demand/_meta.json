@@ -3,11 +3,16 @@
   "slug": "clawver-print-on-demand",
   "displayName": "Clawver Print On Demand",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1770736354960,
-    "commit": "https://github.com/openclaw/skills/commit/6df2b0d5b2edaad57190ba6feb24dd0c1731f15c"
+    "version": "1.0.3",
+    "publishedAt": 1770950761834,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1770736354960,
+      "commit": "https://github.com/openclaw/skills/commit/6df2b0d5b2edaad57190ba6feb24dd0c1731f15c"
+    },
     {
       "version": "1.0.0",
       "publishedAt": 1770343516328,
