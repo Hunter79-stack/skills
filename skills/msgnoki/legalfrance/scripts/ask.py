@@ -11,7 +11,14 @@ from pathlib import Path
 # Add parent to path for imports
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from search import hybrid_search, bm25_search, format_results
-from search_jurisprudence import search as juri_search
+
+try:
+    from search_jurisprudence import search as juri_search
+    _JURI_AVAILABLE = True
+except ImportError:
+    _JURI_AVAILABLE = False
+    def juri_search(*args, **kwargs):
+        return []
 
 JURI_SOURCES = {
     "cass-ce": [
@@ -86,12 +93,14 @@ def build_rag_prompt(
     except Exception:
         code_results = bm25_search(question, top_k=top_k)
 
-    # Jurisprudence: SQLite FTS (optional corpus filter)
-    try:
-        sources_filter = JURI_SOURCES.get(juris, None)
-        juri_results = juri_search(question, top_k=top_k_jurisprudence, sources=sources_filter)
-    except Exception:
-        juri_results = []
+    # Jurisprudence: SQLite FTS (optionnel — module présent uniquement si corpus jurisprudentiel installé)
+    juri_results = []
+    if _JURI_AVAILABLE:
+        try:
+            sources_filter = JURI_SOURCES.get(juris, None)
+            juri_results = juri_search(question, top_k=top_k_jurisprudence, sources=sources_filter)
+        except Exception:
+            juri_results = []
 
     sources_blocks = []
     if code_results:
