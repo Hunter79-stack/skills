@@ -1,0 +1,11 @@
+{
+  "owner": "staybased",
+  "slug": "client-retention",
+  "displayName": "Client Retention",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1770927838974,
+    "commit": null
+  },
+  "history": []
+}
