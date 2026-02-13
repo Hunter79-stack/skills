@@ -1,11 +1,17 @@
 {
   "owner": "odrobnik",
   "slug": "raiffeisen-elba",
-  "displayName": "Raiffeisen Elba",
+  "displayName": "Raiffeisen ELBA",
   "latest": {
-    "version": "1.3.0",
-    "publishedAt": 1770903587999,
-    "commit": "https://github.com/openclaw/skills/commit/fd1b9d2d558c349b008ccbfc53e5eaf5f72eb380"
+    "version": "1.3.2",
+    "publishedAt": 1770964173670,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.3.0",
+      "publishedAt": 1770903587999,
+      "commit": "https://github.com/openclaw/skills/commit/fd1b9d2d558c349b008ccbfc53e5eaf5f72eb380"
+    }
+  ]
 }
