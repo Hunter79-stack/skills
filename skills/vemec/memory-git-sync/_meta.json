@@ -1,0 +1,11 @@
+{
+  "owner": "vemec",
+  "slug": "memory-git-sync",
+  "displayName": "Smart Git Backup",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1770990610998,
+    "commit": null
+  },
+  "history": []
+}
