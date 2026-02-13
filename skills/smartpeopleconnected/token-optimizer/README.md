@@ -2,10 +2,11 @@
 
 **Reduce your AI costs by 97% - From $1,500+/month to under $50/month**
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/smartpeopleconnected/openclaw-token-optimizer)
+[![Version](https://img.shields.io/badge/version-1.0.15-blue.svg)](https://github.com/smartpeopleconnected/openclaw-token-optimizer)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![OpenClaw](https://img.shields.io/badge/OpenClaw-Compatible-purple.svg)](https://openclaw.ai)
 [![Cost Savings](https://img.shields.io/badge/savings-97%25-brightgreen.svg)](https://github.com/smartpeopleconnected/openclaw-token-optimizer)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20this%20project-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/smartpeopleconnected)
 
 ---
 
@@ -44,26 +45,21 @@ Token Optimizer applies four key optimizations that work together to slash your 
 
 ### Installation
 
-**Windows (PowerShell):**
-```powershell
-.\scripts\install.ps1
-```
-
-**macOS/Linux:**
 ```bash
-chmod +x scripts/install.sh
-./scripts/install.sh
-```
+# Preview changes (safe dry-run with diff)
+python cli.py optimize --dry-run
 
-**Manual Python:**
-```bash
-python src/optimizer.py --mode full
+# Apply changes
+python cli.py optimize
+
+# Quick health check
+python cli.py health
 ```
 
 ### Verify Setup
 
 ```bash
-python src/verify.py
+python cli.py verify
 ```
 
 ## Features
@@ -88,7 +84,7 @@ Optimized context loading rules that reduce startup context from 50KB to 8KB:
 
 ### 4. Prompt Caching
 Automatic 90% discount on repeated content:
-- System prompts cached and reused
+- Agent prompts cached and reused
 - 5-minute TTL for optimal cache hits
 - Per-model cache configuration
 
@@ -102,44 +98,65 @@ Built-in rate limits and budget warnings:
 
 ### Analyze Current Setup
 ```bash
-python src/analyzer.py
+python cli.py analyze
 ```
 
-Shows:
-- Current configuration status
-- Workspace file sizes
-- Optimization opportunities
-- Estimated monthly savings
+Shows current configuration status, workspace file sizes, optimization opportunities, and estimated monthly savings.
+
+### Preview Changes (Dry Run with Diff)
+```bash
+python cli.py optimize --dry-run
+```
+
+Shows a colored unified diff of what would change, without modifying anything.
 
 ### Apply Full Optimization
 ```bash
-python src/optimizer.py --mode full
+python cli.py optimize
 ```
 
-Applies all optimizations:
-- Updates `~/.openclaw/openclaw.json`
-- Generates workspace templates
-- Creates system prompt rules
-- Sets up Ollama heartbeat
+Applies all optimizations: model routing, heartbeat, caching, rate limits, workspace templates, and agent prompts.
 
 ### Apply Specific Optimizations
 ```bash
-# Model routing only
-python src/optimizer.py --mode routing
-
-# Heartbeat to Ollama only
-python src/optimizer.py --mode heartbeat
-
-# Prompt caching only
-python src/optimizer.py --mode caching
-
-# Rate limits only
-python src/optimizer.py --mode limits
+python cli.py optimize --mode routing    # Model routing only
+python cli.py optimize --mode heartbeat  # Heartbeat only
+python cli.py optimize --mode caching    # Prompt caching only
+python cli.py optimize --mode limits     # Rate limits only
 ```
 
-### Dry Run (Preview Changes)
+### Quick Health Check
 ```bash
-python src/optimizer.py --mode full --dry-run
+python cli.py health
+```
+
+Checks config exists, valid JSON, provider reachable, workspace lean, and budget active.
+
+### Configure Heartbeat Provider
+```bash
+python cli.py setup-heartbeat --provider ollama      # Default
+python cli.py setup-heartbeat --provider lmstudio     # LM Studio
+python cli.py setup-heartbeat --provider groq         # Groq cloud
+python cli.py setup-heartbeat --provider none         # Disable heartbeat
+python cli.py setup-heartbeat --provider groq --fallback ollama
+```
+
+### Rollback Configuration
+```bash
+python cli.py rollback --list            # List available backups
+python cli.py rollback --to <filename>   # Restore a specific backup
+```
+
+### Verify Setup
+```bash
+python cli.py verify
+```
+
+### Disable Colors
+```bash
+python cli.py --no-color optimize --dry-run
+# or
+NO_COLOR=1 python cli.py optimize --dry-run
 ```
 
 ## Configuration
@@ -156,7 +173,7 @@ Agent principles and operating rules. Includes:
 Your context: name, role, mission, success metrics.
 
 ### `~/.openclaw/prompts/OPTIMIZATION-RULES.md`
-Copy these rules into your agent's system prompt.
+Copy these rules into your agent prompt.
 
 ## Requirements
 
@@ -164,52 +181,50 @@ Copy these rules into your agent's system prompt.
 - OpenClaw installed and configured
 - Ollama (optional, for free heartbeats)
 
-### Installing Ollama
+### Installing Ollama (Optional)
 
-**macOS/Linux:**
+Ollama is only needed if you want free local heartbeats. Download from [https://ollama.ai](https://ollama.ai), then:
 ```bash
-curl -fsSL https://ollama.ai/install.sh | sh
 ollama pull llama3.2:3b
 ollama serve
 ```
 
-**Windows:**
-Download from [ollama.ai](https://ollama.ai) and run:
-```powershell
-ollama pull llama3.2:3b
-ollama serve
+Or use the CLI to configure a different provider:
+```bash
+python cli.py setup-heartbeat --provider lmstudio
+python cli.py setup-heartbeat --provider none  # disable heartbeat
 ```
 
 ## File Structure
 
 ```
 token-optimizer/
-├── skill.json                 # Skill manifest
-├── README.md                  # This file
-├── src/
-│   ├── __init__.py
-│   ├── analyzer.py            # Analyzes current config
-│   ├── optimizer.py           # Applies optimizations
-│   └── verify.py              # Verifies setup
-├── templates/
-│   ├── openclaw-config-optimized.json
-│   ├── SOUL.md
-│   ├── USER.md
-│   └── OPTIMIZATION-RULES.md
-└── scripts/
-    ├── install.sh             # Unix installer
-    └── install.ps1            # Windows installer
++-- skill.json                 # Skill manifest
++-- README.md                  # This file
++-- src/
+|   +-- __init__.py            # Version (single source of truth)
+|   +-- colors.py              # Shared ANSI colors
+|   +-- analyzer.py            # Analyzes current config
+|   +-- optimizer.py           # Applies optimizations
+|   +-- verify.py              # Verifies setup
++-- templates/
+|   +-- openclaw-config-optimized.json
+|   +-- SOUL.md
+|   +-- USER.md
+|   +-- OPTIMIZATION-RULES.md
++-- test/
+    +-- simulation_test.py     # Simulation tests
 ```
 
 ## Troubleshooting
 
 ### Context size still large
-- Ensure SESSION INITIALIZATION RULE is in your system prompt
+- Ensure SESSION INITIALIZATION RULE is in your agent prompt
 - Check that SOUL.md and USER.md are lean (<15KB total)
 
 ### Still using Sonnet for everything
 - Verify `~/.openclaw/openclaw.json` has correct model configuration
-- Ensure MODEL SELECTION RULE is in system prompt
+- Ensure MODEL SELECTION RULE is in agent prompt
 
 ### Heartbeat errors
 - Make sure Ollama is running: `ollama serve`
@@ -217,20 +232,22 @@ token-optimizer/
 
 ### Costs haven't dropped
 - Run `python src/verify.py` to check all optimizations
-- Ensure system prompt includes all optimization rules
+- Ensure agent prompt includes all optimization rules
 
 ## Support
 
-- **Documentation:** [docs.tokenoptimizer.ai](https://docs.tokenoptimizer.ai)
-- **Issues:** [GitHub Issues](https://github.com/tokenoptimizer/openclaw-optimizer/issues)
-- **Email:** support@tokenoptimizer.ai
+- **Issues:** [GitHub Issues](https://github.com/smartpeopleconnected/openclaw-token-optimizer/issues)
+
+**If this tool saved you money, consider supporting development:**
+
+[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/smartpeopleconnected)
 
 ## License
 
-Commercial license. See [LICENSE](LICENSE) for details.
+MIT License. See [LICENSE](LICENSE) for details.
 
 ---
 
-**Built with care by TokenOptimizer**
+**Built with care by Smart People Connected**
 
 *Stop burning tokens. Start building things.*

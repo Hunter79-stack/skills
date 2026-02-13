@@ -8,25 +8,15 @@ import json
 import os
 import sys
 import subprocess
+import urllib.request
 from pathlib import Path
+from datetime import datetime
 from typing import Dict, List, Tuple
 
-# ANSI color codes
-class Colors:
-    RED = '\033[91m'
-    GREEN = '\033[92m'
-    YELLOW = '\033[93m'
-    BLUE = '\033[94m'
-    MAGENTA = '\033[95m'
-    CYAN = '\033[96m'
-    WHITE = '\033[97m'
-    BOLD = '\033[1m'
-    END = '\033[0m'
-
-def colorize(text: str, color: str) -> str:
-    if sys.stdout.isatty():
-        return f"{color}{text}{Colors.END}"
-    return text
+try:
+    from src.colors import Colors, colorize
+except ImportError:
+    from colors import Colors, colorize
 
 
 class OptimizationVerifier:
@@ -76,17 +66,56 @@ class OptimizationVerifier:
             self.checks.append(("Model aliases configured", False, "config error"))
             return False
 
-    def check_heartbeat_ollama(self, config: Dict) -> bool:
-        """Check heartbeat is routed to Ollama."""
+    def check_heartbeat_provider(self, config: Dict) -> bool:
+        """Check heartbeat provider is configured and reachable."""
         try:
             heartbeat = config.get('heartbeat', {})
+            if not heartbeat:
+                self.checks.append(("Heartbeat provider configured", False, "not configured"))
+                return False
+
+            provider = heartbeat.get('provider', '')
             model = heartbeat.get('model', '')
-            is_ollama = 'ollama' in model.lower() or 'local' in model.lower()
-            self.checks.append(("Heartbeat uses Ollama", is_ollama, model or "not configured"))
-            return is_ollama
+
+            # Auto-detect provider from model string if not explicit
+            if not provider:
+                for name in ('ollama', 'lmstudio', 'groq'):
+                    if name in model.lower():
+                        provider = name
+                        break
+                if not provider:
+                    provider = 'ollama'
+
+            is_free = provider in ('ollama', 'lmstudio', 'none')
+            label = f"{provider} ({model})" if model else provider
+            self.checks.append(("Heartbeat provider configured", True, label))
+
+            if provider != 'none':
+                reachable = self.check_provider_reachable(provider, heartbeat.get('endpoint'))
+                self.checks.append(("Heartbeat provider reachable", reachable,
+                                    f"{provider} {'OK' if reachable else 'not reachable'}"))
+            return True
         except Exception:
-            self.checks.append(("Heartbeat uses Ollama", False, "config error"))
+            self.checks.append(("Heartbeat provider configured", False, "config error"))
             return False
+
+    def check_provider_reachable(self, provider: str, endpoint: str = None) -> bool:
+        """Check if a heartbeat provider is reachable."""
+        if provider == "ollama":
+            try:
+                result = subprocess.run(['ollama', 'list'], capture_output=True, text=True, timeout=5)
+                return result.returncode == 0
+            except (subprocess.SubprocessError, FileNotFoundError):
+                return False
+        elif provider in ("lmstudio", "groq"):
+            url = endpoint or ("http://localhost:1234" if provider == "lmstudio" else "https://api.groq.com")
+            try:
+                req = urllib.request.Request(url, method="GET")
+                urllib.request.urlopen(req, timeout=5)
+                return True
+            except Exception:
+                return False
+        return False
 
     def check_caching_enabled(self, config: Dict) -> bool:
         """Check prompt caching is enabled."""
@@ -126,28 +155,6 @@ class OptimizationVerifier:
             self.checks.append(("Budget limits configured", False, "config error"))
             return False
 
-    def check_ollama_running(self) -> bool:
-        """Check if Ollama is running."""
-        try:
-            result = subprocess.run(['ollama', 'list'], capture_output=True, text=True, timeout=5)
-            is_running = result.returncode == 0
-            self.checks.append(("Ollama is running", is_running, "ollama list succeeded" if is_running else "not running"))
-            return is_running
-        except (subprocess.SubprocessError, FileNotFoundError):
-            self.checks.append(("Ollama is running", False, "not installed or not running"))
-            return False
-
-    def check_ollama_model(self) -> bool:
-        """Check if required Ollama model is available."""
-        try:
-            result = subprocess.run(['ollama', 'list'], capture_output=True, text=True, timeout=5)
-            has_model = 'llama3.2' in result.stdout
-            self.checks.append(("Ollama model available", has_model, "llama3.2" if has_model else "model not found"))
-            return has_model
-        except (subprocess.SubprocessError, FileNotFoundError):
-            self.checks.append(("Ollama model available", False, "could not check"))
-            return False
-
     def check_workspace_files(self) -> bool:
         """Check workspace files exist and are optimized."""
         workspace_dir = self.openclaw_dir / 'workspace'
@@ -172,7 +179,7 @@ class OptimizationVerifier:
         return all_found and is_lean
 
     def check_prompts_exist(self) -> bool:
-        """Check system prompt files exist."""
+        """Check agent prompt files exist."""
         prompts_dir = self.openclaw_dir / 'prompts'
         optimization_rules = prompts_dir / 'OPTIMIZATION-RULES.md'
 
@@ -207,7 +214,7 @@ class OptimizationVerifier:
         # Caching savings (90% on repeated content)
         cache = config.get('agents', {}).get('defaults', {}).get('cache', {})
         if cache.get('enabled'):
-            # 5KB system prompt * 100 calls/day * 0.003/1K * 0.9 savings
+            # 5KB agent prompt * 100 calls/day * 0.003/1K * 0.9 savings
             savings['caching'] = 5 * 100 * 0.003 * 0.9 * 30  # ~$40.50/month
 
         # Session management (estimated from lean context)
@@ -216,6 +223,76 @@ class OptimizationVerifier:
         savings['total'] = sum(v for k, v in savings.items() if k != 'total')
 
         return savings
+
+    def check_benefit_report(self, savings: Dict):
+        """Show benefit report every 7 days with donation CTA."""
+        stats_path = self.openclaw_dir / 'token-optimizer-stats.json'
+
+        if not stats_path.exists():
+            return
+
+        try:
+            with open(stats_path, 'r') as f:
+                stats = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            return
+
+        installed_at = stats.get('installed_at')
+        if not installed_at:
+            return
+
+        try:
+            install_date = datetime.fromisoformat(installed_at)
+        except ValueError:
+            return
+
+        now = datetime.now()
+        days_active = (now - install_date).days
+
+        if days_active < 7:
+            return
+
+        # Check if 7 days since last report
+        last_report = stats.get('last_benefit_report')
+        if last_report:
+            try:
+                last_report_date = datetime.fromisoformat(last_report)
+                days_since_report = (now - last_report_date).days
+                if days_since_report < 7:
+                    return
+            except ValueError:
+                pass
+
+        # Calculate accumulated savings
+        weekly_savings = savings['total'] / 4.33  # monthly to weekly
+        total_savings = (savings['total'] / 30) * days_active
+        yearly_projection = savings['total'] * 12
+
+        # Show benefit report
+        print(colorize("\n  +--------------------------------------------------+", Colors.BOLD + Colors.GREEN))
+        print(colorize("  |         Your Savings Report                      |", Colors.BOLD + Colors.GREEN))
+        print(colorize("  +--------------------------------------------------+", Colors.GREEN))
+        print(colorize(f"  |  Active for: {days_active} days                              ", Colors.GREEN))
+        print(colorize(f"  |                                                  ", Colors.GREEN))
+        print(colorize(f"  |  Savings this week:       ~${weekly_savings:>8.2f}          ", Colors.GREEN))
+        print(colorize(f"  |  Savings since install:   ~${total_savings:>8.2f}          ", Colors.GREEN))
+        print(colorize(f"  |  Projected yearly:        ~${yearly_projection:>8.2f}          ", Colors.GREEN))
+        print(colorize(f"  |                                                  ", Colors.GREEN))
+        print(colorize(f"  |  Token Optimizer is saving you real money.       ", Colors.GREEN))
+        print(colorize(f"  |  If it helps, consider a small thank-you:       ", Colors.GREEN))
+        print(colorize(f"  |                                                  ", Colors.GREEN))
+        print(colorize(f"  |  -> https://ko-fi.com/smartpeopleconnected       ", Colors.CYAN + Colors.BOLD))
+        print(colorize(f"  |                                                  ", Colors.GREEN))
+        print(colorize("  +--------------------------------------------------+", Colors.GREEN))
+
+        # Update last report timestamp
+        stats['last_benefit_report'] = now.isoformat()
+        stats['verify_count'] = stats.get('verify_count', 0) + 1
+        try:
+            with open(stats_path, 'w') as f:
+                json.dump(stats, f, indent=2)
+        except IOError:
+            pass
 
     def run_verification(self):
         """Run all verification checks."""
@@ -228,12 +305,10 @@ class OptimizationVerifier:
         self.check_config_exists()
         self.check_model_routing(config)
         self.check_model_aliases(config)
-        self.check_heartbeat_ollama(config)
+        self.check_heartbeat_provider(config)
         self.check_caching_enabled(config)
         self.check_rate_limits(config)
         self.check_budgets(config)
-        self.check_ollama_running()
-        self.check_ollama_model()
         self.check_workspace_files()
         self.check_prompts_exist()
 
@@ -292,6 +367,9 @@ class OptimizationVerifier:
                 if not status:
                     print(f"  - Fix: {name}")
             print(colorize("\nRun 'token-optimizer optimize' to apply missing optimizations", Colors.CYAN))
+
+        # Show benefit report (every 7 days)
+        self.check_benefit_report(savings)
 
         return failed == 0
 

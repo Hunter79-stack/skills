@@ -37,7 +37,7 @@ The default configuration prioritizes capability over cost - meaning you're burn
 1. **Smart Model Routing** - Haiku by default, Sonnet only when needed (92% savings)
 2. **Free Heartbeats** - Route status checks to Ollama instead of paid API (100% savings)
 3. **Lean Sessions** - Load 8KB instead of 50KB context per message (80% savings)
-4. **Prompt Caching** - 90% discount on repeated system prompts
+4. **Prompt Caching** - 90% discount on repeated agent prompts
 
 **Results our users see:**
 
@@ -52,7 +52,7 @@ The default configuration prioritizes capability over cost - meaning you're burn
 
 - Automated configuration optimizer
 - Pre-built workspace templates (SOUL.md, USER.md)
-- System prompt optimization rules
+- Optimization prompt rules
 - Ollama heartbeat setup
 - Budget and rate limit controls
 - Verification tools
@@ -111,12 +111,34 @@ The default configuration prioritizes capability over cost - meaning you're burn
 
 ### Changelog
 
-**v1.0.0** (Initial Release)
+**v1.0.8** (2026-02-12) - Quality & Provider Support
+- **NEW:** Configurable heartbeat providers: ollama, lmstudio, groq, none
+- **NEW:** Rollback command to list and restore config backups
+- **NEW:** Health check command for quick system status
+- **NEW:** Diff preview in dry-run mode (colored unified diff)
+- **NEW:** `--no-color` flag and `NO_COLOR` env var support
+- **IMPROVED:** Shared colors module (deduplicated code)
+- **IMPROVED:** Version single source of truth across all files
+- **IMPROVED:** Extended marketplace triggers (+10 new search terms)
+- **FIX:** License consistency (MIT everywhere)
+- **FIX:** Version sync (was showing 1.0.0 in 7 files)
+
+**v1.0.7** (2026-02-08) - Security & Savings Report
+- **SECURITY:** Removed hidden HTML comment from SKILL.md (ClawHub review finding)
+- **SECURITY:** Dry-run is now the default - use `--apply` to make changes
+- **SECURITY:** User confirmation before downloading Ollama model (~2GB)
+- **SECURITY:** Existing user config files are no longer overwritten
+- **NEW:** 7-day savings report shows accumulated cost savings with weekly breakdown
+- **BREAKING:** `--dry-run` flag replaced by `--apply` (dry-run is now default)
+
+**v1.0.0 - v1.0.6** (Initial Releases)
 - Model routing optimization (Haiku default)
 - Ollama heartbeat configuration
 - Prompt caching setup
 - Session initialization rules
 - Budget and rate limit controls
-- Windows and Unix installers
+- Cross-platform CLI (Windows, macOS, Linux)
 - Workspace templates
 - Verification tools
+- Ko-fi support integration
+- Marketing materials
