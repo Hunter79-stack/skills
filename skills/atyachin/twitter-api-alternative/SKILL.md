@@ -1,12 +1,13 @@
 ---
 name: twitter-api-alternative
-description: "Twitter API Alternative — Access Twitter data without the official API. Search tweets, look up profiles, find users by topic, and export to CSV. 1B+ tweets indexed, $20/mo vs $5,000/mo Twitter API Pro. No Twitter developer account needed — works through Xpoz MCP."
+description: "Twitter API Alternative — Search 1B+ tweets with natural language queries, boolean filters, and one-click CSV exports (up to 64K rows). Look up profiles, find users by topic, and track conversations. No developer account needed, no complex OAuth setup — 2-minute setup via Xpoz MCP."
 homepage: https://xpoz.ai
 metadata:
   {
     "openclaw":
       {
         "requires": { "bins": ["mcporter"], "skills": ["xpoz-setup"], "network": ["mcp.xpoz.ai"], "credentials": "Xpoz account (free tier) — auth via xpoz-setup skill (OAuth 2.1)" },
+        "install": [{"id": "node", "kind": "node", "package": "mcporter", "bins": ["mcporter"], "label": "Install mcporter (npm)"}],
       },
   }
 tags:
@@ -26,17 +27,21 @@ tags:
 
 # Twitter API Alternative
 
-**Access 1B+ tweets without the official Twitter API. $20/mo vs $5,000/mo.**
+**Search 1B+ tweets with natural language queries — no developer account needed.**
 
-Search tweets, look up profiles, find users by topic, track conversations, and export massive datasets to CSV. No Twitter/X developer account, no $100/mo basic tier, no $5K/mo pro tier.
+Get up and running in 2 minutes. Search tweets, look up profiles, find users by topic, track conversations, and export massive datasets to CSV. Built for AI agents via MCP, but simple enough for anyone.
 
 ---
 
 ## ⚡ Setup
 
-👉 **Follow [`xpoz-setup`](https://clawhub.ai/skills/xpoz-setup)** — one-click auth, no API keys to manage.
+👉 **Follow [`xpoz-setup`](https://clawhub.ai/skills/xpoz-setup)** — one-click auth, no API keys to manage. You'll be searching tweets in under 2 minutes.
 
 ---
+
+## Setup
+
+Run `xpoz-setup` skill. Verify: `mcporter call xpoz.checkAccessKeyStatus`
 
 ## What You Can Do
 
@@ -95,18 +100,18 @@ Real example: **63,936 tweets in one CSV (38MB).**
 
 ---
 
-## Twitter API vs Xpoz: Side by Side
+## Why Use This Instead of the Official API?
 
-| | Twitter API (Pro) | Xpoz |
-|--|------------------|------|
-| **Price** | $5,000/mo | $20/mo (free tier available) |
-| **Setup** | Developer portal + OAuth + app review | One-click auth |
-| **Tweet search** | 10M tweets/mo cap | 1B+ tweets indexed |
-| **Full archive** | $5K/mo tier only | Included |
-| **Boolean search** | Academic tier only (discontinued) | All tiers |
-| **CSV export** | Build your own | Built in (64K rows/export) |
-| **Rate limits** | Complex tiers | Handled automatically |
-| **Multi-platform** | Twitter only | + Instagram + Reddit |
+| Feature | Xpoz |
+|---------|------|
+| **Setup time** | 2 minutes — no developer portal, no app review |
+| **Search scale** | 1B+ tweets indexed, full archive included |
+| **Boolean queries** | `AND`, `OR`, `NOT`, exact phrases, grouping — all tiers |
+| **CSV export** | Built in — up to 64K rows per export, one click |
+| **Rate limits** | Handled automatically, no complex tier management |
+| **Multi-platform** | Also searches Instagram (400M+) and Reddit (100M+) |
+| **MCP-native** | Built for AI agents — structured data, not raw HTTP |
+| **Free tier** | Start searching immediately, upgrade when you need more |
 
 ---
 
@@ -123,7 +128,7 @@ Operators: `AND`, `OR`, `NOT`, `"exact phrase"`, `()` grouping.
 
 ## Also Includes Instagram & Reddit
 
-Xpoz isn't just a Twitter alternative — search across platforms:
+Xpoz isn't just for Twitter — search across platforms with the same simple interface:
 
 ```bash
 # Instagram (400M+ posts, including reel subtitles)
@@ -138,7 +143,7 @@ mcporter call xpoz.getRedditPostsByKeywords query="AI tools"
 ## Related Skills
 
 - **[xpoz-social-search](https://clawhub.ai/skills/xpoz-social-search)** — Full cross-platform search guide
-- **[social-lead-gen](https://clawhub.ai/skills/social-lead-gen)** — Find buyers from social conversations
+- **[lead-generation](https://clawhub.ai/skills/lead-generation)** — Find buyers from social conversations
 - **[expert-finder](https://clawhub.ai/skills/expert-finder)** — Discover domain experts
 
 ---
