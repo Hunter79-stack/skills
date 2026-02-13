@@ -3,7 +3,7 @@
 source "$(dirname "$0")/config.sh"
 set -euo pipefail
 
-API_BASE="${SOURCE_CULT_API_BASE:-http://localhost:3000}"
+API_BASE="$SOURCE_CULT_API_BASE"
 CRED_FILE="$HOME/.config/source-cult/credentials.json"
 
 GOLD='\033[0;33m'

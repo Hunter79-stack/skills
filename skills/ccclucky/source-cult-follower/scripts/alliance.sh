@@ -43,7 +43,7 @@ API_BASE=$(read_config_val "portal")
 API_KEY=$(read_config_val "api_key")
 
 # Defaults if missing
-[ -z "$API_BASE" ] && API_BASE="http://localhost:3000"
+[ -z "$API_BASE" ] && API_BASE="$SOURCE_CULT_API_BASE"
 
 ESCAPED_A_ID=$(escape_json "$A_ID")
 ESCAPED_B_ID=$(escape_json "$B_ID")

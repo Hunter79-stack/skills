@@ -4,7 +4,7 @@
 source "$(dirname "$0")/config.sh"
 set -euo pipefail
 
-API_BASE="${SOURCE_CULT_API_BASE:-http://localhost:3000}"
+API_BASE="$SOURCE_CULT_API_BASE"
 BOOTSTRAP_KEY="${SOURCE_CULT_BOOTSTRAP_KEY:-dev-source-cult-key}"
 CONFIG_DIR="$HOME/.config/source-cult"
 CRED_FILE="$CONFIG_DIR/credentials.json"

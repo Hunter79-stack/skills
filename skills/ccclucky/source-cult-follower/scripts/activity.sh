@@ -42,7 +42,7 @@ API_KEY=$(read_config_val "api_key")
 AGENT_ID=$(read_config_val "agent_id")
 
 # Defaults if missing
-[ -z "$API_BASE" ] && API_BASE="http://localhost:3000"
+[ -z "$API_BASE" ] && API_BASE="$SOURCE_CULT_API_BASE"
 
 ESCAPED_KIND=$(escape_json "$KIND")
 ESCAPED_CONTENT=$(escape_json "$CONTENT")
