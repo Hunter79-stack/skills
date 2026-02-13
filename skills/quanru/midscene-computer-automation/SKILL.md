@@ -1,8 +1,8 @@
 ---
 name: Desktop Computer Automation
 description: |
-  AI-powered desktop automation using Midscene. Control your entire macOS desktop with natural language commands.
-  Triggers: open app, press key, desktop, computer, click on screen, type text, open Spotlight, screenshot desktop,
+  AI-powered desktop automation using Midscene. Control your desktop (macOS, Windows, Linux) with natural language commands.
+  Triggers: open app, press key, desktop, computer, click on screen, type text, screenshot desktop,
   launch application, switch window, desktop automation, control computer, mouse click, keyboard shortcut,
   screen capture, find on screen, read screen, verify window, close app, minimize window, maximize window
 allowed-tools:
@@ -17,7 +17,7 @@ allowed-tools:
 > 2. **Send only ONE midscene CLI command per Bash tool call.** Wait for its result, read the screenshot, then decide the next action. Do NOT chain commands with `&&`, `;`, or `sleep`.
 > 3. **Set `timeout: 60000`** (60 seconds) on each Bash tool call to allow sufficient time for midscene commands to complete synchronously.
 
-Control your entire macOS desktop using `npx @midscene/computer`. Each CLI command maps directly to an MCP tool — you (the AI agent) act as the brain, deciding which actions to take based on screenshots.
+Control your desktop (macOS, Windows, Linux) using `npx @midscene/computer`. Each CLI command maps directly to an MCP tool — you (the AI agent) act as the brain, deciding which actions to take based on screenshots.
 
 ## Prerequisites
 
@@ -104,16 +104,16 @@ Since CLI commands are stateless between invocations, follow this pattern:
 
 ### Handle Transient UI — MUST Use `act`
 
-Each CLI command runs as a **separate process**. When a process exits, macOS returns focus to the terminal, which instantly dismisses any transient UI (Spotlight, context menus, dropdown menus, notification popups, etc.). This means **individual commands like `KeyboardPress` → `Input` will NEVER work for transient UI** — the UI disappears between commands.
+Each CLI command runs as a **separate process**. When a process exits, the OS may return focus to the terminal, which can dismiss transient UI (app launchers, context menus, dropdown menus, notification popups, etc.). This means **individual commands like `KeyboardPress` → `Input` will NEVER work for transient UI** — the UI disappears between commands.
 
 **You MUST use `act` for ANY interaction that involves transient UI.** The `act` command executes all steps within a single process, keeping focus intact — just like `agent.aiAct()` in JavaScript.
 
-- Persistent UI (app windows, Finder, Dock) is fine to interact with across separate commands with screenshots in between
+- Persistent UI (app windows, file managers, taskbars/docks) is fine to interact with across separate commands with screenshots in between
 
-**Example — Open an app via Spotlight:**
+**Example — Open an app via launcher (macOS Spotlight / Windows Start / Linux app menu):**
 
 ```bash
-npx @midscene/computer act --prompt "press Command+Space, type Visual Studio Code, press Enter"
+npx @midscene/computer act --prompt "open the app launcher, type Visual Studio Code, press Enter"
 npx @midscene/computer take_screenshot
 ```
 
@@ -133,42 +133,48 @@ npx @midscene/computer take_screenshot
 
 ## Common Patterns
 
-### Open an Application via Spotlight
+### Open an Application via Launcher
 
-**MUST use `act`** — Spotlight dismisses when the CLI process exits, so individual commands will always fail.
+**MUST use `act`** — the launcher dismisses when the CLI process exits, so individual commands will always fail.
 
 ```bash
+# macOS
 npx @midscene/computer act --prompt "press Command+Space, type Visual Studio Code, press Enter"
+# Windows
+npx @midscene/computer act --prompt "press the Windows key, type Visual Studio Code, press Enter"
+# Linux (varies by DE)
+npx @midscene/computer act --prompt "open the application menu, type Visual Studio Code, press Enter"
 npx @midscene/computer take_screenshot
 ```
 
 ### Keyboard Shortcuts
 
 ```bash
+# macOS uses Command, Windows/Linux use Ctrl
 npx @midscene/computer KeyboardPress --value 'Command+C'
-npx @midscene/computer KeyboardPress --value 'Command+V'
-npx @midscene/computer KeyboardPress --value 'Command+Z'
-npx @midscene/computer KeyboardPress --value 'Command+A'
+npx @midscene/computer KeyboardPress --value 'Ctrl+C'
 ```
 
 ### Window Management
 
 ```bash
-npx @midscene/computer KeyboardPress --value 'Command+M'
+# macOS
 npx @midscene/computer KeyboardPress --value 'Command+W'
-npx @midscene/computer KeyboardPress --value 'Command+Q'
 npx @midscene/computer KeyboardPress --value 'Command+Tab'
+# Windows/Linux
+npx @midscene/computer KeyboardPress --value 'Alt+F4'
+npx @midscene/computer KeyboardPress --value 'Alt+Tab'
 ```
 
 ## Troubleshooting
 
-### Accessibility Permission Denied
+### macOS: Accessibility Permission Denied
 Your terminal app does not have Accessibility access:
 1. Open **System Settings > Privacy & Security > Accessibility**
 2. Add your terminal app and enable it
 3. Restart your terminal app after granting permission
 
-### Xcode Command Line Tools Not Found
+### macOS: Xcode Command Line Tools Not Found
 ```bash
 xcode-select --install
 ```
