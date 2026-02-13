@@ -3,9 +3,15 @@
   "slug": "udp-messenger",
   "displayName": "LocalUDPMessenger",
   "latest": {
-    "version": "1.1.0",
-    "publishedAt": 1770931606718,
-    "commit": "https://github.com/openclaw/skills/commit/9cb95b189f8ef3635e568d4bae86da7b4ad1907d"
+    "version": "1.2.0",
+    "publishedAt": 1770942168723,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.1.0",
+      "publishedAt": 1770931606718,
+      "commit": "https://github.com/openclaw/skills/commit/9cb95b189f8ef3635e568d4bae86da7b4ad1907d"
+    }
+  ]
 }
