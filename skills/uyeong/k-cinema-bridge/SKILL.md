@@ -1,56 +1,61 @@
+---
+name: k-cinema-bridge
+description: Query Korean multiplex (Lotte Cinema, CGV, Megabox) box office rankings and upcoming movie data enriched with KOBIS details. Use when the user asks about Korean movies currently showing, box office rankings, upcoming releases, or wants movie recommendations based on genre, director, actor, or rating.
+homepage: https://uyeong.github.io/k-cinema-bridge/
+allowed-tools: WebFetch
+---
+
 # k-cinema-bridge
 
-한국 멀티플렉스(롯데시네마, CGV, 메가박스) 박스오피스 및 상영예정작 데이터를 제공하는 JSON API.
-KOBIS(영화진흥위원회) 데이터로 보강된 장르, 감독, 배우 등 상세 정보를 포함한다.
-데이터는 매일 00:00 UTC에 자동 갱신된다.
+A JSON API providing Korean multiplex (Lotte Cinema, CGV, Megabox) box office and upcoming movie data, enriched with detailed information such as genre, director, and cast from KOBIS (Korean Film Council). Data is automatically refreshed daily at 00:00 UTC.
 
-## API
+## API Reference
 
-- BASE_URL: `https://uyeong.github.io/k-cinema-bridge`
-- 모든 엔드포인트는 인증 없이 GET 요청만으로 사용 가능
-- info 필드가 null일 수 있으므로 반드시 null 체크 필요
+- Base URL: `https://uyeong.github.io/k-cinema-bridge`
+- All endpoints are accessible via `GET` requests without authentication.
+- The `info` field may be `null`, so always perform a `null` check before accessing it.
 
-| 엔드포인트 | 설명 |
+| Endpoint | Description |
 |---|---|
-| GET /api/boxoffice.json | 전체 소스 박스오피스 종합 (`{lotte, cgv, megabox}`) |
-| GET /api/boxoffice/{source}.json | 소스별 박스오피스 (`BoxOfficeMovie[]`) |
-| GET /api/upcoming.json | 전체 소스 상영예정작 종합 (`{lotte, cgv, megabox}`) |
-| GET /api/upcoming/{source}.json | 소스별 상영예정작 (`UpcomingMovie[]`) |
+| GET /api/boxoffice.json | Combined box office from all sources (`{lotte, cgv, megabox}`) |
+| GET /api/boxoffice/{source}.json | Box office by source (`BoxOfficeMovie[]`) |
+| GET /api/upcoming.json | Combined upcoming movies from all sources (`{lotte, cgv, megabox}`) |
+| GET /api/upcoming/{source}.json | Upcoming movies by source (`UpcomingMovie[]`) |
 
-source: `lotte` | `cgv` | `megabox`
+Valid source values: `lotte`, `cgv`, `megabox`
 
-## 데이터 구조
+## Data Models
 
 ### BoxOfficeMovie
 
 ```
 source: "lotte" | "cgv" | "megabox"
-rank: number          -- 박스오피스 순위 (1부터 시작)
-title: string         -- 영화 제목
-rating: string        -- 관람 등급
-posterUrl: string     -- 포스터 이미지 URL
-info?: MovieInfo      -- KOBIS 상세 정보 (null일 수 있음)
+rank: number          -- Box office rank (starting from 1)
+title: string         -- Movie title
+rating: string        -- Audience rating
+posterUrl: string     -- Poster image URL
+info?: MovieInfo      -- KOBIS detailed info (may be null)
 ```
 
 ### UpcomingMovie
 
 ```
 source: "lotte" | "cgv" | "megabox"
-title: string         -- 영화 제목
-rating: string        -- 관람 등급
-posterUrl: string     -- 포스터 이미지 URL
-releaseDate: string   -- 개봉 예정일 (YYYY-MM-DD, 빈 문자열일 수 있음)
-info?: MovieInfo      -- KOBIS 상세 정보 (null일 수 있음)
+title: string         -- Movie title
+rating: string        -- Audience rating
+posterUrl: string     -- Poster image URL
+releaseDate: string   -- Release date (YYYY-MM-DD, may be an empty string)
+info?: MovieInfo      -- KOBIS detailed info (may be null)
 ```
 
 ### MovieInfo
 
 ```
 code, title, englishTitle, originalTitle: string
-runtime: string (분)
+runtime: string (minutes)
 productionYear, openDate (YYYYMMDD), productionStatus, type: string
-nations: string[]     -- 제작 국가
-genres: string[]      -- 장르
+nations: string[]     -- Production countries
+genres: string[]
 directors: {name, englishName}[]
 actors: {name, englishName, role, roleEnglish}[]
 showTypes: {group, name}[]
@@ -59,47 +64,59 @@ audits: {number, grade}[]
 staff: {name, englishName, role}[]
 ```
 
-## 활용 가이드
+## Instructions
 
-### 현재 인기 영화 추천
+### Recommending Popular Movies
 
-트리거: "요즘 뭐 볼만해?", "영화 추천해줘"
+When the user asks for movie recommendations or what's popular:
 
-GET /api/boxoffice.json으로 전체 멀티플렉스 박스오피스를 가져와 공통 상위권 영화를 파악한다.
-rank가 낮을수록 상위, info.genres로 장르 안내 가능.
+1. Fetch `GET {BASE_URL}/api/boxoffice.json` to retrieve combined box office data from all sources.
+2. Identify movies that appear across multiple sources with low rank values — lower rank means higher popularity.
+3. Present the top-ranked movies with their title, rating, and genre from `info.genres` if available.
 
-### 개봉 예정작 안내
+### Announcing Upcoming Releases
 
-트리거: "곧 개봉하는 영화 뭐 있어?", "다음 달 영화"
+When the user asks about upcoming or soon-to-be-released movies:
 
-GET /api/upcoming.json으로 전체 상영예정작을 가져온다.
-releaseDate(YYYY-MM-DD)로 날짜 필터링, info.genres/directors/actors로 상세 정보 제공.
+1. Fetch `GET {BASE_URL}/api/upcoming.json` to retrieve combined upcoming movie data.
+2. Filter results by `releaseDate` (YYYY-MM-DD) to match the user's requested time range.
+3. Provide details such as genre, directors, and actors from the `info` field if available.
 
-### 장르/감독/배우 기반 검색
+### Searching by Genre, Director, or Actor
 
-트리거: "액션 영화 뭐 해?", "봉준호 신작 나왔어?", "마동석 영화"
+When the user asks about a specific genre, director, or actor:
 
-GET /api/boxoffice.json + GET /api/upcoming.json을 모두 조회 후 info 필드로 필터링.
-- 장르: `movie.info?.genres.includes("액션")`
-- 감독: `movie.info?.directors.some(d => d.name === "봉준호")`
-- 배우: `movie.info?.actors.some(a => a.name === "마동석")`
+1. Fetch both `GET {BASE_URL}/api/boxoffice.json` and `GET {BASE_URL}/api/upcoming.json`.
+2. Filter results using the `info` field:
+    - Genre: match against `info.genres`
+    - Director: match against `info.directors[].name`
+    - Actor: match against `info.actors[].name`
+3. Always null-check the `info` field before accessing nested properties.
 
-### 관람 등급 기반 필터링
+### Filtering by Audience Rating
 
-트리거: "아이랑 볼만한 영화", "전체관람가 영화 뭐 있어?"
+When the user asks for age-appropriate movies:
 
-rating 필드로 필터링. info 없이도 가능.
-- "전체 관람가" | "12세 관람가" | "15세 관람가" | "청소년 관람불가"
+1. Use the `rating` field to filter. This field is always present and does not require the `info` field.
+2. Known rating values: "전체 관람가" (All ages), "12세 관람가" (12+), "15세 관람가" (15+), "청소년 관람불가" (Adults only).
 
-### 특정 멀티플렉스 조회
+### Querying a Specific Multiplex
 
-트리거: "CGV에서 뭐 해?", "롯데시네마 상영작"
+When the user asks about a specific cinema chain:
 
-GET /api/boxoffice/{source}.json 또는 GET /api/upcoming/{source}.json
-source는 "lotte" | "cgv" | "megabox".
+1. Fetch `GET {BASE_URL}/api/boxoffice/{source}.json` or `GET {BASE_URL}/api/upcoming/{source}.json`.
+2. Valid source values: `lotte`, `cgv`, `megabox`.
 
-### 멀티플렉스 간 비교
+### Comparing Across Multiplexes
 
-트리거: "CGV랑 메가박스 순위 차이 알려줘"
+When the user asks to compare rankings between cinema chains:
 
-GET /api/boxoffice.json으로 종합 데이터에서 같은 title을 가진 영화의 rank를 비교한다.
+1. Fetch `GET {BASE_URL}/api/boxoffice.json` to retrieve combined data.
+2. Find movies with the same `title` across different sources and compare their `rank` values.
+
+## Response Guidelines
+
+- Respond in the same language the user is using.
+- When presenting movie lists, include title, rank or release date, rating, and genre when available.
+- If `info` is `null` for a movie, present only the base fields (title, rank, rating, posterUrl) without guessing missing details.
+- When comparing across multiplexes, use a table format for clarity.
