@@ -1,5 +1,68 @@
 # Changelog - Web Search Plus
 
+## [2.7.0] - 2026-02-14
+
+### ✨ Added
+- Provider cooldown tracking in `.cache/provider_health.json`
+- Exponential cooldown on provider failures: **1m → 5m → 25m → 1h (cap)**
+- Retry strategy for transient failures (timeout, 429, 503): up to 2 retries with backoff **1s → 3s → 9s**
+- Smarter cache keys hashed from full request context (query/provider/max_results + locale, freshness, time_range, topic, search_engines, include_news, and related params)
+- Cross-provider result deduplication by normalized URL during fallback merge
+
+### 🔧 Changed
+- Cooldown providers are skipped in routing while their cooldown is active
+- Provider health is reset automatically after successful requests
+- Fallback output now includes dedup metadata:
+  - `deduplicated: true|false`
+  - `metadata.dedup_count`
+
+
+## [2.6.5] - 2026-02-11
+
+### 🆕 File-Based Result Caching
+
+Added local caching to save API costs on repeated searches:
+
+#### Features
+- **Automatic Caching**: Search results cached locally by default
+- **1-Hour TTL**: Results expire after 3600 seconds (configurable)
+- **Cache Indicators**: Response includes `cached: true/false` and `cache_age_seconds`
+- **Zero-Cost Repeats**: Cached requests don't hit APIs
+
+#### New CLI Options
+- `--cache-ttl SECONDS` — Custom cache TTL (default: 3600)
+- `--no-cache` — Bypass cache, always fetch fresh
+- `--clear-cache` — Delete all cached results
+- `--cache-stats` — Show cache statistics (entries, size, age)
+
+#### Configuration
+- **Cache directory**: `.cache/` in skill directory
+- **Environment variable**: `WSP_CACHE_DIR` to override location
+- **Cache key**: Based on query + provider + max_results (SHA256)
+
+#### Usage Examples
+```bash
+# First request costs API credits
+python3 scripts/search.py -q "AI startups"
+
+# Second request is FREE (uses cache)
+python3 scripts/search.py -q "AI startups"
+
+# Force fresh results
+python3 scripts/search.py -q "AI startups" --no-cache
+
+# View stats
+python3 scripts/search.py --cache-stats
+
+# Clear everything
+python3 scripts/search.py --clear-cache
+```
+
+#### Technical Details
+- Cache files: JSON with metadata (_cache_timestamp, _cache_key, etc.)
+- Automatic cleanup of expired entries on access
+- Graceful handling of corrupted cache files
+
 ## [2.6.1] - 2026-02-04
 
 - Privacy cleanup: removed hardcoded paths and personal info from docs
