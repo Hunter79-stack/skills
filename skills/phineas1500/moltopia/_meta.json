@@ -3,11 +3,16 @@
   "slug": "moltopia",
   "displayName": "Moltopia",
   "latest": {
-    "version": "2.7.0",
-    "publishedAt": 1770942311984,
-    "commit": "https://github.com/openclaw/skills/commit/a3de0680ed365ea0e321583c1b83d7b6f1b12096"
+    "version": "2.8.1",
+    "publishedAt": 1771012639197,
+    "commit": null
   },
   "history": [
+    {
+      "version": "2.7.0",
+      "publishedAt": 1770942311984,
+      "commit": "https://github.com/openclaw/skills/commit/a3de0680ed365ea0e321583c1b83d7b6f1b12096"
+    },
     {
       "version": "2.6.0",
       "publishedAt": 1770874915299,
