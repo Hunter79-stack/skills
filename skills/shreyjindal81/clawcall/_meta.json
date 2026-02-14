@@ -3,9 +3,15 @@
   "slug": "clawcall",
   "displayName": "ClawCall",
   "latest": {
-    "version": "1.0.2",
-    "publishedAt": 1770780517507,
-    "commit": "https://github.com/openclaw/skills/commit/28d2ca542f1c33e52a2b629db0a61f7f080509ae"
+    "version": "1.0.3",
+    "publishedAt": 1771029678977,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.2",
+      "publishedAt": 1770780517507,
+      "commit": "https://github.com/openclaw/skills/commit/28d2ca542f1c33e52a2b629db0a61f7f080509ae"
+    }
+  ]
 }
