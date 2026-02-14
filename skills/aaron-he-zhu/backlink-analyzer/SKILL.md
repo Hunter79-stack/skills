@@ -1,10 +1,54 @@
 ---
 name: backlink-analyzer
-description: Analyzes backlink profiles to understand link authority, identify toxic links, discover link building opportunities, and monitor competitor link acquisition. Essential for off-page SEO strategy.
-geo-relevance: "low"
+description: 'Use when the user asks to "analyze backlinks", "check link profile", "find toxic links", "link building opportunities", "off-page SEO", "who links to me", "I have spammy links", "how do I get more backlinks", or "disavow links". Analyzes backlink profiles to understand link authority, identify toxic links, discover link building opportunities, and monitor competitor link acquisition. Essential for off-page SEO strategy. For internal link analysis, see internal-linking-optimizer. For competitor link profiles, see competitor-analysis.'
+license: Apache-2.0
+metadata:
+  author: aaron-he-zhu
+  version: "2.0.0"
+  geo-relevance: "low"
+  tags:
+    - seo
+    - backlinks
+    - link building
+    - link profile
+    - toxic links
+    - off-page seo
+    - link authority
+    - domain authority
+    - link acquisition
+  triggers:
+    - "analyze backlinks"
+    - "check link profile"
+    - "find toxic links"
+    - "link building opportunities"
+    - "off-page SEO"
+    - "backlink audit"
+    - "link quality"
+    - "who links to me"
+    - "I have spammy links"
+    - "how do I get more backlinks"
+    - "disavow links"
 ---
 
 # Backlink Analyzer
+
+
+> **[SEO & GEO Skills Library](https://skills.sh/aaron-he-zhu/seo-geo-claude-skills)** · 20 skills for SEO + GEO · Install all: `npx skills add aaron-he-zhu/seo-geo-claude-skills`
+
+<details>
+<summary>Browse all 20 skills</summary>
+
+**Research** · [keyword-research](../../research/keyword-research/) · [competitor-analysis](../../research/competitor-analysis/) · [serp-analysis](../../research/serp-analysis/) · [content-gap-analysis](../../research/content-gap-analysis/)
+
+**Build** · [seo-content-writer](../../build/seo-content-writer/) · [geo-content-optimizer](../../build/geo-content-optimizer/) · [meta-tags-optimizer](../../build/meta-tags-optimizer/) · [schema-markup-generator](../../build/schema-markup-generator/)
+
+**Optimize** · [on-page-seo-auditor](../../optimize/on-page-seo-auditor/) · [technical-seo-checker](../../optimize/technical-seo-checker/) · [internal-linking-optimizer](../../optimize/internal-linking-optimizer/) · [content-refresher](../../optimize/content-refresher/)
+
+**Monitor** · [rank-tracker](../rank-tracker/) · **backlink-analyzer** · [performance-reporter](../performance-reporter/) · [alert-manager](../alert-manager/)
+
+**Cross-cutting** · [content-quality-auditor](../../cross-cutting/content-quality-auditor/) · [domain-authority-auditor](../../cross-cutting/domain-authority-auditor/) · [entity-optimizer](../../cross-cutting/entity-optimizer/) · [memory-management](../../cross-cutting/memory-management/)
+
+</details>
 
 This skill helps you analyze, monitor, and optimize your backlink profile. It identifies link quality, discovers opportunities, and tracks competitor link building activities.
 
