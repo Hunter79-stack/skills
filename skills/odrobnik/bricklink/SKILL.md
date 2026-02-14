@@ -2,7 +2,7 @@
 name: bricklink
 description: "BrickLink Store API helper/CLI (OAuth 1.0 request signing). Covers orders, store inventory (read + write), catalog, categories, colors, feedback, and push notifications."
 summary: "BrickLink Store API CLI: orders, inventory, catalog, pricing, feedback."
-version: 1.3.3
+version: 1.4.1
 homepage: https://github.com/odrobnik/bricklink-skill
 metadata:
   openclaw:
@@ -50,22 +50,22 @@ See [SETUP.md](SETUP.md) for prerequisites and setup instructions.
 - `bricklink.py get-price-guide <type> <no> [--color-id N] [--guide-type stock|sold] [--new-or-used N|U] [--country-code XX] [--region ...] [--currency-code XXX] [--vat N|Y|O]` - Fetches price guide statistics.
 - `bricklink.py get-known-colors <type> <no>` - Lists known colors for a catalog item.
 
-### Mutating (require `--yes`)
+### Mutating
 
 > **Note:** Order mutations (update-order, update-order-status, update-payment-status) only work for **store orders** (direction=out, where you are the seller). Purchases (direction=in) return 404 — the BrickLink API does not allow buyers to modify order status or file/archive incoming orders. Use the BrickLink website for those.
 
-- `bricklink.py update-order <order_id> --yes [--json body.json] [--remarks ...] [--is-filed true|false] [--shipping-...] [--cost-...]` — Updates allowed order fields (tracking, remarks, shipping/cost fields). Store orders only.
-- `bricklink.py update-order-status <order_id> <status> --yes` — Updates the status of an order. Store orders only.
-- `bricklink.py update-payment-status <order_id> <payment_status> --yes` — Updates the payment status of an order. Store orders only.
-- `bricklink.py send-drive-thru <order_id> [--mail-me] --yes` — Sends a "Drive Thru" email for an order.
+- `bricklink.py update-order <order_id> [--remarks ...] [--is-filed true|false] [--shipping-...] [--cost-...]` — Updates allowed order fields (tracking, remarks, shipping/cost fields). Store orders only.
+- `bricklink.py update-order-status <order_id> <status>` — Updates the status of an order. Store orders only.
+- `bricklink.py update-payment-status <order_id> <payment_status>` — Updates the payment status of an order. Store orders only.
+- `bricklink.py send-drive-thru <order_id> [--mail-me]` — Sends a "Drive Thru" email for an order.
 
-- `bricklink.py post-feedback --yes [--json body.json] [--order-id N --rating 0|1|2 --comment ...]` - Posts new feedback for an order.
-- `bricklink.py reply-feedback <feedback_id> --yes [--json body.json] [--reply ...]` - Replies to feedback you received.
+- `bricklink.py post-feedback --order-id N --rating 0|1|2 [--comment ...]` - Posts new feedback for an order.
+- `bricklink.py reply-feedback <feedback_id> --reply "..."` - Replies to feedback you received.
 
-- `bricklink.py create-inventory --yes [--json body.json] [--item-type ... --item-no ... --color-id N --quantity N --unit-price ... --new-or-used N|U ...]` - Creates a single inventory lot.
-- `bricklink.py create-inventories --yes [--json body.json] [--item-type ... --item-no ... --color-id N --quantity N --unit-price ... --new-or-used N|U ...]` - Creates multiple inventory lots in one request.
-- `bricklink.py update-inventory <inventory_id> --yes [--json body.json] [--quantity N --unit-price ... --new-or-used N|U --remarks ...]` - Updates an inventory lot.
-- `bricklink.py delete-inventory <inventory_id> --yes` - Deletes an inventory lot.
+- `bricklink.py create-inventory [--item-type ... --item-no ... --color-id N --quantity N --unit-price ... --new-or-used N|U ...]` - Creates a single inventory lot from flags.
+- `bricklink.py create-inventory --file batch.json` - Creates multiple inventory lots from a validated JSON file (workspace or /tmp only).
+- `bricklink.py update-inventory <inventory_id> [--quantity N --unit-price ... --new-or-used N|U --remarks ...]` - Updates an inventory lot.
+- `bricklink.py delete-inventory <inventory_id>` - Deletes an inventory lot.
 
 ### Utilities
 

@@ -468,9 +468,57 @@ td.qty {{ width: 60px; }}
 </body></html>"""
 
 
-def _load_json_file(path: str) -> Any:
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+_INVENTORY_KEYS = {
+    "item", "color_id", "color_name", "quantity", "new_or_used",
+    "completeness", "unit_price", "bind_id", "description", "remarks",
+    "bulk", "is_retain", "is_stock_room", "stock_room_id",
+    "my_cost", "sale_rate", "tier_quantity1", "tier_quantity2", "tier_quantity3",
+    "tier_price1", "tier_price2", "tier_price3",
+}
+
+
+def _load_batch_file(path_str: str) -> list[dict[str, Any]]:
+    """Load and validate a JSON batch file for inventory operations."""
+    p = Path(path_str).resolve()
+
+    # Path restriction: workspace + /tmp only
+    allowed = [Path("/tmp").resolve()]
+    cwd = Path.cwd()
+    if (cwd / "skills").is_dir():
+        allowed.append(cwd.resolve())
+    ws = os.environ.get("OPENCLAW_WORKSPACE")
+    if ws:
+        allowed.append(Path(ws).resolve())
+    if not any(str(p).startswith(str(a) + "/") or p == a for a in allowed):
+        raise SystemExit(f"Refusing to read '{path_str}' — must be inside workspace or /tmp")
+
+    # Must be a .json file
+    if p.suffix.lower() != ".json":
+        raise SystemExit(f"Batch file must be a .json file, got: {p.name}")
+
+    if not p.is_file():
+        raise SystemExit(f"Batch file not found: {path_str}")
+
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        raise SystemExit(f"Invalid JSON in batch file: {e}")
+
+    if not isinstance(data, list):
+        raise SystemExit("Batch file must contain a JSON array of inventory objects")
+    if not data:
+        raise SystemExit("Batch file contains an empty array")
+
+    for idx, entry in enumerate(data):
+        if not isinstance(entry, dict):
+            raise SystemExit(f"Batch item [{idx}] is not a JSON object")
+        unknown = set(entry.keys()) - _INVENTORY_KEYS
+        if unknown:
+            raise SystemExit(f"Batch item [{idx}] has unknown keys: {', '.join(sorted(unknown))}")
+
+    return data
+
 
 def _apply_inventory_flags(body: dict[str, Any], args, *, include_item: bool = True) -> dict[str, Any]:
     if include_item:
@@ -792,18 +840,11 @@ def cmd_get_feedback_item(args) -> int:
 
 
 def cmd_post_feedback(args) -> int:
-    if not args.yes:
-        raise SystemExit("Refusing to post feedback without --yes")
 
     creds = load_creds(args)
     base = API_BASE_DEFAULT
 
     body: dict[str, Any] = {}
-    if args.json:
-        body = _load_json_file(args.json)
-        if not isinstance(body, dict):
-            raise SystemExit("--json must contain a JSON object")
-
     if args.order_id is not None:
         body["order_id"] = int(args.order_id)
     if args.rating is not None:
@@ -812,9 +853,9 @@ def cmd_post_feedback(args) -> int:
         body["comment"] = str(args.comment)
 
     if not body:
-        raise SystemExit("Feedback body is empty. Provide --json or --order-id/--rating/--comment.")
+        raise SystemExit("Feedback body is empty. Provide --order-id/--rating/--comment.")
     if "order_id" not in body or "rating" not in body:
-        raise SystemExit("Feedback requires order_id and rating (use --order-id and --rating, or include in --json).")
+        raise SystemExit("Feedback requires order_id and rating (use --order-id and --rating).")
 
     url = f"{base}/feedback"
     data = api_call(creds, "POST", url, body_json=body)
@@ -823,25 +864,18 @@ def cmd_post_feedback(args) -> int:
 
 
 def cmd_reply_feedback(args) -> int:
-    if not args.yes:
-        raise SystemExit("Refusing to reply to feedback without --yes")
 
     creds = load_creds(args)
     base = API_BASE_DEFAULT
 
     body: dict[str, Any] = {}
-    if args.json:
-        body = _load_json_file(args.json)
-        if not isinstance(body, dict):
-            raise SystemExit("--json must contain a JSON object")
-
     if args.reply is not None:
         body["reply"] = str(args.reply)
 
     if not body:
-        raise SystemExit("Reply body is empty. Provide --json or --reply.")
+        raise SystemExit("Reply body is empty. Provide --reply.")
     if "reply" not in body:
-        raise SystemExit("Reply requires reply text (use --reply, or include in --json).")
+        raise SystemExit("Reply requires reply text (use --reply).")
 
     fid = int(args.feedback_id)
     url = f"{base}/feedback/{fid}/reply"
@@ -901,82 +935,41 @@ def cmd_get_category(args) -> int:
 
 
 def cmd_create_inventory(args) -> int:
-    if not args.yes:
-        raise SystemExit("Refusing to create inventory without --yes")
 
     creds = load_creds(args)
     base = API_BASE_DEFAULT
-
-    body: dict[str, Any] = {}
-    if args.json:
-        body = _load_json_file(args.json)
-        if not isinstance(body, dict):
-            raise SystemExit("--json must contain a JSON object for create-inventory")
-
-    body = _apply_inventory_flags(body, args, include_item=True)
-
-    if not body:
-        raise SystemExit("Inventory body is empty. Provide --json or required flags.")
-    _validate_inventory_required(body)
-
     url = f"{base}/inventories"
-    data = api_call(creds, "POST", url, body_json=body)
-    print(json.dumps(data, ensure_ascii=False, indent=2))
-    return 0
 
-
-def cmd_create_inventories(args) -> int:
-    if not args.yes:
-        raise SystemExit("Refusing to create inventories without --yes")
-
-    creds = load_creds(args)
-    base = API_BASE_DEFAULT
-
-    items: list[dict[str, Any]] = []
-    if args.json:
-        payload = _load_json_file(args.json)
-        if not isinstance(payload, list):
-            raise SystemExit("--json must contain a JSON array for create-inventories")
-        items = payload
-
-    if not items:
-        items = [_apply_inventory_flags({}, args, include_item=True)]
+    if args.file:
+        # Batch mode: post array from JSON file
+        items = _load_batch_file(args.file)
+        for idx, entry in enumerate(items):
+            _validate_inventory_required(entry, index=idx)
+        print(f"Creating {len(items)} inventory item(s)…", file=__import__('sys').stderr)
+        data = api_call(creds, "POST", url, body_json=items)
     else:
-        updated: list[dict[str, Any]] = []
-        for entry in items:
-            if not isinstance(entry, dict):
-                raise SystemExit("--json array must contain only objects")
-            updated.append(_apply_inventory_flags(entry, args, include_item=True))
-        items = updated
+        # Single mode: build from flags
+        body: dict[str, Any] = {}
+        body = _apply_inventory_flags(body, args, include_item=True)
+        if not body:
+            raise SystemExit("Provide item flags (--item-type, --item-no, etc.) or --file for batch.")
+        _validate_inventory_required(body)
+        data = api_call(creds, "POST", url, body_json=body)
 
-    if not items:
-        raise SystemExit("Inventory list is empty. Provide --json or required flags.")
-    for idx, entry in enumerate(items):
-        _validate_inventory_required(entry, index=idx)
-
-    url = f"{base}/inventories"
-    data = api_call(creds, "POST", url, body_json=items)
     print(json.dumps(data, ensure_ascii=False, indent=2))
     return 0
 
 
 def cmd_update_inventory(args) -> int:
-    if not args.yes:
-        raise SystemExit("Refusing to update inventory without --yes")
 
     creds = load_creds(args)
     base = API_BASE_DEFAULT
 
     body: dict[str, Any] = {}
-    if args.json:
-        body = _load_json_file(args.json)
-        if not isinstance(body, dict):
-            raise SystemExit("--json must contain a JSON object for update-inventory")
-
     body = _apply_inventory_flags(body, args, include_item=False)
 
     if not body:
-        raise SystemExit("Inventory update body is empty. Provide --json or flags.")
+        raise SystemExit("Inventory update body is empty. Provide flags (--quantity, --unit-price, etc.).")
 
     inv_id = int(args.inventory_id)
     url = f"{base}/inventories/{inv_id}"
@@ -986,8 +979,6 @@ def cmd_update_inventory(args) -> int:
 
 
 def cmd_delete_inventory(args) -> int:
-    if not args.yes:
-        raise SystemExit("Refusing to delete inventory without --yes")
 
     creds = load_creds(args)
     base = API_BASE_DEFAULT
@@ -999,20 +990,13 @@ def cmd_delete_inventory(args) -> int:
 
 
 def cmd_update_order(args) -> int:
-    if not args.yes:
-        raise SystemExit("Refusing to modify an order without --yes")
 
     creds = load_creds(args)
     base = API_BASE_DEFAULT
 
     body: dict[str, Any] = {}
 
-    if args.json:
-        body = _load_json_file(args.json)
-        if not isinstance(body, dict):
-            raise SystemExit("--json must contain a JSON object")
-
-    # Apply convenience flags (override)
+    # Apply flags
     if args.remarks is not None:
         body["remarks"] = args.remarks
 
@@ -1052,8 +1036,6 @@ def cmd_update_order(args) -> int:
 
 
 def cmd_update_order_status(args) -> int:
-    if not args.yes:
-        raise SystemExit("Refusing to modify order status without --yes")
 
     creds = load_creds(args)
     base = API_BASE_DEFAULT
@@ -1066,8 +1048,6 @@ def cmd_update_order_status(args) -> int:
 
 
 def cmd_update_payment_status(args) -> int:
-    if not args.yes:
-        raise SystemExit("Refusing to modify payment status without --yes")
 
     creds = load_creds(args)
     base = API_BASE_DEFAULT
@@ -1080,8 +1060,6 @@ def cmd_update_payment_status(args) -> int:
 
 
 def cmd_send_drive_thru(args) -> int:
-    if not args.yes:
-        raise SystemExit("Refusing to send drive-thru email without --yes")
 
     creds = load_creds(args)
     base = API_BASE_DEFAULT
@@ -1251,34 +1229,22 @@ def main() -> int:
     p.add_argument("category_id", type=int)
     p.set_defaults(func=cmd_get_category)
 
-    p = sub.add_parser("create-inventory", help="POST /inventories (single resource)")
-    p.add_argument("--yes", action="store_true", help="Actually create the inventory item")
-    p.add_argument("--json", default=None, help="Path to JSON body (inventory resource)")
+    p = sub.add_parser("create-inventory", help="POST /inventories (single via flags, or batch via --file)")
+    p.add_argument("--file", default=None, help="Batch mode: .json file with array of inventory objects (workspace or /tmp only)")
     _add_inventory_common_args(p, include_item=True)
     p.set_defaults(func=cmd_create_inventory)
 
-    p = sub.add_parser("create-inventories", help="POST /inventories (array of resources)")
-    p.add_argument("--yes", action="store_true", help="Actually create the inventory items")
-    p.add_argument("--json", default=None, help="Path to JSON body (array of inventory resources)")
-    _add_inventory_common_args(p, include_item=True)
-    p.set_defaults(func=cmd_create_inventories)
-
     p = sub.add_parser("update-inventory", help="PUT /inventories/{inventory_id}")
     p.add_argument("inventory_id", type=int)
-    p.add_argument("--yes", action="store_true", help="Actually update the inventory item")
-    p.add_argument("--json", default=None, help="Path to JSON body (inventory resource fragment)")
     _add_inventory_common_args(p, include_item=False)
     p.set_defaults(func=cmd_update_inventory)
 
     p = sub.add_parser("delete-inventory", help="DELETE /inventories/{inventory_id}")
     p.add_argument("inventory_id", type=int)
-    p.add_argument("--yes", action="store_true", help="Actually delete the inventory item")
     p.set_defaults(func=cmd_delete_inventory)
 
     p = sub.add_parser("update-order", help="PUT /orders/{order_id} (update tracking, remarks, costs, filed)")
     p.add_argument("order_id", type=int)
-    p.add_argument("--yes", action="store_true", help="Actually perform the update")
-    p.add_argument("--json", default=None, help="Path to JSON body (order resource fragment)")
     p.add_argument("--remarks", default=None)
     p.add_argument("--is-filed", default=None, choices=["true", "false"], help="Set is_filed")
     p.add_argument("--shipping-date-shipped", default=None, help="Timestamp (ISO) for shipping.date_shipped")
@@ -1295,24 +1261,19 @@ def main() -> int:
     p = sub.add_parser("update-order-status", help="PUT /orders/{order_id}/status")
     p.add_argument("order_id", type=int)
     p.add_argument("status", help="New status value (see BrickLink available status list)")
-    p.add_argument("--yes", action="store_true", help="Actually perform the update")
     p.set_defaults(func=cmd_update_order_status)
 
     p = sub.add_parser("update-payment-status", help="PUT /orders/{order_id}/payment_status")
     p.add_argument("order_id", type=int)
     p.add_argument("payment_status", help="New payment status value (see BrickLink available status list)")
-    p.add_argument("--yes", action="store_true", help="Actually perform the update")
     p.set_defaults(func=cmd_update_payment_status)
 
     p = sub.add_parser("send-drive-thru", help="POST /orders/{order_id}/drive_thru")
     p.add_argument("order_id", type=int)
     p.add_argument("--mail-me", action="store_true", help="CC yourself")
-    p.add_argument("--yes", action="store_true", help="Actually send the email")
     p.set_defaults(func=cmd_send_drive_thru)
 
     p = sub.add_parser("post-feedback", help="POST /feedback")
-    p.add_argument("--yes", action="store_true", help="Actually post feedback")
-    p.add_argument("--json", default=None, help="Path to JSON body")
     p.add_argument("--order-id", type=int, default=None)
     p.add_argument("--rating", type=int, choices=[0, 1, 2], default=None)
     p.add_argument("--comment", default=None)
@@ -1320,8 +1281,6 @@ def main() -> int:
 
     p = sub.add_parser("reply-feedback", help="POST /feedback/{feedback_id}/reply")
     p.add_argument("feedback_id", type=int)
-    p.add_argument("--yes", action="store_true", help="Actually post the reply")
-    p.add_argument("--json", default=None, help="Path to JSON body")
     p.add_argument("--reply", default=None)
     p.set_defaults(func=cmd_reply_feedback)
 

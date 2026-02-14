@@ -54,6 +54,6 @@ The skill will use the config file if it exists, falling back to environment var
 ## Permissions
 
 - **Read operations** (get-orders, get-inventories, etc.) work immediately
-- **Write operations** (update-order, create-inventory, etc.) require the `--yes` flag for safety
+- **Write operations** (update-order, create-inventory, etc.) execute immediately — double-check parameters before running
 - **Order mutations** (update-order, update-order-status, update-payment-status) only work for **store orders** (direction=out, where you are the seller)
 - Purchases (direction=in) cannot be modified via API — use the BrickLink website instead
