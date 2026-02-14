@@ -3,11 +3,16 @@
   "slug": "alert-manager",
   "displayName": "Alert Manager",
   "latest": {
-    "version": "1.0.3",
-    "publishedAt": 1770824197173,
-    "commit": "https://github.com/openclaw/skills/commit/7870e38f43b1f002242d90856039b9909e5d291b"
+    "version": "2.0.0",
+    "publishedAt": 1771042766085,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.3",
+      "publishedAt": 1770824197173,
+      "commit": "https://github.com/openclaw/skills/commit/7870e38f43b1f002242d90856039b9909e5d291b"
+    },
     {
       "version": "1.0.2",
       "publishedAt": 1770739453246,

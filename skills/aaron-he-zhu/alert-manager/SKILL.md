@@ -1,10 +1,53 @@
 ---
 name: alert-manager
-description: Sets up and manages alerts for critical SEO and GEO metrics including ranking drops, traffic changes, technical issues, and competitor movements. Enables proactive monitoring and quick response to issues.
-geo-relevance: "low"
+description: 'Use when the user asks to "set up SEO alerts", "monitor rankings", "notify me when rankings drop", "traffic alerts", "watch competitor changes", "alert me if rankings drop", "notify me of traffic changes", or "watch my keywords for changes". Sets up and manages alerts for critical SEO and GEO metrics including ranking drops, traffic changes, technical issues, and competitor movements. Enables proactive monitoring and quick response to issues. For detailed rank analysis, see rank-tracker. For comprehensive reporting, see performance-reporter.'
+license: Apache-2.0
+metadata:
+  author: aaron-he-zhu
+  version: "2.0.0"
+  geo-relevance: "low"
+  tags:
+    - seo
+    - geo
+    - alerts
+    - monitoring
+    - ranking alerts
+    - traffic monitoring
+    - competitor alerts
+    - seo notifications
+    - proactive monitoring
+  triggers:
+    - "set up SEO alerts"
+    - "monitor rankings"
+    - "notify me when rankings drop"
+    - "traffic alerts"
+    - "watch competitor changes"
+    - "alert me"
+    - "ranking notifications"
+    - "alert me if rankings drop"
+    - "notify me of traffic changes"
+    - "watch my keywords for changes"
 ---
 
 # Alert Manager
+
+
+> **[SEO & GEO Skills Library](https://skills.sh/aaron-he-zhu/seo-geo-claude-skills)** · 20 skills for SEO + GEO · Install all: `npx skills add aaron-he-zhu/seo-geo-claude-skills`
+
+<details>
+<summary>Browse all 20 skills</summary>
+
+**Research** · [keyword-research](../../research/keyword-research/) · [competitor-analysis](../../research/competitor-analysis/) · [serp-analysis](../../research/serp-analysis/) · [content-gap-analysis](../../research/content-gap-analysis/)
+
+**Build** · [seo-content-writer](../../build/seo-content-writer/) · [geo-content-optimizer](../../build/geo-content-optimizer/) · [meta-tags-optimizer](../../build/meta-tags-optimizer/) · [schema-markup-generator](../../build/schema-markup-generator/)
+
+**Optimize** · [on-page-seo-auditor](../../optimize/on-page-seo-auditor/) · [technical-seo-checker](../../optimize/technical-seo-checker/) · [internal-linking-optimizer](../../optimize/internal-linking-optimizer/) · [content-refresher](../../optimize/content-refresher/)
+
+**Monitor** · [rank-tracker](../rank-tracker/) · [backlink-analyzer](../backlink-analyzer/) · [performance-reporter](../performance-reporter/) · **alert-manager**
+
+**Cross-cutting** · [content-quality-auditor](../../cross-cutting/content-quality-auditor/) · [domain-authority-auditor](../../cross-cutting/domain-authority-auditor/) · [entity-optimizer](../../cross-cutting/entity-optimizer/) · [memory-management](../../cross-cutting/memory-management/)
+
+</details>
 
 This skill helps you set up proactive monitoring alerts for critical SEO and GEO metrics. Get notified when rankings drop, traffic changes significantly, technical issues occur, or competitors make moves.
 
