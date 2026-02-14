@@ -1,333 +1,459 @@
 ---
 name: bw-cli
-description: Securely interact with Bitwarden password manager via the bw CLI. Covers authentication (login/unlock/logout), vault operations (list/get/create/edit/delete items, folders, attachments), password/passphrase generation, organization management, and secure session handling. Use for "bitwarden", "bw", "password safe", "vaultwarden", "vault", "password manager", "generate password", "get password", "unlock vault". Requires bw CLI installed and internet access.
+description: Interact with Bitwarden password manager using the bw CLI. Covers authentication (login/unlock/logout/status), vault operations (list/get/create/edit/delete/restore items, folders, attachments, collections), password/passphrase generation, organization management, and Send/receive. Use for "bitwarden", "bw", "password safe", "vaultwarden", "vault", "password manager", "generate password", "get password", "unlock vault", "share send".
+metadata:
+  author: tfm
+  version: "1.4.0"
+  docs: https://bitwarden.com/help/cli/
+  docs-md: https://bitwarden.com/help/cli.md
 ---
 
-# Bitwarden CLI Skill
+# Bitwarden CLI
 
-Secure vault operations using the Bitwarden command-line interface.
+Complete reference for interacting with Bitwarden via the command-line interface.
 
-## When to use
+**Official documentation:** https://bitwarden.com/help/cli/  
+**Markdown version (for agents):** https://bitwarden.com/help/cli.md
 
-**Activate this skill when the user wants to:**
-- Authenticate to Bitwarden (`login`, `unlock`, `logout`, `status`)
-- Retrieve credentials (`get password`, `get username`, `get totp`, `get item`)
-- Manage vault items (`list`, `create`, `edit`, `delete`, `restore`)
-- Generate passwords/passphrases (`generate`)
-- Handle attachments (`create attachment`, `get attachment`)
-- Manage organizations (`list organizations`, `move`, `confirm`)
-- Export/import vault data
-- Work with Vaultwarden/self-hosted instances
+## Quick Reference
 
-**Do NOT use for:**
-- Installing Bitwarden browser extensions or mobile apps
-- Comparing password managers theoretically
-- Self-hosting Bitwarden server setup (use server administration tools)
-- General encryption questions unrelated to Bitwarden
-
-## Prerequisites
-
-- `bw` CLI installed (verify with `bw --version`)
-- Internet access (or access to self-hosted server)
-- For vault operations: valid `BW_SESSION` environment variable or interactive unlock
-
-## Authentication & Session Management
-
-Bitwarden CLI uses a two-step authentication model:
-1. **Login** (`bw login`) - Authenticates identity, creates local vault copy
-2. **Unlock** (`bw unlock`) - Decrypts vault, generates session key
-
-### ⚠️ ALWAYS Sync Before Accessing Vault
-
-**CRITICAL:** The Bitwarden CLI maintains a local copy of the vault that can become stale. **Always run `bw sync` before accessing vault data** to ensure you have the latest items:
+### Installation
 
 ```bash
-# Sync vault before any retrieval operation
+# Native executable (recommended)
+# https://bitwarden.com/download/?app=cli
+
+# npm
+npm install -g @bitwarden/cli
+
+# Linux package managers
+choco install bitwarden-cli  # Windows via Chocolatey
+snap install bw              # Linux via Snap
+```
+
+### Authentication Flow
+
+```bash
+# 1. Login (creates local vault copy)
+bw login                     # Interactive login
+bw login --apikey           # API key login
+bw login --sso              # SSO login
+
+# 2. Unlock (generates session key)
+bw unlock                    # Interactive unlock
+bw unlock --passwordenv BW_PASSWORD     # From env
+bw unlock --passwordfile ~/.secrets     # From file
+
+# 3. Export session key (copy output to shell)
+export BW_SESSION="..."
+
+# 4. Sync before any vault operation
 bw sync
 
-# Then proceed with vault operations
-bw get item "Coda API Token"
+# 5. End session
+bw lock                      # Lock (keep login)
+bw logout                    # Complete logout
 ```
 
-**Best practice pattern for all vault operations:**
-1. Check status / unlock if needed
-2. **Run `bw sync`** (always!)
-3. Then list, get, create, edit items
+## Session & Configuration Commands
 
-This prevents working with outdated data, especially when:
-- Items were added/updated via other devices or browser extensions
-- Working with shared organization items
-- Recent changes haven't propagated to the local vault copy
+### status
 
-### Quick Start: Interactive Login
-
-```bash
-# Login (supports email/password, API key, or SSO)
-bw login
-
-# Unlock to get session key
-bw unlock
-# Copy the export command from output, then:
-export BW_SESSION="..."
-```
-
-### Automated/Scripted Login
-
-Use environment variables for automation:
-
-```bash
-# Method 1: API Key (recommended for automation)
-export BW_CLIENTID="user.xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-export BW_CLIENTSECRET="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-bw login --apikey
-bw unlock --passwordenv BW_PASSWORD # if BW_PASSWORD set
-
-# Method 2: Password file
-bw unlock --passwordfile ~/.secrets/bw-master-password.txt
-```
-
-### Secure Password Storage (User-Requested)
-
-If the user explicitly requests saving the master password to disk for convenience:
-
-```bash
-# 1. Create secrets directory in workspace
-mkdir -p ~/.openclaw/workspace/.secrets
-chmod 700 ~/.openclaw/workspace/.secrets
-
-# 2. Store password (user enters interactively)
-read -s BW_MASTER_PASS
-echo "$BW_MASTER_PASS" > ~/.openclaw/workspace/.secrets/bw-password.txt
-chmod 600 ~/.openclaw/workspace/.secrets/bw-password.txt
-
-# 3. Ensure git ignores it
-echo ".secrets/" >> ~/.openclaw/workspace/.gitignore
-```
-
-**Security requirements:**
-- File must be created with mode `600` (user read/write only)
-- Directory must be mode `700`
-- Must add `.secrets/` to `.gitignore` immediately
-- Must inform user of risks
-
-### Check Status
+Check authentication and vault status:
 
 ```bash
 bw status
 ```
 
-Returns JSON with `status`: `unauthenticated`, `locked`, or `unlocked`.
+Returns: `unauthenticated`, `locked`, or `unlocked`.
 
-### End Session
+### config
+
+Configure CLI settings:
 
 ```bash
-# Lock (keep login, destroy session key)
-bw lock
+# Set server (self-hosted or regional)
+bw config server https://vault.example.com
+bw config server https://vault.bitwarden.eu   # EU cloud
+bw config server                              # Check current
 
-# Logout (complete logout, requires re-authentication)
-bw logout
-# REQUIRES CONFIRMATION
+# Individual service URLs
+bw config server --web-vault <url> --api <url> --identity <url>
 ```
 
-## Core Vault Operations
+### sync
 
-### List Items
+Sync local vault with server (always run before vault operations):
 
 ```bash
-# All items
+bw sync                     # Full sync
+bw sync --last             # Show last sync timestamp
+```
+
+### update
+
+Check for updates (does not auto-install):
+
+```bash
+bw update
+```
+
+### serve
+
+Start REST API server:
+
+```bash
+bw serve --port 8087 --hostname localhost
+```
+
+## Vault Item Commands
+
+### list
+
+List vault objects:
+
+```bash
+# Items
 bw list items
-
-# Search with filters
 bw list items --search github
-bw list items --folderid null --search "api key"
-bw list items --collectionid xxx --organizationid xxx
+bw list items --folderid <id> --collectionid <id>
+bw list items --url https://example.com
+bw list items --trash                        # Items in trash
 
-# Other objects
+# Folders
 bw list folders
+
+# Collections
+bw list collections                          # All collections
+bw list org-collections --organizationid <id>  # Org collections
+
+# Organizations
 bw list organizations
-bw list collections
+bw list org-members --organizationid <id>
 ```
 
-### Retrieve Items
+### get
+
+Retrieve single values or items:
 
 ```bash
-# Get specific fields (searches by name if not UUID)
+# Get specific fields (by name or ID)
 bw get password "GitHub"
 bw get username "GitHub"
-bw get totp "GitHub"  # 2FA code
+bw get totp "GitHub"                         # 2FA code
 bw get notes "GitHub"
 bw get uri "GitHub"
 
-# Get full item JSON (useful for scripts)
-bw get item "GitHub" --pretty
+# Get full item JSON
+bw get item "GitHub"
+bw get item <uuid> --pretty
 
-# By exact ID
-bw get item 7ac9cae8-5067-4faf-b6ab-acfd00e2c328
+# Other objects
+bw get folder <id>
+bw get collection <id>
+bw get organization <id>
+bw get org-collection <id> --organizationid <id>
+
+# Templates for create operations
+bw get template item
+bw get template item.login
+bw get template item.card
+bw get template item.identity
+bw get template item.securenote
+bw get template folder
+bw get template collection
+bw get template item-collections
+
+# Security
+bw get fingerprint <user-id>
+bw get fingerprint me
+bw get exposed <password>                    # Check if password is breached
+
+# Attachments
+bw get attachment <filename> --itemid <id> --output /path/
 ```
 
-**Note:** `get` returns only one result. Use specific search terms.
+### create
 
-### Create Items
-
-Workflow: template → modify → encode → create
+Create new objects:
 
 ```bash
 # Create folder
-bw get template folder | jq '.name="Work Accounts"' | bw encode | bw create folder
+bw get template folder | jq '.name="Work"' | bw encode | bw create folder
 
 # Create login item
 bw get template item | jq \
-  '.name="New Service" | .login=$(bw get template item.login | jq '.username="user@example.com" | .password="secret123"')' \
+  '.name="Service" | .login=$(bw get template item.login | jq '.username="user@example.com" | .password="secret"')' \
   | bw encode | bw create item
+
+# Create secure note (type=2)
+bw get template item | jq \
+  '.type=2 | .secureNote.type=0 | .name="Note" | .notes="Content"' \
+  | bw encode | bw create item
+
+# Create card (type=3)
+bw get template item | jq \
+  '.type=3 | .name="My Card" | .card=$(bw get template item.card | jq '.number="4111..."')' \
+  | bw encode | bw create item
+
+# Create identity (type=4)
+bw get template item | jq \
+  '.type=4 | .name="My Identity" | .identity=$(bw get template item.identity)' \
+  | bw encode | bw create item
+
+# Create SSH key (type=5)
+bw get template item | jq \
+  '.type=5 | .name="My SSH Key"' \
+  | bw encode | bw create item
+
+# Attach file to existing item
+bw create attachment --file ./doc.pdf --itemid <uuid>
 ```
 
-**Item types:** Login (1), Secure Note (2), Card (3), Identity (4). See [references/commands.md](./references/commands.md) for details.
+Item types: `1=Login`, `2=Secure Note`, `3=Card`, `4=Identity`, `5=SSH Key`.
 
-### Edit Items
+### edit
+
+Modify existing objects:
 
 ```bash
-# Get item, modify password, save back
+# Edit item
 bw get item <id> | jq '.login.password="newpass"' | bw encode | bw edit item <id>
 
-# Move to collection
-echo '["collection-uuid"]' | bw encode | bw edit item-collections <item-id> --organizationid <org-id>
+# Edit folder
+bw get folder <id> | jq '.name="New Name"' | bw encode | bw edit folder <id>
+
+# Edit item collections
+ echo '["collection-uuid"]' | bw encode | bw edit item-collections <item-id> --organizationid <id>
+
+# Edit org collection
+bw get org-collection <id> --organizationid <id> | jq '.name="New Name"' | bw encode | bw edit org-collection <id> --organizationid <id>
 ```
 
-### Delete and Restore
+### delete
+
+Remove objects:
 
 ```bash
-# Send to trash (recoverable for 30 days)
+# Send to trash (recoverable 30 days)
 bw delete item <id>
+bw delete folder <id>
+bw delete attachment <id> --itemid <id>
+bw delete org-collection <id> --organizationid <id>
 
-# PERMANENT DELETE - REQUIRES EXPLICIT CONFIRMATION
+# Permanent delete (irreversible!)
 bw delete item <id> --permanent
+```
 
-# Restore from trash
+### restore
+
+Recover from trash:
+
+```bash
 bw restore item <id>
 ```
 
-### Attachments
+## Password Generation
+
+### generate
+
+Generate passwords or passphrases:
 
 ```bash
-# Attach file to existing item
-bw create attachment --file ./document.pdf --itemid <item-id>
-
-# Download attachment
-bw get attachment document.pdf --itemid <item-id> --output ./downloads/
-```
-
-## Password/Passphrase Generation
-
-```bash
-# Default: 14 chars, upper+lower+numbers
+# Password (default: 14 chars)
 bw generate
-
-# Custom: 20 chars with special characters
 bw generate --uppercase --lowercase --number --special --length 20
+bw generate -ulns --length 32
 
-# Passphrase: 4 words, dash-separated, capitalized
+# Passphrase
 bw generate --passphrase --words 4 --separator "-" --capitalize --includeNumber
 ```
 
-## Organization Management
+## Send Commands (Secure Sharing)
+
+### send
+
+Create ephemeral shares:
 
 ```bash
-# List organizations
-bw list organizations
+# Text Send
+bw send -n "Secret" -d 7 --hidden "This text vanishes in 7 days"
 
-# List org collections
-bw list org-collections --organizationid <org-id>
+# File Send
+bw send -n "Doc" -d 14 -f /path/to/file.pdf
 
-# Move personal item to organization
-echo '["collection-uuid"]' | bw encode | bw move <item-id> <org-id>
+# Advanced options
+bw send --password accesspass -f file.txt
+```
 
-# Confirm member (verify fingerprint first!)
+### receive
+
+Access received Sends:
+
+```bash
+bw receive <url> --password <pass>
+```
+
+## Organization Commands
+
+### move
+
+Share items to organization:
+
+```bash
+echo '["collection-uuid"]' | bw encode | bw move <item-id> <organization-id>
+```
+
+### confirm
+
+Confirm invited members:
+
+```bash
 bw get fingerprint <user-id>
-bw confirm org-member <user-id> --organizationid <org-id>
-
-# Device approvals (admin only)
-bw device-approval list --organizationid <org-id>
-bw device-approval approve <request-id> --organizationid <org-id>
+bw confirm org-member <user-id> --organizationid <id>
 ```
 
-## Import/Export
+### device-approval
+
+Manage device approvals:
 
 ```bash
-# Import from other password managers
-bw import --formats  # list supported formats
+bw device-approval list --organizationid <id>
+bw device-approval approve <request-id> --organizationid <id>
+bw device-approval approve-all --organizationid <id>
+bw device-approval deny <request-id> --organizationid <id>
+bw device-approval deny-all --organizationid <id>
+```
+
+## Import & Export
+
+### import
+
+Import from other password managers:
+
+```bash
+bw import --formats                          # List supported formats
 bw import lastpasscsv ./export.csv
-
-# Export vault - REQUIRES CONFIRMATION for destination outside workspace
-bw export --output ~/.openclaw/workspace/ --format encrypted_json
-bw export --output ~/.openclaw/workspace/ --format zip  # includes attachments
+bw import bitwardencsv ./import.csv --organizationid <id>
 ```
 
-## Self-Hosted / Vaultwarden
+### export
+
+Export vault data:
 
 ```bash
-# Configure for self-hosted instance
-bw config server https://vaultwarden.example.com
-
-# EU cloud
-bw config server https://vault.bitwarden.eu
-
-# Check current server
-bw config server
+bw export                                    # CSV format
+bw export --format json
+bw export --format encrypted_json
+bw export --format encrypted_json --password <custom-pass>
+bw export --format zip                       # Includes attachments
+bw export --output /path/ --raw              # Output to file or stdout
+bw export --organizationid <id> --format json
 ```
 
-## Safety & Security Guardrails
+## Utilities
 
-### Automatic Confirmations Required
+### encode
 
-| Action | Confirmation Required | Reason |
-|--------|----------------------|--------|
-| `bw delete --permanent` | Yes | Irreversible data loss |
-| `bw logout` | Yes | Destroys session, requires re-auth |
-| `bw export` outside workspace | Yes | Potential data exfiltration |
-| `bw serve` | Yes | Opens network service |
-| Saving master password to disk | Yes (with security instructions) | Credential exposure risk |
-| `sudo` (for installing bw) | Yes | System privilege escalation |
+Base64 encode JSON for create/edit operations:
 
-### Secret Handling
+```bash
+bw get template folder | jq '.name="Test"' | bw encode | bw create folder
+```
 
-- **Never log `BW_SESSION`** - redact from all output
-- **Never log master passwords** - use `--quiet` when piping passwords
-- **Session keys** - valid until `bw lock` or `bw logout`, or new terminal
-- **Environment variables** - `BW_PASSWORD`, `BW_CLIENTID`, `BW_CLIENTSECRET` should be unset after use in scripts
+### generate (password)
 
-### Workspace Boundaries
+See [Password Generation](#password-generation).
 
-- Default all exports to `~/.openclaw/workspace/`
-- Create `.secrets/` subdirectory for sensitive files (mode 700)
-- Auto-add `.secrets/` to `.gitignore`
-- Confirm before writing outside workspace
+### Global Options
+
+Available on all commands:
+
+```bash
+--pretty                     # Format JSON output with tabs
+--raw                        # Return raw output
+--response                   # JSON formatted response
+--quiet                      # No stdout (use for piping secrets)
+--nointeraction             # Don't prompt for input
+--session <key>             # Pass session key directly
+--version                   # CLI version
+--help                      # Command help
+```
+
+## Security Reference
+
+### Secure Password Storage
+
+If saving master password for automation:
+
+```bash
+# Create .secrets file
+echo "BW_PASSWORD=your_password" > ~/.openclaw/workspace/.secrets
+chmod 600 ~/.openclaw/workspace/.secrets
+
+# Add to .gitignore
+echo ".secrets" >> ~/.openclaw/workspace/.gitignore
+
+# Usage
+source ~/.openclaw/workspace/.secrets
+bw unlock --passwordenv BW_PASSWORD
+```
+
+### Environment Variables
+
+```bash
+BW_CLIENTID                  # API key client_id
+BW_CLIENTSECRET              # API key client_secret
+BW_PASSWORD                  # Master password for unlock
+BW_SESSION                   # Session key (auto-used by CLI)
+BITWARDENCLI_DEBUG=true      # Enable debug output
+NODE_EXTRA_CA_CERTS          # Self-signed certs path
+BITWARDENCLI_APPDATA_DIR     # Custom config directory
+```
+
+### Two-Step Login Methods
+
+Method values: `0=Authenticator`, `1=Email`, `3=YubiKey`.
+
+```bash
+bw login user@example.com password --method 0 --code 123456
+```
+
+### URI Match Types
+
+Values: `0=Domain`, `1=Host`, `2=Starts With`, `3=Exact`, `4=Regex`, `5=Never`.
+
+### Field Types
+
+Values: `0=Text`, `1=Hidden`, `2=Boolean`.
+
+### Organization User Types
+
+`0=Owner`, `1=Admin`, `2=User`, `3=Manager`, `4=Custom`.
+
+### Organization User Statuses
+
+`0=Invited`, `1=Accepted`, `2=Confirmed`, `-1=Revoked`.
+
+## Best Practices
+
+1. **Always sync**: Run `bw sync` before any vault operation
+2. **Secure session**: Use `bw lock` when done
+3. **Protect secrets**: Never log BW_SESSION
+4. **Password files**: Use mode 600 for password files
+5. **Verify fingerprints**: Before confirming org members
 
 ## Troubleshooting
 
-### "Your authentication request appears to be coming from a bot"
+| Issue | Solution |
+|-------|----------|
+| "Bot detected" | Use `--apikey` or provide `client_secret` |
+| "Vault is locked" | Run `bw unlock` and export BW_SESSION |
+| Self-signed cert error | Set `NODE_EXTRA_CA_CERTS` |
+| Need debug info | `export BITWARDENCLI_DEBUG=true` |
 
-Use API key authentication instead of email/password, or provide `client_secret` when prompted.
+---
 
-### "Vault is locked"
-
-Run `bw unlock` and set `BW_SESSION` environment variable.
-
-### Self-signed certificates (self-hosted)
-
-```bash
-export NODE_EXTRA_CA_CERTS="/path/to/ca-cert.pem"
-```
-
-### Debug mode
-
-```bash
-export BITWARDENCLI_DEBUG=true
-```
-
-## References
-
-- Full command reference: [references/commands.md](./references/commands.md)
-- Helper scripts:
-  - [scripts/unlock-session.sh](./scripts/unlock-session.sh) - Safe unlock with session export
-  - [scripts/safe-get-field.sh](./scripts/safe-get-field.sh) - Retrieve specific fields safely
-  - [scripts/create-login-item.sh](./scripts/create-login-item.sh) - Interactive login creation
+**References:**
+- HTML documentation: https://bitwarden.com/help/cli/
+- Markdown (fetchable): https://bitwarden.com/help/cli.md
