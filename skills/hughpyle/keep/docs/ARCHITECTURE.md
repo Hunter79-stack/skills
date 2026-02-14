@@ -35,16 +35,16 @@ The original document content is **not stored** — only the summary and embeddi
 │  - Version management: get_version(), list_versions()       │
 └──────────────────┬──────────────────────────────────────────┘
                    │
-        ┌──────────┼──────────┬──────────────┬───────────┐
-        │          │          │              │           │
-        ▼          ▼          ▼              ▼           ▼
-   ┌────────┐ ┌─────────┐ ┌──────────┐ ┌─────────┐ ┌─────────┐
-   │Document│ │Embedding│ │Summary   │ │Vector   │ │Document │
-   │Provider│ │Provider │ │Provider  │ │Store    │ │Store    │
-   └────────┘ └─────────┘ └──────────┘ └─────────┘ └─────────┘
-       │          │            │             │           │
-   fetch()    embed()     summarize()   vectors/    summaries/
-   from URI   text→vec   text→summary   search      versions
+        ┌──────────┼──────────┬──────────┬──────────┬───────────┐
+        │          │          │          │          │           │
+        ▼          ▼          ▼          ▼          ▼           ▼
+   ┌────────┐ ┌─────────┐ ┌────────┐ ┌────────┐ ┌─────────┐ ┌─────────┐
+   │Document│ │Embedding│ │Summary │ │Media   │ │Vector   │ │Document │
+   │Provider│ │Provider │ │Provider│ │Descr.* │ │Store    │ │Store    │
+   └────────┘ └─────────┘ └────────┘ └────────┘ └─────────┘ └─────────┘
+       │          │           │          │             │           │
+   fetch()    embed()    summarize()  describe()  vectors/    summaries/
+   from URI   text→vec  text→summary  media→text  search      versions
 ```
 
 ### Components
@@ -99,6 +99,12 @@ URI or content
 │ ization         │   (scripts/styles removed)
 └────────┬────────┘
          │ clean text
+         ▼
+┌─────────────────┐
+│ Media Enrichment│ ← Optional: vision description (images)
+│ (if configured) │   or transcription (audio) appended
+└────────┬────────┘
+         │ enriched text
     ┌────┴────┬─────────────┐
     │         │             │
     ▼         ▼             ▼
@@ -294,9 +300,27 @@ Fetch content from URIs with content regularization.
 **Content Regularization:**
 - **PDF**: text extracted via pypdf
 - **HTML**: text extracted via BeautifulSoup (scripts/styles removed)
+- **DOCX/PPTX**: text + tables/slides extracted via python-docx/python-pptx; auto-tags: author, title
+- **Audio** (MP3, FLAC, OGG, WAV, AIFF, M4A, WMA): metadata via tinytag; auto-tags: artist, album, genre, year
+- **Images** (JPEG, PNG, TIFF, WEBP): EXIF metadata via Pillow; auto-tags: dimensions, camera, date
 - **Other formats**: treated as plain text
 
-This ensures both embedding and summarization receive clean text.
+Provider-extracted tags merge with user tags (user wins on collision). This ensures both embedding and summarization receive clean text.
+
+### Media Description Providers (optional)
+Generate text descriptions from media files, enriching metadata-only content.
+
+- **mlx**: Apple Silicon — vision (mlx-vlm) + audio transcription (mlx-whisper)
+- **ollama**: Local server — vision models only (llava, moondream, bakllava)
+
+Media description runs in `Keeper.update()` between fetch and upsert. Descriptions are appended to the metadata content before embedding/summarization, making media files semantically searchable by their visual or audio content.
+
+Design points:
+- Only triggered for non-text content types (image/*, audio/*)
+- Lazy sub-provider loading: MLX composite only loads VLM for first image, whisper for first audio
+- GPU-locked via `LockedMediaDescriber` (same file-lock pattern as summarization)
+- Graceful degradation: errors never block indexing; no provider = metadata-only (unchanged behavior)
+- Optional dependency: `pip install keep-skill[media]` for MLX models
 
 ---
 

@@ -13,6 +13,7 @@ import importlib.resources
 import json
 import logging
 import re
+import sqlite3
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional
@@ -103,6 +104,12 @@ def _filter_by_date(items: list, since: str) -> list:
     ]
 
 
+def _is_hidden(item) -> bool:
+    """System notes (dot-prefix IDs like .conversations) are hidden by default."""
+    base_id = item.tags.get("_base_id", item.id)
+    return base_id.startswith(".")
+
+
 def _truncate_ts(ts: str) -> str:
     """Normalize timestamp to canonical format: YYYY-MM-DDTHH:MM:SS.
 
@@ -156,17 +163,21 @@ import sys
 
 from .config import load_or_create_config, save_config, StoreConfig, EmbeddingIdentity
 from .paths import get_config_dir, get_default_store_path
-from .pending_summaries import PendingSummaryQueue
+from .protocol import DocumentStoreProtocol, VectorStoreProtocol, PendingQueueProtocol
 from .providers import get_registry
 from .providers.base import (
+    Document,
     DocumentProvider,
     EmbeddingProvider,
+    MediaDescriber,
     SummarizationProvider,
 )
 from .providers.embedding_cache import CachingEmbeddingProvider
 from .document_store import VersionInfo
-from .store import ChromaStore
-from .types import Item, filter_non_system_tags, SYSTEM_TAG_PREFIX, parse_utc_timestamp
+from .types import (
+    Item, filter_non_system_tags, SYSTEM_TAG_PREFIX, parse_utc_timestamp,
+    validate_tag_key, validate_id, MAX_TAG_VALUE_LENGTH,
+)
 
 
 # Default max length for truncated placeholder summaries
@@ -230,29 +241,42 @@ SYSTEM_DOC_IDS = {
     "tag-type.md": ".tag/type",
     "meta-todo.md": ".meta/todo",
     "meta-learnings.md": ".meta/learnings",
+    "meta-genre.md": ".meta/genre",
+    "meta-artist.md": ".meta/artist",
+    "meta-album.md": ".meta/album",
 }
 
 # Pattern for meta-doc query lines: key=value pairs separated by spaces
 _META_QUERY_PAIR = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*=\S+$')
 # Pattern for context-match lines: key= (bare, no value)
 _META_CONTEXT_KEY = re.compile(r'^([a-zA-Z_][a-zA-Z0-9_]*)=$')
+# Pattern for prerequisite lines: key=* (item must have this tag)
+_META_PREREQ_KEY = re.compile(r'^([a-zA-Z_][a-zA-Z0-9_]*)=\*$')
 
 
-def _parse_meta_doc(content: str) -> tuple[list[dict[str, str]], list[str]]:
+def _parse_meta_doc(content: str) -> tuple[list[dict[str, str]], list[str], list[str]]:
     """
-    Parse meta-doc content into query lines and context-match keys.
+    Parse meta-doc content into query lines, context-match keys, and prerequisites.
 
     Returns:
-        (query_lines, context_keys) where:
+        (query_lines, context_keys, prereq_keys) where:
         - query_lines: list of dicts, each {key: value, ...} for AND queries
         - context_keys: list of tag keys for context matching
+        - prereq_keys: list of tag keys the current item must have
     """
     query_lines: list[dict[str, str]] = []
     context_keys: list[str] = []
+    prereq_keys: list[str] = []
 
     for line in content.split("\n"):
         line = line.strip()
         if not line:
+            continue
+
+        # Check for prerequisite: exactly "key=*"
+        prereq_match = _META_PREREQ_KEY.match(line)
+        if prereq_match:
+            prereq_keys.append(prereq_match.group(1))
             continue
 
         # Check for context-match: exactly "key=" with no value
@@ -276,7 +300,7 @@ def _parse_meta_doc(content: str) -> tuple[list[dict[str, str]], list[str]]:
         if is_query and pairs:
             query_lines.append(pairs)
 
-    return query_lines, context_keys
+    return query_lines, context_keys, prereq_keys
 
 # Old IDs for migration (maps old → new)
 _OLD_ID_RENAMES = {
@@ -397,7 +421,12 @@ class Keeper:
     def __init__(
         self,
         store_path: Optional[str | Path] = None,
-        decay_half_life_days: float = 30.0
+        decay_half_life_days: float = 30.0,
+        *,
+        config: Optional[StoreConfig] = None,
+        doc_store: Optional["DocumentStoreProtocol"] = None,
+        vector_store: Optional["VectorStoreProtocol"] = None,
+        pending_queue: Optional["PendingQueueProtocol"] = None,
     ) -> None:
         """
         Initialize or open an existing reflective memory store.
@@ -408,59 +437,68 @@ class Keeper:
             decay_half_life_days: Memory decay half-life in days (ACT-R model).
                 After this many days, an item's effective relevance is halved.
                 Set to 0 or negative to disable decay.
+            config: Pre-loaded StoreConfig (skips filesystem config discovery).
+            doc_store: Injected document store (skips default backend creation).
+            vector_store: Injected vector store (skips default backend creation).
+            pending_queue: Injected summary queue (skips default backend creation).
         """
         self._decay_half_life_days = decay_half_life_days
 
-        # Resolve config and store paths
-        # If store_path is explicitly provided, use it as both config and store location
-        # Otherwise, discover config via tree-walk and let config determine store
-        if store_path is not None:
-            self._store_path = Path(store_path).resolve()
-            config_dir = self._store_path
+        # --- Config resolution ---
+        if config is not None:
+            # Injected config — skip filesystem discovery
+            self._config: StoreConfig = config
+            self._store_path = config.path if config.path else Path(".")
         else:
-            # Discover config directory (tree-walk or envvar)
-            config_dir = get_config_dir()
+            # Resolve config and store paths from filesystem
+            if store_path is not None:
+                self._store_path = Path(store_path).resolve()
+                config_dir = self._store_path
+            else:
+                config_dir = get_config_dir()
 
-        # Load or create configuration
-        self._config: StoreConfig = load_or_create_config(config_dir)
+            self._config = load_or_create_config(config_dir)
 
-        # If store_path wasn't explicit, resolve from config
-        if store_path is None:
-            self._store_path = get_default_store_path(self._config)
+            if store_path is None:
+                self._store_path = get_default_store_path(self._config)
 
-        # Initialize document provider (needed for most operations)
+        # --- Document provider ---
         registry = get_registry()
         self._document_provider: DocumentProvider = registry.create_document(
             self._config.document.name,
             self._config.document.params,
         )
+        self._apply_file_size_limit(self._document_provider)
 
         # Lazy-loaded providers (created on first use to avoid network access for read-only ops)
         self._embedding_provider: Optional[EmbeddingProvider] = None
         self._summarization_provider: Optional[SummarizationProvider] = None
+        self._media_describer: Optional[MediaDescriber] = None
 
-        # Initialize pending summary queue
-        queue_path = self._store_path / "pending_summaries.db"
-        self._pending_queue = PendingSummaryQueue(queue_path)
+        # --- Storage backends (injected or factory-created) ---
+        if doc_store is not None and vector_store is not None:
+            # Fully injected (tests, custom setups)
+            from .backend import NullPendingQueue
+            self._document_store = doc_store
+            self._store = vector_store
+            self._pending_queue = pending_queue or NullPendingQueue()
+            self._is_local = False
+        else:
+            # Factory-based creation from config
+            from .backend import create_stores
+            bundle = create_stores(self._config)
+            self._document_store = bundle.doc_store
+            self._store = bundle.vector_store
+            self._pending_queue = bundle.pending_queue
+            self._is_local = bundle.is_local
 
-        # Initialize document store (canonical records)
-        from .document_store import DocumentStore
-        doc_store_path = self._store_path / "documents.db"
-        self._document_store = DocumentStore(doc_store_path)
-
-        # Initialize ChromaDB store (embedding index)
-        # Use dimension from stored identity if available (allows offline read-only access)
-        embedding_dim = None
-        if self._config.embedding_identity:
-            embedding_dim = self._config.embedding_identity.dimension
-        self._store = ChromaStore(
-            self._store_path,
-            embedding_dimension=embedding_dim,
-        )
+        # Guard against concurrent background reconciliation
+        import threading
+        self._reconcile_lock = threading.Lock()
 
         # Check store consistency and reconcile in background if needed
+        # (safe for all backends — uses abstract store interface)
         if self._check_store_consistency() and self._config.embedding is not None:
-            import threading
             chroma_coll = self._resolve_chroma_collection()
             doc_coll = self._resolve_doc_collection()
             threading.Thread(
@@ -472,6 +510,17 @@ class Keeper:
         self._needs_sysdoc_migration = (
             self._config.system_docs_version < SYSTEM_DOCS_VERSION
         )
+
+    def _apply_file_size_limit(self, provider: DocumentProvider) -> None:
+        """Apply max_file_size config to file-based providers."""
+        from .providers.documents import FileDocumentProvider, CompositeDocumentProvider
+        max_size = self._config.max_file_size
+        if isinstance(provider, FileDocumentProvider):
+            provider.max_size = max_size
+        elif isinstance(provider, CompositeDocumentProvider):
+            for p in provider._providers:
+                if isinstance(p, FileDocumentProvider):
+                    p.max_size = max_size
 
     def _check_store_consistency(self) -> bool:
         """Check if DocumentStore and ChromaDB ID sets match.
@@ -501,10 +550,15 @@ class Keeper:
 
     def _auto_reconcile_safe(self, chroma_coll: str, doc_coll: str) -> None:
         """Background-safe wrapper for auto-reconcile. Silently handles failures."""
+        if not self._reconcile_lock.acquire(blocking=False):
+            logger.debug("Reconciliation already in progress, skipping")
+            return
         try:
             self._auto_reconcile(chroma_coll, doc_coll)
         except Exception as e:
             logger.debug("Background reconcile failed: %s", e)
+        finally:
+            self._reconcile_lock.release()
 
     def _auto_reconcile(self, chroma_coll: str, doc_coll: str) -> None:
         """Fix store divergence using summaries (no content re-fetch needed).
@@ -534,11 +588,13 @@ class Keeper:
                 record = self._document_store.get(doc_coll, doc_id)
                 if record:
                     embedding = provider.embed(record.summary)
-                    self._store.upsert(
-                        collection=chroma_coll, id=doc_id,
-                        embedding=embedding, summary=record.summary, tags=record.tags,
-                    )
-                    logger.info("Reconciled missing item: %s", doc_id)
+                    # Re-verify document still exists after (potentially slow) embedding
+                    if self._document_store.get(doc_coll, doc_id) is not None:
+                        self._store.upsert(
+                            collection=chroma_coll, id=doc_id,
+                            embedding=embedding, summary=record.summary, tags=record.tags,
+                        )
+                        logger.info("Reconciled missing item: %s", doc_id)
             except Exception as e:
                 logger.warning("Failed to reconcile %s: %s", doc_id, e)
 
@@ -625,28 +681,20 @@ class Keeper:
             for rec in old_text_docs:
                 new_id = "%" + rec.id[len("_text:"):]
                 if not self._document_store.get(doc_coll, new_id):
-                    # Direct SQL copy preserving created_at and updated_at
-                    tags_json = json.dumps(rec.tags, ensure_ascii=False)
-                    self._document_store._conn.execute("""
-                        INSERT OR REPLACE INTO documents
-                        (id, collection, summary, tags_json, created_at, updated_at, content_hash, accessed_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (new_id, doc_coll, rec.summary, tags_json,
-                          rec.created_at, rec.updated_at, rec.content_hash, rec.accessed_at))
-                    self._document_store._conn.commit()
+                    # Copy record preserving original timestamps
+                    self._document_store.copy_record(doc_coll, rec.id, new_id)
                     # Transfer embedding from ChromaDB (no re-embedding needed)
                     try:
-                        chroma_coll_obj = self._store._get_collection(chroma_coll_name)
-                        result = chroma_coll_obj.get(
-                            ids=[rec.id],
-                            include=["embeddings", "metadatas", "documents"])
-                        if result["ids"] and result["embeddings"] is not None and len(result["embeddings"]) > 0:
-                            meta = result["metadatas"][0] or {}
-                            chroma_coll_obj.upsert(
-                                ids=[new_id],
-                                embeddings=[result["embeddings"][0]],
-                                documents=[result["documents"][0] or rec.summary],
-                                metadatas=[meta])
+                        entries = self._store.get_entries_full(chroma_coll_name, [rec.id])
+                        if entries and entries[0].get("embedding") is not None:
+                            entry = entries[0]
+                            self._store.upsert_batch(
+                                chroma_coll_name,
+                                [new_id],
+                                [entry["embedding"]],
+                                [entry["summary"] or rec.summary],
+                                [entry["tags"]],
+                            )
                     except (ValueError, KeyError) as e:
                         logger.debug("ChromaDB transfer skipped for %s: %s", rec.id, e)
                 self.delete(rec.id)
@@ -756,22 +804,26 @@ class Keeper:
                 self._config.embedding.params,
             )
             # Wrap local GPU providers with lifecycle lock
-            if self._config.embedding.name == "mlx":
-                from .model_lock import LockedEmbeddingProvider
-                base_provider = LockedEmbeddingProvider(
+            # Local-only: model locks and embedding cache use filesystem
+            if self._is_local:
+                if self._config.embedding.name == "mlx":
+                    from .model_lock import LockedEmbeddingProvider
+                    base_provider = LockedEmbeddingProvider(
+                        base_provider,
+                        self._store_path / ".embedding.lock",
+                    )
+                cache_path = self._store_path / "embedding_cache.db"
+                self._embedding_provider = CachingEmbeddingProvider(
                     base_provider,
-                    self._store_path / ".embedding.lock",
+                    cache_path=cache_path,
                 )
-            cache_path = self._store_path / "embedding_cache.db"
-            self._embedding_provider = CachingEmbeddingProvider(
-                base_provider,
-                cache_path=cache_path,
-            )
+            else:
+                self._embedding_provider = base_provider
             # Validate or record embedding identity
             self._validate_embedding_identity(self._embedding_provider)
             # Update store's embedding dimension if it wasn't known at init
-            if self._store._embedding_dimension is None:
-                self._store._embedding_dimension = self._embedding_provider.dimension
+            if self._store.embedding_dimension is None:
+                self._store.reset_embedding_dimension(self._embedding_provider.dimension)
         return self._embedding_provider
 
     def _get_summarization_provider(self) -> SummarizationProvider:
@@ -786,7 +838,7 @@ class Keeper:
                 self._config.summarization.name,
                 self._config.summarization.params,
             )
-            if self._config.summarization.name == "mlx":
+            if self._is_local and self._config.summarization.name == "mlx":
                 from .model_lock import LockedSummarizationProvider
                 provider = LockedSummarizationProvider(
                     provider,
@@ -794,6 +846,34 @@ class Keeper:
                 )
             self._summarization_provider = provider
         return self._summarization_provider
+
+    def _get_media_describer(self) -> Optional[MediaDescriber]:
+        """
+        Get media describer, creating it lazily on first use.
+
+        Returns None if no media provider is configured or creation fails.
+        For MLX (local GPU) providers, wraps with a lifecycle lock.
+        """
+        if self._media_describer is None:
+            if self._config.media is None:
+                return None
+            registry = get_registry()
+            try:
+                provider = registry.create_media(
+                    self._config.media.name,
+                    self._config.media.params,
+                )
+            except (ValueError, RuntimeError) as e:
+                logger.warning("Media describer unavailable: %s", e)
+                return None
+            if self._is_local and self._config.media.name == "mlx":
+                from .model_lock import LockedMediaDescriber
+                provider = LockedMediaDescriber(
+                    provider,
+                    self._store_path / ".media.lock",
+                )
+            self._media_describer = provider
+        return self._media_describer
 
     def _gather_context(
         self,
@@ -1191,21 +1271,21 @@ class Keeper:
 
         # If content changed and we archived a version, also store versioned embedding
         if existing_doc is not None and content_changed:
-            version_count = self._document_store.version_count(doc_coll, id)
-            if version_count > 0:
+            max_ver = self._document_store.max_version(doc_coll, id)
+            if max_ver > 0:
                 if old_embedding is None:
                     old_embedding = self._get_embedding_provider().embed(existing_doc.summary)
                 self._store.upsert_version(
                     collection=chroma_coll,
                     id=id,
-                    version=version_count,
+                    version=max_ver,
                     embedding=old_embedding,
                     summary=existing_doc.summary,
                     tags=existing_doc.tags,
                 )
 
-        # Spawn background processor if needed
-        if summary is None and len(content) > max_len and (not content_unchanged or tags_changed):
+        # Spawn background processor if needed (local only — uses filesystem locks)
+        if self._is_local and summary is None and len(content) > max_len and (not content_unchanged or tags_changed):
             self._spawn_processor()
 
         return _record_to_item(result)
@@ -1253,7 +1333,45 @@ class Keeper:
             if tags is None:
                 tags = source_tags
 
+        # Validate inputs
+        validate_id(id)
+        if tags:
+            for key, value in tags.items():
+                if not key.startswith(SYSTEM_TAG_PREFIX):
+                    validate_tag_key(key)
+                    if len(value) > MAX_TAG_VALUE_LENGTH:
+                        raise ValueError(f"Tag value too long (max {MAX_TAG_VALUE_LENGTH}): {key!r}")
+
         doc = self._document_provider.fetch(id)
+
+        # Merge provider-extracted tags with user tags (user wins on collision)
+        merged_tags: dict[str, str] | None = None
+        if doc.tags or tags:
+            merged_tags = {}
+            if doc.tags:
+                merged_tags.update(doc.tags)
+            if tags:
+                merged_tags.update(tags)  # User tags override provider tags
+
+        # Media description: enrich non-text content with model-based description
+        if doc.content_type and not doc.content_type.startswith("text/"):
+            describer = self._get_media_describer()
+            if describer:
+                try:
+                    file_path = id.removeprefix("file://") if id.startswith("file://") else id
+                    description = describer.describe(file_path, doc.content_type)
+                    if description:
+                        doc = Document(
+                            uri=doc.uri,
+                            content=doc.content + "\n\nDescription:\n" + description,
+                            content_type=doc.content_type,
+                            metadata=doc.metadata,
+                            tags=doc.tags,
+                        )
+                        logger.info("Added media description for %s (%d chars)",
+                                    id, len(description))
+                except Exception as e:
+                    logger.warning("Media description failed for %s: %s", id, e)
 
         system_tags = {"_source": "uri"}
         if doc.content_type:
@@ -1261,7 +1379,7 @@ class Keeper:
 
         return self._upsert(
             id, doc.content,
-            tags=tags, summary=summary,
+            tags=merged_tags, summary=summary,
             system_tags=system_tags,
         )
 
@@ -1376,6 +1494,7 @@ class Keeper:
         *,
         limit: int = 10,
         since: Optional[str] = None,
+        include_hidden: bool = False,
     ) -> list[Item]:
         """
         Find items using semantic similarity search.
@@ -1387,6 +1506,7 @@ class Keeper:
             query: Search query text
             limit: Maximum results to return
             since: Only include items updated since (ISO duration like P3D, or date)
+            include_hidden: Include system notes (dot-prefix IDs)
         """
         chroma_coll = self._resolve_chroma_collection()
         doc_coll = self._resolve_doc_collection()
@@ -1394,19 +1514,19 @@ class Keeper:
         # Embed query
         embedding = self._get_embedding_provider().embed(query)
 
-        # Search (fetch extra to account for re-ranking and date filtering)
-        fetch_limit = limit * 2 if self._decay_half_life_days > 0 else limit
-        if since is not None:
-            fetch_limit = max(fetch_limit, limit * 3)  # Fetch more when filtering
+        # Search (fetch extra to account for re-ranking, date filtering, hidden filtering)
+        fetch_limit = limit * 3 if self._decay_half_life_days > 0 else limit * 2
         results = self._store.query_embedding(chroma_coll, embedding, limit=fetch_limit)
 
         # Convert to Items and apply decay
         items = [r.to_item() for r in results]
         items = self._apply_recency_decay(items)
 
-        # Apply date filter if specified
+        # Apply filters
         if since is not None:
             items = _filter_by_date(items, since)
+        if not include_hidden:
+            items = [i for i in items if not _is_hidden(i)]
 
         final = items[:limit]
         # Touch accessed_at for returned items
@@ -1421,6 +1541,7 @@ class Keeper:
         limit: int = 10,
         since: Optional[str] = None,
         include_self: bool = False,
+        include_hidden: bool = False,
     ) -> list[Item]:
         """
         Find items similar to an existing item.
@@ -1430,6 +1551,7 @@ class Keeper:
             limit: Maximum results to return
             since: Only include items updated since (ISO duration like P3D, or date)
             include_self: Include the queried item in results
+            include_hidden: Include system notes (dot-prefix IDs)
         """
         chroma_coll = self._resolve_chroma_collection()
         doc_coll = self._resolve_doc_collection()
@@ -1442,9 +1564,7 @@ class Keeper:
         embedding = self._store.get_embedding(chroma_coll, id)
         if embedding is None:
             embedding = self._get_embedding_provider().embed(item.summary)
-        actual_limit = limit + 1 if not include_self else limit
-        if since is not None:
-            actual_limit = max(actual_limit, limit * 3)
+        actual_limit = (limit + 1 if not include_self else limit) * 3
         results = self._store.query_embedding(chroma_coll, embedding, limit=actual_limit)
 
         # Filter self if needed
@@ -1455,9 +1575,11 @@ class Keeper:
         items = [r.to_item() for r in results]
         items = self._apply_recency_decay(items)
 
-        # Apply date filter if specified
+        # Apply filters
         if since is not None:
             items = _filter_by_date(items, since)
+        if not include_hidden:
+            items = [i for i in items if not _is_hidden(i)]
 
         final = items[:limit]
         # Touch accessed_at for returned items
@@ -1491,8 +1613,8 @@ class Keeper:
         if embedding is None:
             return []
 
-        # Fetch more than needed to account for version filtering
-        fetch_limit = limit * 3
+        # Fetch more than needed to account for version/hidden filtering
+        fetch_limit = limit * 5
         results = self._store.query_embedding(chroma_coll, embedding, limit=fetch_limit)
 
         # Convert to Items
@@ -1501,15 +1623,15 @@ class Keeper:
         # Extract base ID of source document
         source_base_id = id.split("@v")[0] if "@v" in id else id
 
-        # Filter to distinct base IDs, excluding source document
+        # Filter to distinct base IDs, excluding source document and hidden notes
         seen_base_ids: set[str] = set()
         filtered: list[Item] = []
         for item in items:
             # Get base ID from tags or parse from ID
             base_id = item.tags.get("_base_id", item.id.split("@v")[0] if "@v" in item.id else item.id)
 
-            # Skip versions of source document
-            if base_id == source_base_id:
+            # Skip versions of source document and hidden system notes
+            if base_id == source_base_id or base_id.startswith("."):
                 continue
 
             # Keep only first version of each document
@@ -1540,8 +1662,11 @@ class Keeper:
             return 0  # Current version
         base_id = item.tags.get("_base_id", item.id)
         doc_coll = self._resolve_doc_collection()
-        version_count = self._document_store.version_count(doc_coll, base_id)
-        return version_count - int(version_tag) + 1
+        # Count versions >= this one to get the offset (handles gaps)
+        internal_version = int(version_tag)
+        return self._document_store.count_versions_from(
+            doc_coll, base_id, internal_version
+        )
 
     def resolve_meta(
         self,
@@ -1583,53 +1708,113 @@ class Keeper:
             meta_id = rec.id
             short_name = meta_id.split("/", 1)[1] if "/" in meta_id else meta_id
 
-            query_lines, context_keys = _parse_meta_doc(rec.summary)
-            if not query_lines:
+            query_lines, context_keys, prereq_keys = _parse_meta_doc(rec.summary)
+            if not query_lines and not context_keys:
                 continue
 
-            # Get context values from current item's tags
-            context_values: dict[str, str] = {}
-            for key in context_keys:
-                val = current_tags.get(key)
-                if val and not key.startswith("_"):
-                    context_values[key] = val
-
-            # Build expanded queries: cross-product of query lines × context values
-            expanded: list[dict[str, str]] = []
-            if context_values:
-                for query in query_lines:
-                    for ctx_key, ctx_val in context_values.items():
-                        expanded.append({**query, ctx_key: ctx_val})
-            else:
-                # No context → use query lines as-is
-                expanded = list(query_lines)
-
-            # Run each expanded query, union results (fetch generously for ranking)
-            seen_ids: set[str] = set()
-            matches: list[Item] = []
-            for query in expanded:
-                try:
-                    items = self.query_tag(
-                        limit=100,  # fetch all candidates for ranking
-                        **query,
-                    )
-                except (ValueError, Exception):
-                    continue
-                for item in items:
-                    # Skip the current item, meta-docs, and dupes
-                    if item.id == item_id or item.id.startswith(".meta/") or item.id in seen_ids:
-                        continue
-                    seen_ids.add(item.id)
-                    matches.append(item)
-
-            if not matches:
-                continue
-
-            # Rank by similarity to current item + recency decay
-            matches = self._rank_by_relevance(self._resolve_chroma_collection(), item_id, matches)
-            result[short_name] = matches[:limit_per_doc]
+            matches = self._resolve_meta_queries(
+                item_id, current_tags, query_lines, context_keys, prereq_keys, limit_per_doc,
+            )
+            if matches:
+                result[short_name] = matches
 
         return result
+
+    def resolve_inline_meta(
+        self,
+        item_id: str,
+        queries: list[dict[str, str]],
+        context_keys: list[str] | None = None,
+        prereq_keys: list[str] | None = None,
+        *,
+        limit: int = 3,
+    ) -> list[Item]:
+        """
+        Resolve an inline meta query against an item's tags.
+
+        Like resolve_meta() but with ad-hoc queries instead of persistent
+        .meta/* documents. Queries use the same tag-based syntax.
+
+        Args:
+            item_id: ID of the item whose tags provide context
+            queries: List of tag-match dicts, each {key: value} for AND queries;
+                     multiple dicts are OR (union)
+            context_keys: Tag keys to expand from the current item's tags
+            prereq_keys: Tag keys the current item must have (or return empty)
+            limit: Max results
+
+        Returns:
+            List of matching Items, ranked by similarity + recency.
+        """
+        current = self.get(item_id)
+        if current is None:
+            return []
+
+        return self._resolve_meta_queries(
+            item_id, current.tags,
+            queries, context_keys or [], prereq_keys or [], limit,
+        )
+
+    def _resolve_meta_queries(
+        self,
+        item_id: str,
+        current_tags: dict[str, str],
+        query_lines: list[dict[str, str]],
+        context_keys: list[str],
+        prereq_keys: list[str],
+        limit: int,
+    ) -> list[Item]:
+        """Shared resolution logic for persistent and inline metadocs."""
+        # Check prerequisites: current item must have all required tags
+        if prereq_keys:
+            if not all(current_tags.get(k) for k in prereq_keys):
+                return []
+
+        # Get context values from current item's tags
+        context_values: dict[str, str] = {}
+        for key in context_keys:
+            val = current_tags.get(key)
+            if val and not key.startswith("_"):
+                context_values[key] = val
+
+        # Build expanded queries: cross-product of query lines × context values
+        expanded: list[dict[str, str]] = []
+        if context_values and query_lines:
+            for query in query_lines:
+                for ctx_key, ctx_val in context_values.items():
+                    expanded.append({**query, ctx_key: ctx_val})
+        elif context_values:
+            # Context-only (group-by): each context value becomes a query
+            for ctx_key, ctx_val in context_values.items():
+                expanded.append({ctx_key: ctx_val})
+        else:
+            # No context → use query lines as-is
+            expanded = list(query_lines)
+
+        # Run each expanded query, union results (fetch generously for ranking)
+        seen_ids: set[str] = set()
+        matches: list[Item] = []
+        for query in expanded:
+            try:
+                items = self.query_tag(
+                    limit=100,  # fetch all candidates for ranking
+                    **query,
+                )
+            except (ValueError, Exception):
+                continue
+            for item in items:
+                # Skip the current item, hidden system notes, and dupes
+                if item.id == item_id or _is_hidden(item) or item.id in seen_ids:
+                    continue
+                seen_ids.add(item.id)
+                matches.append(item)
+
+        if not matches:
+            return []
+
+        # Rank by similarity to current item + recency decay
+        matches = self._rank_by_relevance(self._resolve_chroma_collection(), item_id, matches)
+        return matches[:limit]
 
     def _rank_by_relevance(
         self,
@@ -1648,31 +1833,25 @@ class Keeper:
         if not candidates:
             return candidates
 
-        # Get anchor embedding from ChromaDB
+        # Get anchor + candidate embeddings from store
         try:
-            chroma_coll = self._store._get_collection(coll)
-            anchor_result = chroma_coll.get(
-                ids=[anchor_id], include=["embeddings"]
-            )
-            if not anchor_result["ids"] or anchor_result["embeddings"] is None or len(anchor_result["embeddings"]) == 0:
-                return self._apply_recency_decay(candidates)
-            anchor_emb = anchor_result["embeddings"][0]
-
-            # Batch-fetch candidate embeddings
             candidate_ids = [c.id for c in candidates]
-            cand_result = chroma_coll.get(
-                ids=candidate_ids, include=["embeddings"]
-            )
+            all_ids = [anchor_id] + candidate_ids
+            entries = self._store.get_entries_full(coll, all_ids)
         except Exception as e:
             logger.debug("Embedding lookup failed, falling back to recency: %s", e)
             return self._apply_recency_decay(candidates)
 
-        # Build id → embedding lookup (some candidates may not have embeddings)
+        # Build id → embedding lookup
         emb_lookup: dict[str, list[float]] = {}
-        if cand_result["ids"] and cand_result["embeddings"] is not None and len(cand_result["embeddings"]) > 0:
-            for cid, cemb in zip(cand_result["ids"], cand_result["embeddings"]):
-                if cemb is not None:
-                    emb_lookup[cid] = cemb
+        for entry in entries:
+            if entry.get("embedding") is not None:
+                emb_lookup[entry["id"]] = entry["embedding"]
+
+        # Extract anchor embedding
+        anchor_emb = emb_lookup.get(anchor_id)
+        if anchor_emb is None:
+            return self._apply_recency_decay(candidates)
 
         # Score each candidate: cosine similarity
         def _cosine_sim(a: list[float], b: list[float]) -> float:
@@ -1702,6 +1881,7 @@ class Keeper:
         *,
         limit: int = 10,
         since: Optional[str] = None,
+        include_hidden: bool = False,
     ) -> list[Item]:
         """
         Search item summaries using full-text search.
@@ -1710,18 +1890,21 @@ class Keeper:
             query: Text to search for in summaries
             limit: Maximum results to return
             since: Only include items updated since (ISO duration like P3D, or date)
+            include_hidden: Include system notes (dot-prefix IDs)
         """
         chroma_coll = self._resolve_chroma_collection()
         doc_coll = self._resolve_doc_collection()
 
-        # Fetch extra when filtering by date
-        fetch_limit = limit * 3 if since is not None else limit
+        # Fetch extra when filtering
+        fetch_limit = limit * 3
         results = self._store.query_fulltext(chroma_coll, query, limit=fetch_limit)
         items = [r.to_item() for r in results]
 
-        # Apply date filter if specified
+        # Apply filters
         if since is not None:
             items = _filter_by_date(items, since)
+        if not include_hidden:
+            items = [i for i in items if not _is_hidden(i)]
 
         final = items[:limit]
         # Touch accessed_at for returned items
@@ -1736,6 +1919,7 @@ class Keeper:
         *,
         limit: int = 100,
         since: Optional[str] = None,
+        include_hidden: bool = False,
         **tags: str
     ) -> list[Item]:
         """
@@ -1758,6 +1942,12 @@ class Keeper:
             since: Only include items updated since (ISO duration like P3D, or date)
             **tags: Additional tag filters as keyword arguments
         """
+        # Validate tag keys
+        if key is not None:
+            validate_tag_key(key)
+        for k in tags:
+            validate_tag_key(k)
+
         doc_coll = self._resolve_doc_collection()
         chroma_coll = self._resolve_chroma_collection()
 
@@ -1767,9 +1957,12 @@ class Keeper:
             # Convert since to cutoff date for SQL query
             since_date = _parse_since(since) if since else None
             docs = self._document_store.query_by_tag_key(
-                doc_coll, key, limit=limit, since_date=since_date
+                doc_coll, key, limit=limit * 3 if not include_hidden else limit, since_date=since_date
             )
-            return [_record_to_item(d) for d in docs]
+            items = [_record_to_item(d) for d in docs]
+            if not include_hidden:
+                items = [i for i in items if not _is_hidden(i)]
+            return items[:limit]
 
         # Build tag filter from positional or keyword args
         tag_filter = {}
@@ -1793,14 +1986,16 @@ class Keeper:
         else:
             where = {"$and": where_conditions}
 
-        # Fetch extra when filtering by date
-        fetch_limit = limit * 3 if since is not None else limit
+        # Fetch extra when filtering
+        fetch_limit = limit * 3
         results = self._store.query_metadata(chroma_coll, where, limit=fetch_limit)
         items = [r.to_item() for r in results]
 
-        # Apply date filter if specified (post-filter)
+        # Apply filters
         if since is not None:
             items = _filter_by_date(items, since)
+        if not include_hidden:
+            items = [i for i in items if not _is_hidden(i)]
 
         return items[:limit]
 
@@ -1818,6 +2013,8 @@ class Keeper:
         Returns:
             Sorted list of distinct keys or values
         """
+        if key is not None:
+            validate_tag_key(key)
         doc_coll = self._resolve_doc_collection()
 
         if key is None:
@@ -1836,11 +2033,24 @@ class Keeper:
         Reads from document store (canonical), falls back to ChromaDB for legacy data.
         Touches accessed_at on successful retrieval.
         """
+        validate_id(id)
         doc_coll = self._resolve_doc_collection()
         chroma_coll = self._resolve_chroma_collection()
 
         # Try document store first (canonical)
-        doc_record = self._document_store.get(doc_coll, id)
+        try:
+            doc_record = self._document_store.get(doc_coll, id)
+        except sqlite3.DatabaseError as e:
+            logger.warning("DocumentStore.get(%s) failed: %s", id, e)
+            if "malformed" in str(e):
+                self._document_store._try_runtime_recover()
+                # Retry once after recovery
+                try:
+                    doc_record = self._document_store.get(doc_coll, id)
+                except Exception:
+                    doc_record = None
+            else:
+                doc_record = None
         if doc_record:
             self._document_store.touch(doc_coll, id)
             return _record_to_item(doc_record)
@@ -1872,6 +2082,7 @@ class Keeper:
         Returns:
             Item if found, None if version doesn't exist
         """
+        validate_id(id)
         doc_coll = self._resolve_doc_collection()
 
         if offset == 0:
@@ -1907,6 +2118,7 @@ class Keeper:
         Returns:
             List of VersionInfo, newest archived first
         """
+        validate_id(id)
         doc_coll = self._resolve_doc_collection()
         return self._document_store.list_versions(doc_coll, id, limit)
 
@@ -1934,6 +2146,7 @@ class Keeper:
         """
         Check if an item exists in the store.
         """
+        validate_id(id)
         doc_coll = self._resolve_doc_collection()
         chroma_coll = self._resolve_chroma_collection()
         # Check document store first, then ChromaDB
@@ -1955,6 +2168,7 @@ class Keeper:
         Returns:
             True if item existed and was deleted.
         """
+        validate_id(id)
         doc_coll = self._resolve_doc_collection()
         chroma_coll = self._resolve_chroma_collection()
         # Delete from both stores (including versions)
@@ -1968,18 +2182,19 @@ class Keeper:
 
         Returns the restored item, or None if the item was fully deleted.
         """
+        validate_id(id)
         doc_coll = self._resolve_doc_collection()
         chroma_coll = self._resolve_chroma_collection()
 
-        version_count = self._document_store.version_count(doc_coll, id)
+        max_ver = self._document_store.max_version(doc_coll, id)
 
-        if version_count == 0:
+        if max_ver == 0:
             # No history — full delete
             self.delete(id)
             return None
 
         # Get the versioned ChromaDB ID we need to promote
-        versioned_chroma_id = f"{id}@v{version_count}"
+        versioned_chroma_id = f"{id}@v{max_ver}"
 
         # Get the archived embedding from ChromaDB
         archived_embedding = self._store.get_embedding(chroma_coll, versioned_chroma_id)
@@ -2002,11 +2217,7 @@ class Keeper:
             )
 
         # Delete the versioned entry from ChromaDB
-        chroma_coll_handle = self._store._get_collection(chroma_coll)
-        try:
-            chroma_coll_handle.delete(ids=[versioned_chroma_id])
-        except ValueError:
-            pass  # May not exist if it was a tag-only change
+        self._store.delete_entries(chroma_coll, [versioned_chroma_id])
 
         return self.get(id)
 
@@ -2057,6 +2268,187 @@ class Keeper:
             The updated context Item
         """
         return self.remember(content, id=NOWDOC_ID, tags=tags)
+
+    def move(
+        self,
+        name: str,
+        *,
+        source_id: str = NOWDOC_ID,
+        tags: Optional[dict[str, str]] = None,
+        only_current: bool = False,
+    ) -> Item:
+        """
+        Move versions from a source document into a named item.
+
+        Moves matching versions (filtered by tags if provided) from source_id
+        to a named item. If the target already exists, extracted versions are
+        appended to its history. The source retains non-matching versions;
+        if fully emptied and source is 'now', it resets to default.
+
+        Args:
+            name: ID for the target item (created if new, extended if exists)
+            source_id: Document to extract from (default: now)
+            tags: If provided, only extract versions whose tags contain
+                  all specified key=value pairs. If None, extract all.
+            only_current: If True, only extract the current (tip) version,
+                        not any archived history.
+
+        Returns:
+            The moved Item.
+
+        Raises:
+            ValueError: If name is empty, source doesn't exist,
+                        or no versions match the filter.
+        """
+        if not name:
+            raise ValueError("Name cannot be empty")
+
+        doc_coll = self._resolve_doc_collection()
+        chroma_coll = self._resolve_chroma_collection()
+
+        # Get the source's archived version numbers before extraction
+        # (needed to map to ChromaDB versioned IDs)
+        source_versions = self._document_store.list_versions(
+            doc_coll, source_id, limit=10000
+        )
+        source_current = self._document_store.get(doc_coll, source_id)
+        if source_current is None:
+            raise ValueError(f"Source document '{source_id}' not found")
+
+        # Identify which versions will be extracted (for ChromaDB cleanup)
+        def _tags_match(item_tags: dict, filt: dict) -> bool:
+            return all(item_tags.get(k) == v for k, v in filt.items())
+
+        if only_current:
+            # Only extract the tip — no archived versions
+            matched_version_nums = []
+            if tags:
+                current_matches = _tags_match(source_current.tags, tags)
+            else:
+                current_matches = True
+        elif tags:
+            matched_version_nums = [
+                v.version for v in source_versions
+                if _tags_match(v.tags, tags)
+            ]
+            current_matches = _tags_match(source_current.tags, tags)
+        else:
+            matched_version_nums = [v.version for v in source_versions]
+            current_matches = True
+
+        # Extract in DocumentStore (SQLite side)
+        extracted, new_source, base_version = self._document_store.extract_versions(
+            doc_coll, source_id, name, tag_filter=tags,
+            only_current=only_current,
+        )
+
+        # ChromaDB side: move embeddings
+
+        # 1. Collect source ChromaDB IDs for matched versions
+        source_chroma_ids = [f"{source_id}@v{n}" for n in matched_version_nums]
+        if current_matches:
+            source_chroma_ids.append(source_id)
+
+        # 2. If target already exists, archive its current embedding
+        # (extract_versions already archived the SQLite side; we mirror in ChromaDB)
+        if base_version > 1:
+            archive_version = base_version - 1  # version assigned by _archive_current_unlocked
+            existing = self._store.get_entries_full(chroma_coll, [name])
+            if existing and existing[0].get("embedding") is not None:
+                entry = existing[0]
+                archived_vid = f"{name}@v{archive_version}"
+                archived_tags = dict(entry["tags"])
+                archived_tags["_version"] = str(archive_version)
+                archived_tags["_base_id"] = name
+                self._store.upsert_batch(
+                    chroma_coll,
+                    [archived_vid],
+                    [entry["embedding"]],
+                    [entry["summary"] or ""],
+                    [archived_tags],
+                )
+
+        # 3. Batch-get embeddings from source
+        embedding_map: dict[str, list[float]] = {}
+        if source_chroma_ids:
+            source_entries = self._store.get_entries_full(chroma_coll, source_chroma_ids)
+            for entry in source_entries:
+                if entry.get("embedding") is not None:
+                    embedding_map[entry["id"]] = entry["embedding"]
+
+            # 4. Batch-delete source entries
+            found_ids = [entry["id"] for entry in source_entries]
+            if found_ids:
+                self._store.delete_entries(chroma_coll, found_ids)
+
+        # 5. Insert target entries with new IDs
+        # The extracted list is chronological (oldest first),
+        # last one is current, rest are history
+        target_ids = []
+        target_embeddings = []
+        target_summaries = []
+        target_tags = []
+
+        # History versions (sequential from base_version)
+        for seq, vi in enumerate(extracted[:-1], start=base_version):
+            target_vid = f"{name}@v{seq}"
+            # Find the embedding for this version
+            source_vid = f"{source_id}@v{vi.version}" if vi.version > 0 else source_id
+            emb = embedding_map.get(source_vid)
+            if emb is not None:
+                ver_tags = dict(vi.tags)
+                ver_tags["_version"] = str(seq)
+                ver_tags["_base_id"] = name
+                target_ids.append(target_vid)
+                target_embeddings.append(emb)
+                target_summaries.append(vi.summary)
+                target_tags.append(ver_tags)
+
+        # Current (newest extracted)
+        newest = extracted[-1]
+        source_cur_id = f"{source_id}@v{newest.version}" if newest.version > 0 else source_id
+        cur_emb = embedding_map.get(source_cur_id)
+        if cur_emb is not None:
+            cur_tags = dict(newest.tags)
+            cur_tags["_saved_from"] = source_id
+            from .types import utc_now as _utc_now
+            cur_tags["_saved_at"] = _utc_now()
+            target_ids.append(name)
+            target_embeddings.append(cur_emb)
+            target_summaries.append(newest.summary)
+            target_tags.append(cur_tags)
+
+        # 6. Batch-insert/update into ChromaDB
+        if target_ids:
+            self._store.upsert_batch(
+                chroma_coll,
+                target_ids,
+                target_embeddings,
+                target_summaries,
+                target_tags,
+            )
+
+        # Add system tags to the saved document in DocumentStore too
+        saved_doc = self._document_store.get(doc_coll, name)
+        if saved_doc:
+            saved_tags = dict(saved_doc.tags)
+            saved_tags["_saved_from"] = source_id
+            from .types import utc_now as _utc_now2
+            saved_tags["_saved_at"] = _utc_now2()
+            self._document_store.update_tags(doc_coll, name, saved_tags)
+
+        # If source was fully emptied and is 'now', recreate with defaults
+        if new_source is None and source_id == NOWDOC_ID:
+            try:
+                default_content, default_tags = _load_frontmatter(
+                    SYSTEM_DOC_DIR / "now.md"
+                )
+            except FileNotFoundError:
+                default_content = "# Now\n\nYour working context."
+                default_tags = {}
+            self.set_now(default_content, tags=default_tags)
+
+        return self.get(name)
 
     def list_system_documents(self) -> list[Item]:
         """
@@ -2141,6 +2533,15 @@ class Keeper:
         doc_coll = self._resolve_doc_collection()
         chroma_coll = self._resolve_chroma_collection()
 
+        # Validate inputs
+        validate_id(id)
+        if tags:
+            for key, value in tags.items():
+                if not key.startswith(SYSTEM_TAG_PREFIX):
+                    validate_tag_key(key)
+                    if len(value) > MAX_TAG_VALUE_LENGTH:
+                        raise ValueError(f"Tag value too long (max {MAX_TAG_VALUE_LENGTH}): {key!r}")
+
         # Get existing item (prefer document store, fall back to ChromaDB)
         existing = self.get(id)
         if existing is None:
@@ -2207,6 +2608,7 @@ class Keeper:
         since: Optional[str] = None,
         order_by: str = "updated",
         include_history: bool = False,
+        include_hidden: bool = False,
     ) -> list[Item]:
         """
         List recent items ordered by timestamp.
@@ -2216,23 +2618,26 @@ class Keeper:
             since: Only include items updated since (ISO duration like P3D, or date)
             order_by: Sort order - "updated" (default) or "accessed"
             include_history: Include archived versions alongside current items
+            include_hidden: Include system notes (dot-prefix IDs)
 
         Returns:
             List of Items, most recent first
         """
         doc_coll = self._resolve_doc_collection()
 
-        # Fetch extra when filtering by date
-        fetch_limit = limit * 3 if since is not None else limit
+        # Fetch extra when filtering
+        fetch_limit = limit * 3
         if include_history:
             records = self._document_store.list_recent_with_history(doc_coll, fetch_limit, order_by=order_by)
         else:
             records = self._document_store.list_recent(doc_coll, fetch_limit, order_by=order_by)
         items = [_record_to_item(rec) for rec in records]
 
-        # Apply date filter if specified
+        # Apply filters
         if since is not None:
             items = _filter_by_date(items, since)
+        if not include_hidden:
+            items = [i for i in items if not _is_hidden(i)]
 
         return items[:limit]
 
@@ -2470,6 +2875,11 @@ class Keeper:
             "orphaned_ids": list(orphaned_in_chroma) if orphaned_in_chroma else [],
         }
 
+    @property
+    def config(self) -> "StoreConfig":
+        """Public access to store configuration."""
+        return self._config
+
     def close(self) -> None:
         """
         Close resources (stores, caches, queues).
@@ -2487,6 +2897,10 @@ class Keeper:
         if self._summarization_provider is not None:
             if hasattr(self._summarization_provider, 'release'):
                 self._summarization_provider.release()
+
+        if self._media_describer is not None:
+            if hasattr(self._media_describer, 'release'):
+                self._media_describer.release()
 
         # Close ChromaDB store
         if hasattr(self, '_store') and self._store is not None:

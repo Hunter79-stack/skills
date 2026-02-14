@@ -26,7 +26,7 @@ keep reflect
 
 ## What It Does
 
-Store anything — URLs, files, notes — and `keep` summarizes, embeds, and tags each item. You search by meaning, not keywords. Content goes in as text, PDF, HTML, or JSON; what comes back is a summary with tags and semantic neighbors.
+Store anything — URLs, files, notes — and `keep` summarizes, embeds, and tags each item. You search by meaning, not keywords. Content goes in as text, PDF, HTML, Office documents, audio, or images; what comes back is a summary with tags and semantic neighbors. Audio and image files auto-extract metadata tags (artist, album, camera, date, etc.).
 
 What makes this more than a vector store: when you view your current context (`keep now`) or retrieve any item (`keep get`), keep automatically surfaces relevant open commitments, past learnings, and breakdowns — ranked by similarity and recency. The right things appear at the right time. That's what makes reflection real.
 
@@ -34,7 +34,7 @@ What makes this more than a vector store: when you view your current context (`k
 - **Contextual feedback** — Open commitments and past learnings surface automatically
 - **Semantic search** — Find by meaning, not keywords
 - **Tag organization** — Speech acts, status, project, topic, type — structured and queryable
-- **Version history** — All documents retain history on update
+- **Strings** — Every note is a string of versions; reorganize history by meaning with `keep move`
 - **Works offline** — Local models (MLX, Ollama), or API providers (OpenAI, Gemini, Voyage, Anthropic)
 
 Backed by ChromaDB for vectors, SQLite for metadata and versions.

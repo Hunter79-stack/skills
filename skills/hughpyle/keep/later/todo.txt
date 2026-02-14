@@ -1,15 +1,10 @@
 
-. Separate functional docs/KEEP-NOW.md, docs/KEEP-FIND.md, docs/KEEP-PUT.md etc
+* "threads" vs "strings"
+    - tell the story of what these timelines mean, how to use them
+    (that's one whole dimension right)
 
 * Maybe the metadoc should say how many results to produce by default?
     (e.g. closures: 10, learnings: 3)
-
-* `keep save "thread-name"` — move now history into a named item, reset now
-    - especially when you filter by tag(s)
-    - rename current `now` doc (with all version history) to a named item
-    - useful for closing finished threads: "this conversation is done, archive it"
-    - implementation: rename across SQLite + ChromaDB (both document_store and vector store)
-    - pointers?: saved item gets a markdown link back to where it came from, now gets a link to saved item
 
 * VS Code hooks 
     https://docs.github.com/en/copilot/reference/hooks-configuration
@@ -20,8 +15,6 @@
     https://developers.openai.com/codex/config-advanced/#notifications
     Notification - can just log the user prompts for the turn (better than nothing)
     "We are actively working on designing a hooks system" (https://github.com/openai/codex/pull/11067#issuecomment-3866360949)
-
-* doc: make it really clear that `keep now foo` does NOT update the tags, the previous tags are still there
 
 * need to make sure the tagging instructions are as clear as poss
     - reference `keep get .tag/act` directly
@@ -34,6 +27,8 @@
 * lectio
     - encourage "deep reflection" on items that were important
       e.g. URLs and files that were captured recently
+
+* check - what is your emotional response when encountering this project the first time?
 
 * let's explore some semantic relationships that are important
     the thing we're talking about is related to (many of):
@@ -67,6 +62,8 @@
     lesson one: embeddings plus tagging plus summaries is a whole new thing, actually
         (especially for capturing knowledge about many document, links, references)
 
+    lesson two: metadocs go boom
+
     so, the great use cases?
         - personal agent:
             - first, like a bookmark-manager with superpowers
@@ -95,7 +92,8 @@
     - want this to be pluggable, guide the model-driven tagging from a sysdoc that defines how it works
     - want "references" for this too... maybe later
 
-* check - what is your emotional response when encountering this project the first time?
+* Other auto-taggers:
+    - geolocation-tagger to extract location stuff from latlong
 
 * check for compatibility with linux (so far I've exclusively been running on macOS)
     can deploy on rpi at home
@@ -107,30 +105,9 @@
     - this is all investigation work, not implementation  (I don't have a test environment)
 
 * add support for the kimi/moonshot models, etc - what are we missing? compare claude code, openclaw
-
-* add an audio track (mp3, flac, or something similar) to the library
-    - keep it small tho, under a megabyte?
-    - public domain recording of a song that resonates with the instructional content?
-    - use as content but don't really want add dependencies on mp3/flace/wav decoding (especially anything requiring a license such as the fraunhofer stuff, all our deps must be MIT-compatible)
-    - getting tags out of the file would be a great test case
-    - analysis of the audio content will depend on the available models, but some might do a good job
-    - whisper-cpp etc? outside our scope
-      but I do want a semantic index of my music library
-
-* add an image; same strategy as audio
-
-* also support docx
-
-* multi-embeddings
-    - background task can detect current config and maintain compat
-
-* review the CLI completely.  Can the common tasks have single-letter aliases for their commands?
-
-* better update/degrade memory strategies: compare with current best of breed
-    - want something that tracks last-retrieval time
-    - not sure how that applies to the ranking for retrieval
-    - do we need any of this to be config not code??
  
+* Multi-file (pass a path to a folder, recurse flag, etc.)
+
 ----
 
 Done: (finished items go at the end)
@@ -256,3 +233,11 @@ x `context` text alongside summaries? (no, summary is good now)
 . `keep now -f` removed (not useful)
 . hooks rework (claude code, openclaw, add kiro)
 . skills/docs rework
+. Separate functional docs/KEEP-NOW.md, docs/KEEP-FIND.md, docs/KEEP-PUT.md etc
+. `keep save "name"`: extract now history into named item, with tag-filtered variant (-t)
+. gap-tolerant version numbering: get_version() uses OFFSET, revert() uses max_version(), list_recent_with_history() uses ROW_NUMBER()
+. repaired malformed SQLite database (iterdump + rebuild)
+. media: pptx, docx
+. media: images, audio (tag extraction, not multimodal models yet)
+. `keep save --from ITEM_ID` — extend save to extract from any versioned item, not just now
+. media description: MediaDescriber protocol, MLX (vision + whisper), Ollama (vision), LockedMediaDescriber, config detection, lazy sub-providers, graceful degradation, [media] optional extra

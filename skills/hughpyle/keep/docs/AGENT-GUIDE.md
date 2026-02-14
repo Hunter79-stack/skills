@@ -72,7 +72,40 @@ keep find "recent work" --since P1D   # Last 24 hours
 **Ending a session:**
 ```bash
 keep now "Completed OAuth2 flow. Token refresh working. Next: add tests." -t topic=auth
+keep move "auth-string" -t project=myapp  # Archive this string of work
 ```
+
+---
+
+## Strings
+
+As you work, `keep now` accumulates a string of versions — a trace of how intentions evolved. `keep move` lets you name and archive that string, making room for what's next. It requires `-t` (tag filter) or `--only` (tip only) to prevent accidental grab-all moves.
+
+**Snapshot before pivoting.** When the conversation shifts topic, move what you have so far before moving on:
+```bash
+keep move "auth-string" -t project=myapp     # Archive the auth string
+keep now "Starting on database migration"    # Fresh context for new work
+```
+
+**Incremental archival.** Move to the same name repeatedly — versions append, building a running log across sessions:
+```bash
+# Session 1
+keep move "design-log" -t project=myapp
+# Session 2 (more work on same project)
+keep move "design-log" -t project=myapp      # Appends new versions
+```
+
+**End-of-session archive.** When a string of work is complete:
+```bash
+keep move "auth-string" -t project=myapp
+```
+
+**Tag-filtered extraction.** When a session mixes multiple projects, extract just the string you want:
+```bash
+keep move "frontend-work" -t project=frontend   # Leaves backend versions in now
+```
+
+The moved item is a full versioned document — browse with `keep get name --history`, navigate with `-V 1`, `-V 2`, etc.
 
 ---
 

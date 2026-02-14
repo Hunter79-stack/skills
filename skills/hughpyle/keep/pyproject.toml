@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "keep-skill"
-version = "0.31.0"
+version = "0.38.4"
 description = "Reflective memory - remember and search documents by meaning"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -33,6 +33,17 @@ dependencies = [
     "openai>=1.0",
     "anthropic>=0.40.0",
     "google-genai>=1.0.0",
+    # Document extraction
+    "pypdf>=5.0",
+    "beautifulsoup4>=4.9",
+    "python-docx>=1.0",
+    "python-pptx>=1.0",
+    # Audio metadata
+    "tinytag>=2.0",
+    # Image metadata
+    "Pillow>=10.0",
+    # Remote API client
+    "httpx>=0.27",
 ]
 
 [project.urls]
@@ -45,13 +56,11 @@ local = [
     "mlx>=0.10; platform_system == 'Darwin' and platform_machine == 'arm64'",
     "mlx-lm>=0.10; platform_system == 'Darwin' and platform_machine == 'arm64'",
     "sentence-transformers>=2.2",
-    "pypdf>=5.0",
-    "beautifulsoup4>=4.9",
 ]
-# Document extraction only (for API users who want PDF support)
-documents = [
-    "pypdf>=5.0",
-    "beautifulsoup4>=4.9",
+# Media description (Apple Silicon vision + audio models)
+media = [
+    "mlx-vlm>=0.1; platform_system == 'Darwin' and platform_machine == 'arm64'",
+    "mlx-whisper>=0.1; platform_system == 'Darwin' and platform_machine == 'arm64'",
 ]
 # Development
 dev = [
@@ -89,4 +98,7 @@ addopts = "-m 'not slow'"
 markers = [
     "slow: marks tests as slow (require ML models)",
     "e2e: marks tests as end-to-end (require real providers)",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:importlib._bootstrap",
 ]

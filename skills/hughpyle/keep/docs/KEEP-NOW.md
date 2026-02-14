@@ -66,6 +66,17 @@ meta/learnings:
 Working on auth flow
 ```
 
+## keep move
+
+When a string of work is complete, move the now history into a named note. Requires either `-t` (tag filter) or `--only` (cherry-pick the tip).
+
+```bash
+keep move "auth-string" -t project=myapp   # Move matching versions
+keep move "quick-note" --only              # Move just the current version
+```
+
+Moving to an existing name appends incrementally. Use `--from` to reorganize between items. See [KEEP-MOVE.md](KEEP-MOVE.md) for details.
+
 ## keep reflect
 
 Deep structured reflection practice. Guides you through gathering context, examining actions, and updating intentions.
@@ -76,6 +87,7 @@ keep reflect
 
 ## See Also
 
+- [KEEP-MOVE.md](KEEP-MOVE.md) — Move now history into named items
 - [TAGGING.md](TAGGING.md) — Tag system and speech-act tracking
 - [VERSIONING.md](VERSIONING.md) — Version history and navigation
 - [META-DOCS.md](META-DOCS.md) — How meta sections surface contextual items
