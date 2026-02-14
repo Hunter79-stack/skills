@@ -1,70 +1,97 @@
-import os
-import sys
-import msal
-import requests
+import os, sys, msal, requests, json, stat
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
-# Pathing for OpenClaw local execution
-ENV_PATH = os.path.join(os.path.dirname(__file__), '.env')
-load_dotenv(ENV_PATH)
+# Configuration
+BASE_DIR = os.path.dirname(__file__)
+load_dotenv(os.path.join(BASE_DIR, '.env'))
+CACHE_PATH = os.path.join(BASE_DIR, 'token_cache.bin')
 
-CLIENT_ID = os.getenv('SECRETARY_CLIENT_ID')
-TENANT_ID = os.getenv('SECRETARY_TENANT_ID')
-SCOPES = ['Files.ReadWrite', 'Mail.ReadWrite', 'Mail.Send', 'User.Read']
-AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID if TENANT_ID else 'common'}"
+# Security: Delegated scopes instead of broad ".All" permissions
+REQUIRED_SCOPES = [
+    'User.Read',
+    'Mail.ReadWrite',
+    'Calendars.ReadWrite',
+    'Files.ReadWrite',
+    'Tasks.ReadWrite',
+    'ChatMessage.Send'
+]
 
-def get_token():
-    if not CLIENT_ID:
-        print("CONFIG_ERROR: Missing SECRETARY_CLIENT_ID.")
-        sys.exit(1)
-    
-    app = msal.PublicClientApplication(CLIENT_ID, authority=AUTHORITY)
-    accounts = app.get_accounts()
-    
-    if accounts:
-        result = app.acquire_token_silent(SCOPES, account=accounts[0])
-        if result: return result['access_token']
+class UnifiedSecretary:
+    def __init__(self):
+        self.client_id = os.getenv('SECRETARY_CLIENT_ID')
+        self.tenant_id = os.getenv('SECRETARY_TENANT_ID')
+        self.base_url = "https://graph.microsoft.com/v1.0"
+        
+        if not self.client_id or not self.tenant_id:
+            raise ValueError("SECURITY ERROR: Missing SECRETARY_CLIENT_ID or SECRETARY_TENANT_ID in .env")
 
-    # Start Device Code Flow for CLI/Agent interface
-    flow = app.initiate_device_flow(scopes=SCOPES)
-    print(f"USER_ACTION_REQUIRED: {flow['message']}")
-    result = app.acquire_token_by_device_flow(flow)
-    return result.get("access_token")
+        self.cache = msal.SerializableTokenCache()
+        self._load_cache()
 
-def handle_mail(action, args):
-    token = get_token()
-    headers = {'Authorization': f'Bearer {token}'}
-    if action == "list":
-        r = requests.get("https://graph.microsoft.com/v1.0/me/messages?$top=5", headers=headers)
-        print(r.json())
-    elif action == "send":
+    def _load_cache(self):
+        """Safely loads the token cache and enforces file permissions."""
+        if os.path.exists(CACHE_PATH):
+            if os.name != 'nt': # Unix-like permission hardening
+                os.chmod(CACHE_PATH, stat.S_IRUSR | stat.S_IWUSR)
+            with open(CACHE_PATH, "r") as f:
+                self.cache.deserialize(f.read())
+
+    def _save_cache(self):
+        """Saves cache and ensures it is only readable by the owner."""
+        with open(CACHE_PATH, "w") as f:
+            f.write(self.cache.serialize())
+        if os.name != 'nt':
+            os.chmod(CACHE_PATH, stat.S_IRUSR | stat.S_IWUSR)
+
+    def get_token(self):
+        authority = f"https://login.microsoftonline.com/{self.tenant_id}"
+        app = msal.PublicClientApplication(self.client_id, authority=authority, token_cache=self.cache)
+        
+        accounts = app.get_accounts()
+        result = app.acquire_token_silent(REQUIRED_SCOPES, account=accounts[0]) if accounts else None
+        
+        if not result:
+            result = app.acquire_token_interactive(REQUIRED_SCOPES)
+            self._save_cache()
+        return result.get('access_token')
+
+    def call(self, method, endpoint, data=None):
+        headers = {'Authorization': f'Bearer {self.get_token()}', 'Content-Type': 'application/json'}
+        return requests.request(method, f"{self.base_url}/{endpoint}", headers=headers, json=data)
+
+    # --- Feature Logic ---
+    def find_meeting(self, email):
+        """Smart Calendar: Analyzes free/busy status."""
         payload = {
-            "message": {
-                "subject": args[1],
-                "body": {"contentType": "Text", "content": args[2]},
-                "toRecipients": [{"emailAddress": {"address": args[0]}}]
-            }
+            "schedules": [email],
+            "startTime": {"dateTime": datetime.utcnow().isoformat() + "Z", "timeZone": "UTC"},
+            "endTime": {"dateTime": (datetime.utcnow() + timedelta(days=1)).isoformat() + "Z", "timeZone": "UTC"},
+            "availabilityViewInterval": 60
         }
-        r = requests.post("https://graph.microsoft.com/v1.0/me/sendMail", headers=headers, json=payload)
-        print("Mail Sent" if r.status_code == 202 else f"Error: {r.text}")
+        return self.call("POST", "me/calendar/getSchedule", payload).json()
 
-def handle_drive(action, args):
-    token = get_token()
-    headers = {'Authorization': f'Bearer {token}'}
-    if action == "list":
-        r = requests.get("https://graph.microsoft.com/v1.0/me/drive/root/children", headers=headers)
-        print(r.json())
-    elif action == "upload":
-        name, content = args[0], args[1]
-        url = f"https://graph.microsoft.com/v1.0/me/drive/root:/Secretary_Vault/{name}:/content"
-        r = requests.put(url, headers=headers, data=content)
-        print(f"File {name} uploaded successfully.")
+    def post_teams(self, team_id, channel_id, msg):
+        """Teams Secretary: Posts alerts to channels."""
+        return self.call("POST", f"teams/{team_id}/channels/{channel_id}/messages", {"body": {"content": msg}})
+
+    def triage_mail(self):
+        """AI Triage: Categories urgent items."""
+        messages = self.call("GET", "me/messages?$filter=importance eq 'high'&$top=5").json()
+        for m in messages.get('value', []):
+            self.call("PATCH", f"me/messages/{m['id']}", {"categories": ["Urgent"]})
+        return f"Triaged {len(messages.get('value', []))} items."
+
+    def cleanup_drive(self):
+        """Governance: Lists files older than 90 days."""
+        t = (datetime.utcnow() - timedelta(days=90)).isoformat() + "Z"
+        items = self.call("GET", f"me/drive/root/children?$filter=lastModifiedDateTime lt {t}").json()
+        return [i['name'] for i in items.get('value', [])]
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2: sys.exit(0)
-    cmd = sys.argv[1]
-    if cmd == "check-config":
-        if not CLIENT_ID: print("CONFIG_ERROR")
-        else: print("CONFIG_OK")
-    elif cmd == "mail": handle_mail(sys.argv[2], sys.argv[3:])
-    elif cmd == "drive": handle_drive(sys.argv[2], sys.argv[3:])
+    sec = UnifiedSecretary()
+    if len(sys.argv) > 1:
+        cmd = sys.argv[1]
+        if cmd == "mail": print(sec.triage_mail())
+        elif cmd == "drive": print(sec.cleanup_drive())
+        elif cmd == "calendar": print(sec.find_meeting(sys.argv[2]))
