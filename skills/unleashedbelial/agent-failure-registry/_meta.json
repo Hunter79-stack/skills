@@ -1,0 +1,11 @@
+{
+  "owner": "unleashedbelial",
+  "slug": "agent-failure-registry",
+  "displayName": "Failure Registry",
+  "latest": {
+    "version": "0.1.0",
+    "publishedAt": 1771089413280,
+    "commit": null
+  },
+  "history": []
+}
