@@ -1,7 +1,8 @@
 ---
 name: pamela-call
-version: 1.1.4
-description: Make AI-powered phone calls instantly with Pamela. No lag, no phone setup, no big upfront costs—just automatic calling. Create outbound calls, register custom tools for mid-call actions, handle webhooks, and build React UIs. Use when the user wants to make phone calls, integrate voice AI, build IVR systems, navigate phone menus, or automate phone tasks.
+version: 1.1.7
+description: Make AI-powered phone calls instantly with Pamela. No lag, no phone setup, no big upfront costs—just automatic calling.
+metadata: {"openclaw":{"requires":{"env":["PAMELA_API_KEY"]},"primaryEnv":"PAMELA_API_KEY","homepage":"https://thisispamela.com"}}
 ---
 
 # Pamela Calls - make AI phone calls instantly.
@@ -147,7 +148,7 @@ Pamela sends webhooks for call lifecycle events:
 - `call.failed` - Call failed
 - `call.transcript_update` - New transcript entries
 
-Verify webhook signatures with the `X-Pamela-Signature` header.
+Only credential required for this skill is your API key. Requests may include an `X-Pamela-Signature` header when signing is used; see SDK docs for verification details.
 
 ## Billing
 
