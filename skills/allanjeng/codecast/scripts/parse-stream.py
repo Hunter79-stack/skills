@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
-"""Parse Claude Code stream-json output and post to a chat platform.
+import sys, io
+# Prevent UnicodeEncodeError on surrogate characters in agent output
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, errors='replace')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, errors='replace')
+"""Parse coding agent stream output and post to a chat platform.
 
-Reads JSON lines from stdin (Claude Code's --output-format stream-json),
-formats them into human-readable messages, and posts via a platform adapter.
+Reads JSON lines from stdin — supports Claude Code's --output-format stream-json
+and Codex CLI's --json (JSONL events) — formats them into human-readable messages,
+and posts via a platform adapter.
 
 Features:
+  - Multi-agent parsing (Claude Code stream-json, Codex --json)
   - Platform abstraction (discord by default, extensible)
   - Smart file content preview (first/last lines for large files)
   - Bash command stdout capture
@@ -36,9 +42,9 @@ skip_reads = os.environ.get("SKIP_READS", "false").lower() == "true"
 relay_dir = os.environ.get("RELAY_DIR", "")
 
 # ---------------------------------------------------------------------------
-# Rate limiter — max 25 posts per 60 seconds, with batching on overflow
+# Rate limiter — configurable via CODECAST_RATE_LIMIT env (default: 25 posts/60s)
 # ---------------------------------------------------------------------------
-RATE_LIMIT = 25
+RATE_LIMIT = int(os.environ.get("CODECAST_RATE_LIMIT", "25"))
 RATE_WINDOW = 60  # seconds
 
 _post_times = []      # timestamps of recent posts
@@ -145,10 +151,143 @@ def truncate(s, limit):
 
 
 # ---------------------------------------------------------------------------
+# Codex event handlers (--json JSONL format)
+# ---------------------------------------------------------------------------
+# Codex events: thread.started, turn.started, turn.completed, turn.failed,
+#               item.started, item.completed, error
+
+def handle_codex_event(evt):
+    """Process a single Codex --json event and post formatted messages."""
+    etype = evt.get("type", "")
+
+    if etype == "thread.started":
+        thread_id = evt.get("thread_id", "?")
+        post(f"⚙️ Codex session `{thread_id[:12]}…`")
+
+    elif etype == "item.started":
+        item = evt.get("item", {})
+        _handle_codex_item(item, started=True)
+
+    elif etype == "item.completed":
+        item = evt.get("item", {})
+        _handle_codex_item(item, started=False)
+
+    elif etype == "turn.completed":
+        usage = evt.get("usage", {})
+        if usage:
+            inp = usage.get("input_tokens", 0)
+            cached = usage.get("cached_input_tokens", 0)
+            out = usage.get("output_tokens", 0)
+            # Codex pricing: o3/o4-mini varies; approximate with $2/M in, $8/M out
+            cost = inp * 0.000002 + out * 0.000008
+            global cumulative_cost
+            cumulative_cost += cost
+            post(f"📊 Turn done — {inp:,} in ({cached:,} cached) / {out:,} out tokens")
+
+    elif etype == "turn.failed":
+        error = evt.get("error", {})
+        msg = error.get("message", "Unknown error") if isinstance(error, dict) else str(error)
+        post(f"❌ **Turn failed:** {truncate(msg, 500)}")
+
+    elif etype == "error":
+        msg = evt.get("message", evt.get("error", "Unknown error"))
+        post(f"❌ **Error:** {truncate(str(msg), 500)}")
+
+
+def _handle_codex_item(item, started=False):
+    """Format a Codex item event (command, message, file change, etc.)."""
+    itype = item.get("type", "")
+    status = item.get("status", "")
+
+    if itype == "command_execution":
+        cmd = item.get("command", "?")
+        if started:
+            post(f"🖥️ **Exec** `{truncate(cmd, 300)}`")
+            bash_commands.append(cmd)
+            tools_used["command_execution"] = tools_used.get("command_execution", 0) + 1
+        else:
+            # Completed — show output if present
+            output = item.get("output", "")
+            exit_code = item.get("exit_code")
+            if output:
+                output = truncate(output.strip(), 800)
+                post(f"📤 **Output** ```\n{output}\n```")
+            if exit_code is not None and exit_code != 0:
+                post(f"⚠️ Exit code: {exit_code}")
+
+    elif itype == "agent_message":
+        text = item.get("text", "").strip()
+        if text and not started:
+            post(f"💬 {text}")
+
+    elif itype == "file_change":
+        fp = item.get("file_path", item.get("path", "?"))
+        change = item.get("change_type", item.get("status", "modified"))
+        if not started:
+            if change in ("created", "create"):
+                files_created.append(fp)
+                post(f"📝 **Created** `{fp}`")
+            else:
+                files_edited.append(fp)
+                post(f"✏️ **Modified** `{fp}`")
+            tools_used["file_change"] = tools_used.get("file_change", 0) + 1
+
+    elif itype == "reasoning":
+        # Reasoning traces — post a condensed version
+        text = item.get("text", "").strip()
+        if text and not started:
+            post(f"🧠 *{truncate(text, 400)}*")
+
+    elif itype == "mcp_tool_call":
+        name = item.get("name", item.get("tool", "?"))
+        if started:
+            post(f"🔧 **MCP** `{name}`")
+            tools_used[f"mcp:{name}"] = tools_used.get(f"mcp:{name}", 0) + 1
+
+    elif itype == "web_search":
+        query = item.get("query", "?")
+        if started:
+            post(f"🔍 **Search** `{query}`")
+            tools_used["web_search"] = tools_used.get("web_search", 0) + 1
+
+    elif itype == "plan_update":
+        if not started:
+            text = item.get("text", "").strip()
+            if text:
+                post(f"📋 **Plan** {truncate(text, 500)}")
+
+
+# ---------------------------------------------------------------------------
+# Stream format auto-detection
+# ---------------------------------------------------------------------------
+# Detect whether we're reading Claude Code stream-json or Codex --json
+# based on the first JSON event's type field.
+_stream_format = None  # "claude" or "codex", auto-detected on first event
+
+CODEX_EVENT_TYPES = {
+    "thread.started", "turn.started", "turn.completed", "turn.failed",
+    "item.started", "item.completed", "error",
+}
+
+
+def detect_format(evt):
+    """Detect stream format from first event."""
+    global _stream_format
+    etype = evt.get("type", "")
+    if etype in CODEX_EVENT_TYPES:
+        _stream_format = "codex"
+    else:
+        _stream_format = "claude"
+    return _stream_format
+
+
+# ---------------------------------------------------------------------------
 # Main event loop
 # ---------------------------------------------------------------------------
 # Track the last tool_use name so we can correlate tool_results with their tool
 _last_tool_name = None
+# Track Codex session start for final summary
+_codex_start_time = None
 
 for line in sys.stdin:
     line = line.strip()
@@ -171,7 +310,23 @@ for line in sys.stdin:
 
     etype = evt.get("type", "")
 
-    # --- System init ---
+    # --- Auto-detect stream format on first event ---
+    if _stream_format is None:
+        detect_format(evt)
+        if _stream_format == "codex":
+            _codex_start_time = time.time()
+
+    # --- Codex events ---
+    if _stream_format == "codex":
+        handle_codex_event(evt)
+
+        # Periodically flush batched messages
+        _prune_window()
+        if _batch_queue and len(_post_times) < RATE_LIMIT:
+            _flush_batch()
+        continue
+
+    # --- Claude Code: System init ---
     if etype == "system" and evt.get("subtype") == "init":
         model = evt.get("model", "unknown")
         mode = evt.get("permissionMode", "default")
@@ -319,6 +474,30 @@ for line in sys.stdin:
     _prune_window()
     if _batch_queue and len(_post_times) < RATE_LIMIT:
         _flush_batch()
+
+# --- Codex end-of-session summary ---
+if _stream_format == "codex" and _codex_start_time:
+    duration = time.time() - _codex_start_time
+    summary_parts = [f"✅ **Codex Session Complete** | {duration:.1f}s | ${cumulative_cost:.4f}"]
+    summary_parts.append("")
+    summary_parts.append("📊 **Session Summary**")
+    if files_created:
+        unique_created = sorted(set(files_created))
+        summary_parts.append(f"  📝 Created: {len(unique_created)} file(s)")
+        for f in unique_created[:10]:
+            summary_parts.append(f"    • `{f}`")
+    if files_edited:
+        unique_edited = sorted(set(files_edited))
+        summary_parts.append(f"  ✏️ Edited: {len(unique_edited)} file(s)")
+        for f in unique_edited[:10]:
+            summary_parts.append(f"    • `{f}`")
+    if bash_commands:
+        summary_parts.append(f"  🖥️ Commands: {len(bash_commands)}")
+    if tools_used:
+        tool_summary = ", ".join(f"{k}: {v}" for k, v in sorted(tools_used.items()))
+        summary_parts.append(f"  🔧 Tools: {tool_summary}")
+    summary_parts.append(f"  💰 Total cost: ${cumulative_cost:.4f}")
+    post("\n".join(summary_parts))
 
 # Flush any remaining batched messages
 if _batch_queue:

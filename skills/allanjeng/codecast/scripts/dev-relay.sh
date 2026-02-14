@@ -12,9 +12,12 @@
 #   -i <seconds>    Post interval (default: 10)
 #   -n <name>       Agent display name (auto-detected from command)
 #   -P <platform>   Chat platform: discord (default). Others error until implemented.
+#   -r <n>          Rate limit (posts per 60s, default: 25)
 #   --thread        Post into a Discord thread (first message creates the thread)
 #   --skip-reads    Hide Read tool events from relay output
 #   --resume <dir>  Replay a previous session from its stream.jsonl
+#   --review <url>  PR review mode: clone, review, stream (see review-pr.sh)
+#   --parallel <f>  Parallel tasks mode: run tasks from file across worktrees
 #
 # For Claude Code: uses -p --output-format stream-json --verbose for clean JSON output
 # Prerequisites: ~/.claude/settings.json with defaultMode: "bypassPermissions"
@@ -30,6 +33,9 @@ PLATFORM="discord"
 THREAD_MODE=false
 SKIP_READS=false
 RESUME_DIR=""
+RATE_LIMIT=""
+REVIEW_PR=""
+PARALLEL_FILE=""
 
 # Parse long options first, converting them to positional args for getopts
 ARGS=()
@@ -38,13 +44,15 @@ while [[ $# -gt 0 ]]; do
     --thread)     THREAD_MODE=true; shift ;;
     --skip-reads) SKIP_READS=true; shift ;;
     --resume)     RESUME_DIR="$2"; shift 2 ;;
+    --review)     REVIEW_PR="$2"; shift 2 ;;
+    --parallel)   PARALLEL_FILE="$2"; shift 2 ;;
     --)           ARGS+=("--"); shift; ARGS+=("$@"); break ;;
     *)            ARGS+=("$1"); shift ;;
   esac
 done
 if [ ${#ARGS[@]} -gt 0 ]; then set -- "${ARGS[@]}"; else set --; fi
 
-while getopts "w:t:h:i:n:P:" opt; do
+while getopts "w:t:h:i:n:P:r:" opt; do
   case $opt in
     w) WORKDIR="$OPTARG" ;;
     t) TIMEOUT="$OPTARG" ;;
@@ -52,6 +60,7 @@ while getopts "w:t:h:i:n:P:" opt; do
     i) INTERVAL="$OPTARG" ;;
     n) AGENT_NAME="$OPTARG" ;;
     P) PLATFORM="$OPTARG" ;;
+    r) RATE_LIMIT="$OPTARG" ;;
     *) exit 1 ;;
   esac
 done
@@ -73,6 +82,7 @@ if [ -n "$RESUME_DIR" ]; then
   export WEBHOOK_URL AGENT_NAME PLATFORM THREAD_MODE SKIP_READS BOT_TOKEN
   export RELAY_DIR="$RESUME_DIR"
   export REPLAY_MODE=true
+  [ -n "$RATE_LIMIT" ] && export CODECAST_RATE_LIMIT="$RATE_LIMIT"
 
   echo "🔄 Replaying session from $STREAM_FILE"
   PARSER="$SCRIPT_DIR/parse-stream.py"
@@ -81,18 +91,50 @@ if [ -n "$RESUME_DIR" ]; then
   exit 0
 fi
 
+# Review mode: delegate to review-pr.sh
+if [ -n "$REVIEW_PR" ]; then
+  REVIEW_FLAGS=""
+  [ "$THREAD_MODE" = true ] && REVIEW_FLAGS="$REVIEW_FLAGS --thread"
+  [ "$SKIP_READS" = true ] && REVIEW_FLAGS="$REVIEW_FLAGS --skip-reads"
+  [ -n "$RATE_LIMIT" ] && REVIEW_FLAGS="$REVIEW_FLAGS -r $RATE_LIMIT"
+  [ -n "$WORKDIR" ] && [ "$WORKDIR" != "$(pwd)" ] && REVIEW_FLAGS="$REVIEW_FLAGS -w $WORKDIR"
+  REVIEW_FLAGS="$REVIEW_FLAGS -t $TIMEOUT"
+  # Pass remaining args as review options (e.g., -a codex, -p "custom prompt", -c)
+  exec bash "$SCRIPT_DIR/review-pr.sh" $REVIEW_FLAGS "${COMMAND_ARGS[@]}" "$REVIEW_PR"
+fi
+
+# Parallel mode: delegate to parallel-tasks.sh
+if [ -n "$PARALLEL_FILE" ]; then
+  PARA_FLAGS=""
+  [ "$THREAD_MODE" = true ] && PARA_FLAGS="$PARA_FLAGS --thread"
+  [ "$SKIP_READS" = true ] && PARA_FLAGS="$PARA_FLAGS --skip-reads"
+  [ -n "$RATE_LIMIT" ] && PARA_FLAGS="$PARA_FLAGS -r $RATE_LIMIT"
+  PARA_FLAGS="$PARA_FLAGS -t $TIMEOUT"
+  exec bash "$SCRIPT_DIR/parallel-tasks.sh" $PARA_FLAGS "$PARALLEL_FILE"
+fi
+
 [ -z "$COMMAND" ] && { echo "Usage: dev-relay.sh [options] -- <command>" >&2; exit 1; }
 
 # Auto-detect agent name and mode
 IS_CLAUDE=false
+IS_CODEX=false
 if [ -z "$AGENT_NAME" ]; then
   case "$COMMAND" in
     claude*) AGENT_NAME="Claude Code"; IS_CLAUDE=true ;;
-    codex*)  AGENT_NAME="Codex" ;;
+    codex*)  AGENT_NAME="Codex"; IS_CODEX=true ;;
     gemini*) AGENT_NAME="Gemini CLI" ;;
     pi*)     AGENT_NAME="Pi Agent" ;;
     *)       AGENT_NAME="Agent" ;;
   esac
+fi
+# Detect if Codex command includes --json for structured parsing
+if [ "$IS_CODEX" = true ]; then
+  case "$COMMAND" in
+    *--json*|*--experimental-json*) IS_CODEX_JSON=true ;;
+    *) IS_CODEX_JSON=false ;;
+  esac
+else
+  IS_CODEX_JSON=false
 fi
 
 # Webhook
@@ -115,13 +157,23 @@ if [ "$IS_CLAUDE" = true ] && ! command -v unbuffer &>/dev/null; then
 fi
 
 # Bot token (optional, needed for --thread mode in text channels)
-BOT_TOKEN=$(cat "$SCRIPT_DIR/.bot-token" 2>/dev/null | tr -d '\n')
+# Priority: CODECAST_BOT_TOKEN env var > macOS Keychain > .bot-token file
+BOT_TOKEN="${CODECAST_BOT_TOKEN:-}"
+if [ -z "$BOT_TOKEN" ] && command -v security &>/dev/null; then
+  BOT_TOKEN=$(security find-generic-password -s discord-bot-token -a codecast -w 2>/dev/null || true)
+fi
+if [ -z "$BOT_TOKEN" ]; then
+  BOT_TOKEN=$(cat "$SCRIPT_DIR/.bot-token" 2>/dev/null | tr -d '\n')
+fi
 if [ "$THREAD_MODE" = true ] && [ -z "$BOT_TOKEN" ]; then
   echo "⚠️  Warning: --thread requires a bot token for text channels" >&2
   echo "  Create: echo 'YOUR_BOT_TOKEN' > $SCRIPT_DIR/.bot-token" >&2
   echo "  Falling back to non-thread mode" >&2
   THREAD_MODE=false
 fi
+
+# Cleanup stale relay dirs (>7 days)
+find /tmp -maxdepth 1 -name 'dev-relay.*' -type d -mtime +7 -exec rm -rf {} + 2>/dev/null || true
 
 # Temp workspace
 RELAY_DIR=$(mktemp -d /tmp/dev-relay.XXXXXX)
@@ -161,19 +213,27 @@ printf '%q ' "${COMMAND_ARGS[@]}" >> "$CMD_FILE"
 printf '\n' >> "$CMD_FILE"
 chmod +x "$CMD_FILE"
 
-# Save session info
-cat > /tmp/dev-relay-session.json <<EOF
-{"command":"$COMMAND","workdir":"$WORKDIR","agent":"$AGENT_NAME","relayDir":"$RELAY_DIR","platform":"$PLATFORM","startTime":"$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
+# Save session info (per-PID for concurrent session support)
+SESSION_DIR="/tmp/dev-relay-sessions"
+mkdir -p "$SESSION_DIR"
+SESSION_FILE="$SESSION_DIR/$$.json"
+cat > "$SESSION_FILE" <<EOF
+{"pid":$$,"command":"$COMMAND","workdir":"$WORKDIR","agent":"$AGENT_NAME","relayDir":"$RELAY_DIR","platform":"$PLATFORM","startTime":"$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
 EOF
 
-if [ "$IS_CLAUDE" = true ]; then
-  # Claude Code: use stream-json parser (clean structured output)
-  # unbuffer provides PTY to prevent output buffering
-  # Export all config as env vars for the Python parser and platform adapters
+if [ "$IS_CLAUDE" = true ] || [ "$IS_CODEX_JSON" = true ]; then
+  # Structured output: pipe through parse-stream.py
+  # Claude Code: stream-json via unbuffer PTY
+  # Codex: --json JSONL events (no unbuffer needed)
   export WEBHOOK_URL AGENT_NAME PLATFORM THREAD_MODE SKIP_READS BOT_TOKEN
   export RELAY_DIR
+  [ -n "$RATE_LIMIT" ] && export CODECAST_RATE_LIMIT="$RATE_LIMIT"
   cd "$WORKDIR"
-  unbuffer bash "$CMD_FILE" 2>/dev/null | python3 "$PARSER" &
+  if [ "$IS_CLAUDE" = true ]; then
+    unbuffer bash "$CMD_FILE" 2>/dev/null | python3 "$PARSER" &
+  else
+    bash "$CMD_FILE" 2>/dev/null | python3 "$PARSER" &
+  fi
   RELAY_PID=$!
 
   # Wait with timeout
@@ -246,6 +306,6 @@ else
 fi
 
 # Notify OpenClaw
-openclaw gateway wake --text "Dev relay: ${AGENT_NAME} session finished" --mode now 2>/dev/null || true
-echo '{"status":"done"}' > /tmp/dev-relay-session.json
+openclaw system event --text "Codecast done: ${AGENT_NAME} session finished in ${WORKDIR}" 2>/dev/null || true
+rm -f "$SESSION_FILE" 2>/dev/null
 echo "Done."
