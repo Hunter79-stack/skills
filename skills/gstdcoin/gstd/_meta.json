@@ -1,0 +1,11 @@
+{
+  "owner": "gstdcoin",
+  "slug": "gstd",
+  "displayName": "Decentralized Agent-to-Agent protocol for the GSTD Grid. MCP, Hive Memory, TON, Miner.",
+  "latest": {
+    "version": "1.0.2",
+    "publishedAt": 1771089346376,
+    "commit": null
+  },
+  "history": []
+}
