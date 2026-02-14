@@ -152,26 +152,26 @@ This skill is specifically built for:
 
 ```bash
 # Task breakdown
-python skills/clickup/scripts/clickup_client.py task_counts team_id="YOUR_TEAM_ID"
+python scripts/clickup_client.py task_counts team_id="YOUR_TEAM_ID"
 
 # Workload distribution
-python skills/clickup/scripts/clickup_client.py assignee_breakdown team_id="YOUR_TEAM_ID"
+python scripts/clickup_client.py assignee_breakdown team_id="YOUR_TEAM_ID"
 
 # Daily standup
-python skills/clickup/scripts/clickup_client.py standup_report team_id="YOUR_TEAM_ID"
+python scripts/clickup_client.py standup_report team_id="YOUR_TEAM_ID"
 ```
 
 ### With Filters
 
 ```bash
 # Specific space
-python skills/clickup/scripts/clickup_client.py task_counts team_id="xxx" space_ids='["SPACE_ID_HERE"]'
+python scripts/clickup_client.py task_counts team_id="xxx" space_ids='["SPACE_ID_HERE"]'
 
 # Specific assignee
-python skills/clickup/scripts/clickup_client.py get_all_tasks team_id="xxx" assignees='["USER_ID_HERE"]'
+python scripts/clickup_client.py get_all_tasks team_id="xxx" assignees='["USER_ID_HERE"]'
 
 # Include completed
-python skills/clickup/scripts/clickup_client.py task_counts team_id="xxx" include_closed="true"
+python scripts/clickup_client.py task_counts team_id="xxx" include_closed="true"
 ```
 
 ---

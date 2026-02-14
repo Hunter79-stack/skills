@@ -20,7 +20,7 @@ dependencies:
 |---------|----------------|
 | **🔍 Always includes subtasks** | Never miss 70%+ of actual work — subtasks included automatically |
 | **📊 Advanced reporting** | Task counts, workload distribution, status breakdowns, standup reports |
-| **🏢 Multi-workspace** | Seamlessly switch between Elevated, Atrium, Winch Life, and more |
+| **🏢 Multi-workspace** | Seamlessly switch between Client Work, Product Development, Personal Projects, and more |
 | **👥 Client organization** | Structured folders: 📋 Client Overview, 📁 Completed Work, active projects |
 | **📈 Sales pipeline** | Track proposals, negotiations, and project lifecycles |
 | **⏱️ Time tracking** | Built-in timers and manual entries with billing support |
@@ -163,7 +163,7 @@ python scripts/clickup_client.py get_all_tasks team_id="xxx"
 **Filter reports by space or assignee:**
 ```bash
 # Specific space
-python scripts/clickup_client.py task_counts team_id="xxx" space_ids='["90172290075"]'
+python scripts/clickup_client.py task_counts team_id="xxx" space_ids='["SPACE_ID_HERE"]'
 
 # Specific assignee
 python scripts/clickup_client.py get_all_tasks team_id="xxx" assignees='["12345"]'
