@@ -3,9 +3,15 @@
   "slug": "image-to-data",
   "displayName": "Image To Data",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1770475475286,
-    "commit": "https://github.com/openclaw/skills/commit/8033ee0aa65492322b120d7cbabd066dbfaad0a4"
+    "version": "2.0.0",
+    "publishedAt": 1771002339049,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1770475475286,
+      "commit": "https://github.com/openclaw/skills/commit/8033ee0aa65492322b120d7cbabd066dbfaad0a4"
+    }
+  ]
 }
