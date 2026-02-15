@@ -3,11 +3,16 @@
   "slug": "pinch-to-post",
   "displayName": "Pinch to Post - Manage WordPress sites through WP Pinch MCP server",
   "latest": {
-    "version": "5.3.1",
-    "publishedAt": 1771165190816,
-    "commit": "https://github.com/openclaw/skills/commit/4537ddd198bb644164ffbdcfbedef9b9131a8305"
+    "version": "5.5.1",
+    "publishedAt": 1771166358847,
+    "commit": null
   },
   "history": [
+    {
+      "version": "5.3.1",
+      "publishedAt": 1771165190816,
+      "commit": "https://github.com/openclaw/skills/commit/4537ddd198bb644164ffbdcfbedef9b9131a8305"
+    },
     {
       "version": "3.1.2",
       "publishedAt": 1769229394233,
