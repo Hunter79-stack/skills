@@ -3,11 +3,16 @@
   "slug": "nextjs",
   "displayName": "Next.js",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1771005383367,
-    "commit": "https://github.com/openclaw/skills/commit/f15814cfe7341ff720bc62bca0ebfcad68e37a06"
+    "version": "1.0.2",
+    "publishedAt": 1771105495513,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1771005383367,
+      "commit": "https://github.com/openclaw/skills/commit/f15814cfe7341ff720bc62bca0ebfcad68e37a06"
+    },
     {
       "version": "1.0.0",
       "publishedAt": 1770684369413,
