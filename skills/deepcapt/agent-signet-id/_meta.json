@@ -1,0 +1,11 @@
+{
+  "owner": "deepcapt",
+  "slug": "agent-signet-id",
+  "displayName": "Agent Signet ID",
+  "latest": {
+    "version": "1.1.0",
+    "publishedAt": 1771095466577,
+    "commit": null
+  },
+  "history": []
+}
