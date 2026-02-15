@@ -1,8 +1,11 @@
 ---
 name: gif-whatsapp
-version: 1.0.0
+version: 1.1.0
 description: Search and send GIFs on WhatsApp. Handles the Tenor→MP4 conversion required for WhatsApp.
-metadata: {"clawdbot":{"emoji":"🎬","requires":{"bins":["gifgrep","ffmpeg","curl"]}}}
+author: Leo 🦁
+homepage: https://clawhub.com/skills/gif-whatsapp
+metadata: {"clawdbot":{"emoji":"🎬","requires":{"bins":["gifgrep","ffmpeg","curl"]},"requiresTools":["message"],"notes":"Uses the platform message tool (already configured) for WhatsApp delivery. gifgrep searches Tenor/Giphy only. Downloads are saved to /tmp and cleaned up after sending."}}
+allowed-tools: [exec, message]
 ---
 
 # GIF Sender
@@ -80,6 +83,14 @@ ffmpeg -i /tmp/g.gif -movflags faststart -pix_fmt yuv420p -vf "scale=trunc(iw/2)
 | Frustrated | facepalm, ugh, annoyed |
 | Love | heart, love, hug |
 | Cool | sunglasses, cool, awesome |
+
+## Security & Safety Notes
+
+- **Source domains**: gifgrep only searches trusted GIF providers (Tenor, Giphy)
+- **File handling**: All downloads go to `/tmp` and are overwritten each time (`-y` flag)
+- **Empty caption**: The `‎` character (U+200E, Left-to-Right Mark) is used as an invisible caption so WhatsApp sends the GIF without visible text. This is a standard Unicode control character, not an injection technique
+- **WhatsApp integration**: Uses the platform's built-in `message` tool — no separate WhatsApp credentials needed
+- **ffmpeg safety**: Processes only GIF files from trusted providers; no arbitrary file execution
 
 ## Why This Works
 
