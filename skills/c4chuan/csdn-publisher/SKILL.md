@@ -1,6 +1,6 @@
 ---
 name: csdn-publisher
-version: 2.2.0
+version: 2.3.0
 description: 写文章并发布到 CSDN。使用浏览器自动化 + 扫码登录。支持通过 Telegram 发送二维码，无需 VNC。集成 blog-writer 写作方法论，产出高质量、有个人风格的技术文章。
 ---
 
@@ -144,6 +144,36 @@ description: 写文章并发布到 CSDN。使用浏览器自动化 + 扫码登�
 - 每段 2-4 句话
 - 单句成段用于强调
 - 每 150-250 字一个小标题
+
+---
+
+## 🔍 新闻去重（v2.3 新增）
+
+发布新闻汇总类文章时，**必须先去重**，避免同一条新闻反复出现。
+
+### 去重流程
+
+1. **获取已有新闻**：运行 `scripts/notion-query-recent.sh 14` 获取最近 14 天的 Notion 数据库记录
+2. **逐条比对**：对每条搜索到的新闻，检查是否与已有记录重复：
+   - **URL 精确匹配**：同一个 URL 已存在 → 跳过
+   - **语义重复**：标题描述的是同一件事（即使措辞不同）→ 跳过
+3. **只保留新新闻**：去重后无新闻则跳过写文章和发布
+
+### 语义重复判断示例
+
+以下算同一条新闻：
+- "宇树人形机器人日常训练视频爆火B站，播放量超376万" ≈ "宇树人形机器人日常训练视频爆火：播放量超375万"
+- "小鹏Iron人形机器人深圳首秀摔倒" ≈ "小鹏Iron机器人深圳商场演示翻车"
+- "Apptronik融资9.35亿美元" ≈ "Apptronik获5.2亿美元融资"（同一轮融资的不同报道）
+
+### 脚本说明
+
+| 脚本 | 用途 |
+|------|------|
+| `scripts/notion-query-recent.sh [天数]` | 查询最近 N 天的已有新闻，输出 `标题 \| URL \| 日期` |
+| `scripts/notion-check-duplicate.sh "标题" ["URL"]` | 精确检查单条新闻是否重复，返回 `duplicate` 或 `new` |
+
+⚠️ 脚本中的 Notion API Key 和 Database ID 需要根据实际环境配置。
 
 ---
 
@@ -378,9 +408,11 @@ csdn-publisher/
 ├── style-guide-cn.md     # 中文写作风格指南
 ├── examples/             # 示例文章库
 │   └── *.md              # 示例文章（YYYY-MM-DD-slug.md）
-└── scripts/
-    ├── login.py          # 扫码登录脚本
-    └── inject-content.js # CDP 内容注入脚本（核心）
+├── scripts/
+│   ├── login.py              # 扫码登录脚本
+│   ├── inject-content.js     # CDP 内容注入脚本（核心）
+│   ├── notion-query-recent.sh   # 查询最近N天已有新闻
+│   └── notion-check-duplicate.sh # 精确去重检查
 ```
 
 ---
@@ -476,6 +508,7 @@ nohup python scripts/login.py login --timeout 300 --notify > /tmp/csdn-login.log
 
 ## Changelog
 
+- **v2.3.0**: 新增新闻去重功能（notion-query-recent.sh + notion-check-duplicate.sh），支持 URL 精确匹配和语义重复判断
 - **v2.2.0**: 固化 CDP 内容注入方案（scripts/inject-content.js），替换不可靠的 browser evaluate 方法
 - **v2.1.0**: 添加容错与重试策略（内容落盘、健康检查、自动重试、兜底通知）
 - **v2.0.0**: 集成 blog-writer 写作方法论，添加中文风格指南，重构工作流
