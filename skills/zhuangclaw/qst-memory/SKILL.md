@@ -1,19 +1,22 @@
 ---
 name: qst-memory
 description: |
-  QST Memory Management System v1.5 for OpenClaw agents. Provides:
-  1. Tree-based classification structure (3-level hierarchy)
-  2. Three search methods: Tree, Selection Rule, Semantic (Enhanced)
-  3. Hybrid Search combining all methods
-  4. Auto-classification with AI inference
-  5. Memory decay & cleanup system
-  6. TF-IDF similarity algorithm with context awareness
+  Universal Memory Management System v1.7.1 for OpenClaw agents. Provides:
+  1. Multi-Agent Support (qst, mengtian, lisi, custom)
+  2. Agent State System ("I'm Doing") - IDLE/DOING/WAITING/PAUSED/COMPLETED/FAILED
+  3. Heartbeat Integration - State-driven intelligent checking strategy
+  4. Tree-based classification structure (3-level hierarchy)
+  5. Three search methods: Tree, Semantic, Hybrid
+  6. Auto-classification with AI inference
+  7. Appendix Indexing for technical documents
+  8. Memory encryption (AES-128-CBC + HMAC) for sensitive data
+  9. Event history tracking with timeline
   
-  Use when: Agent needs intelligent memory management with flexible classification.
-  Goal: Reduce token consumption by 70-90%, improve relevance by 20%.
+  Use when: Agent needs intelligent memory management with state awareness.
+  Goal: Reduce token consumption by 70-90%, improve relevance by 20%, add contextual awareness.
 ---
 
-# QST Memory Management v1.5
+# Universal Memory Management v1.7.1
 
 ## 🌳 Tree-Based Classification Structure
 
@@ -118,6 +121,170 @@ result = auto_classify("QST暗物質使用FSCA理論")
 [I]: max(0.5, 1.5 - age * 0.1/365)
 [N]: max(0.1, 1.0 - age * 0.5/30)
 ```
+
+---
+
+## 🤖 Agent State System (v1.7 New)
+
+### State Machine
+
+The Agent State System provides contextual awareness for intelligent heartbeat checking.
+
+| State | Description | Heartbeat Behavior |
+|-------|-------------|-------------------|
+| **IDLE** | Agent is idle | Full checks (@mentions + replies + voting) |
+| **DOING** | Agent is working on task | Critical checks only (@mentions + replies, no voting) |
+| **WAITING** | Waiting for conditions | Quick checks (only @mentions) |
+| **PAUSED** | Agent is paused | Skip checks |
+| **COMPLETED** | Task completed | Full checks |
+| **FAILED** | Task failed | Full checks |
+
+### Using the Agent State
+
+```bash
+# Start a task (switches to DOING mode)
+python universal_memory.py --agent qst doing start \
+  --task "QST FSCA simulation #42" \
+  --type Research
+
+# Update progress
+python universal_memory.py --agent qst doing update --progress 50
+
+# Pause task
+python universal_memory.py --agent qst doing pause --reason "Waiting for resources"
+
+# Resume task
+python universal_memory.py --agent qst doing resume
+
+# Complete task
+python universal_memory.py --agent qst doing complete --result "Simulation successful: ρ=0.08"
+
+# View current status
+python universal_memory.py --agent qst doing status
+
+# View event history
+python universal_memory.py --agent qst doing events
+```
+
+### Event History
+
+All state changes are automatically logged with timestamps:
+
+```json
+{
+  "events": [
+    {
+      "timestamp": "2026-02-15T09:01:22.206211",
+      "event_type": "TASK_START",
+      "description": "开始: QST simulation #42",
+      "progress": 0
+    },
+    {
+      "timestamp": "2026-02-15T09:15:40.754321",
+      "event_type": "PROGRESS_UPDATE",
+      "description": "进度: QST simulation #42 (50%)",
+      "progress": 50
+    },
+    {
+      "timestamp": "2026-02-15T09:25:52.121518",
+      "event_type": "TASK_COMPLETED",
+      "description": "完成: QST simulation #42",
+      "result": "Simulation successful"
+    }
+  ]
+}
+```
+
+---
+
+## 💓 Heartbeat Integration (v1.7.1 New)
+
+### State-Driven Checking Strategy
+
+The system intelligently adjusts heartbeat checking based on agent state:
+
+```python
+# When agent is DOING: Only check critical notifications
+# - ✅ Check: @mentions, replies
+# - ❌ Skip: Voting (to avoid interrupting work)
+
+# When agent is IDLE: Full checking
+# - ✅ Check: @mentions, replies, voting
+```
+
+### Setting Up Heartbeat Integration
+
+```bash
+# Copy integration script to workspace
+cp scripts/heartbeat_integration.py /home/node/.openclaw/workspace/heartbeat.py
+chmod +x /home/node/.openclaw/workspace/heartbeat.py
+
+# Set up cron task (every 20 minutes)
+crontab -e
+# Add: */20 * * * * python3 /home/node/.openclaw/workspace/heartbeat.py
+```
+
+### Heartbeat Output
+
+```
+============================================================
+❤️  Heartbeat Started: 2026-02-15 09:15:26 UTC
+============================================================
+
+🤖 Agent: qst | 狀態: DOING
+   任務: QST simulation #42
+   類型: Research
+   進度: 50%
+
+🔄 狀態: DOING - 執行 HKGBook 檢查 (策略: 簡化)
+   📢 通知: 0 提及, 0 回覆
+   ⚠️  DOING/WAITING - 跳過投票
+   ✅ HKGBook 檢查完成
+
+============================================================
+✅ Heartbeat Completed: 2026-02-15 09:15:28 UTC
+============================================================
+```
+
+### Multi-Agent Support
+
+Each agent maintains independent state:
+
+```bash
+# qst agent
+/data/qst_doing-state.json
+
+# mengtian agent
+/data/mengtian_doing-state.json
+
+# lisi agent
+/data/lisi_doing-state.json
+```
+
+---
+
+## 🔐 Memory Encryption (v1.7 New)
+
+### AES-128-CBC + HMAC Encryption
+
+Sensitive data (API keys, passwords, tokens) can be encrypted using industrial-grade encryption:
+
+```python
+from crypto import MemoryCrypto
+
+crypto = MemoryCrypto()
+encrypted = crypto.encrypt("GitHubPAT: ghp_xxx...")
+# Output: ENC::gAAAAABgF7qj... (encrypted string)
+
+decrypted = crypto.decrypt(encrypted)
+# Output: "GitHubPAT: ghp_xxx..."
+```
+
+### Key Management
+
+- **Key storage**: `~/.qst_memory.key` (mode 600)
+- **Key derivation**: PBKDF2HMAC (SHA256, 480,000 iterations)
+- **Encryption algorithm**: Fernet (AES-128-CBC + HMAC)
 
 ---
 
