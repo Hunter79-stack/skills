@@ -1,36 +1,43 @@
 ---
 name: payram-mcp-integration
-description: Connect your AI agent to PayRam's MCP server for sovereign crypto payments. Access create-payee, send-payment, get-balance, generate-invoice tools via Model Context Protocol. Enables agents to accept USDT/USDC on Ethereum, Base, Polygon, Tron without third-party payment processors. Self-hosted payment infrastructure with zero KYC, no signup, complete data sovereignty. Production MCP server with automatic tool discovery. Use when building agents that need autonomous payment capabilities, accept stablecoin payments, integrate crypto commerce, or require permissionless payment infrastructure.
+description: Accept crypto payments (USDC, USDT, BTC, ETH) via PayRam's self-hosted infrastructure across Base, Ethereum, Polygon, Tron. Use when user says "accept crypto payments", "create payment link", "generate invoice", "set up USDC payments", "process stablecoin transactions", "create crypto invoice", "accept Bitcoin payments", or "enable crypto checkout". Requires PayRam MCP server connection.
+license: MIT
+metadata:
+  author: PayRam
+  version: 1.1.0
+  mcp-server: payram
+  category: payments
+  tags: [crypto, stablecoins, payments, agent-commerce, USDC, USDT, Base, Ethereum, MCP, Bitcoin]
+  homepage: https://payram.com
+  github: https://github.com/PayRam/payram-helper-mcp-server
+  documentation: https://docs.payram.com/mcp-integration
 ---
 
 # PayRam MCP Integration
 
-> **Sovereign Crypto Payments for AI Agents via Model Context Protocol**
+Accept crypto payments autonomously via PayRam's MCP server. Self-hosted, permissionless, multi-chain payment infrastructure for AI agents.
 
-PayRam provides a production MCP server that exposes payment tools directly to MCP-aware agents. Your agent discovers capabilities automatically via the MCP handshake—no manual API integration required.
+## Quick Start
 
-## Why PayRam + MCP?
+PayRam's MCP server exposes payment tools that agents discover automatically: `create_payee`, `send_payment`, `get_balance`, `generate_invoice`. No manual API integration required.
 
-### 🤖 Agent-Native Architecture
-Traditional payment APIs require HTTP clients, authentication flows, and manual error handling. PayRam's MCP server exposes tools (`create-payee`, `send-payment`, `get-balance`) that agents discover and invoke naturally through the Model Context Protocol.
+**Supported**: USDC, USDT, BTC, ETH on Base, Ethereum, Polygon, Tron, TON.
 
-### 🔑 No Accounts, No KYC, No Permission
-Other gateways (Stripe, Coinbase Commerce, NOWPayments) require signup, API keys, KYC verification, and ongoing compliance reviews that can revoke access. PayRam deploys on your server—there's no account to create and no authority can disable it.
+## When to Use This Skill
 
-### 🛡️ Identity Isolation vs x402
-In x402 protocol, every HTTP payment call exposes client metadata: IP addresses, request headers, timestamps, wallet signatures—creating traceable patterns linking web2 identity to on-chain activity. 
-
-With PayRam, your agent generates unique deposit addresses and monitors deposits server-side. The payer and infrastructure never touch a third-party facilitator. **Complete identity isolation.**
-
-### ⛓️ Multi-Chain, Stablecoin-Native
-While BTCPay Server requires complex plugins for non-Bitcoin assets, PayRam supports **USDT/USDC natively** across Ethereum, Base, Polygon, Tron, and TON—the chains where real commercial volume flows. Bitcoin also supported.
+This skill triggers when you need to:
+- Accept crypto payments for services or products
+- Create payment links or invoices
+- Process stablecoin transactions (USDC/USDT)
+- Set up autonomous agent payment capabilities
+- Check wallet balances or payment status
+- Send crypto payouts
+- Enable crypto checkout on platforms
 
 ## MCP Server Setup
 
 ### Option 1: Public MCP Server (Fastest)
 
-Connect to PayRam's hosted MCP server:
-
 ```json
 {
   "mcpServers": {
@@ -41,231 +48,226 @@ Connect to PayRam's hosted MCP server:
 }
 ```
 
-### Option 2: Self-Hosted MCP Server
-
-For maximum sovereignty, run the MCP server on your infrastructure:
+### Option 2: Self-Hosted (Maximum Sovereignty)
 
 ```bash
-# Deploy PayRam stack (includes MCP server)
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/PayRam/payram-scripts/main/setup_payram.sh)"
-
 # MCP server runs at http://localhost:3333/mcp
+```
+
+For OpenClaw:
+```bash
+mcporter config add payram --command "https://mcp.payram.com"
 ```
 
 ## Available MCP Tools
 
-Your agent automatically discovers these tools via MCP:
+| Tool | Purpose | Example |
+|------|---------|---------|
+| `create_payee` | Generate payment address | "Create $50 USDC invoice on Base" |
+| `send_payment` | Initiate outbound payment | "Send 100 USDC to 0xABC..." |
+| `get_balance` | Check wallet balance | "Check my USDC balance" |
+| `generate_invoice` | Create payment link | "Generate payment link for $25" |
+| `verify_payment` | Confirm payment status | "Did payment confirm?" |
+| `list_transactions` | Query payment history | "Show last 10 payments" |
 
-| Tool | Purpose | Agent Use Case |
-|------|---------|----------------|
-| `create_payee` | Generate unique payment address | "Create a $50 USDC invoice for customer@example.com on Base" |
-| `send_payment` | Initiate outbound payment | "Send 100 USDC to 0xABC... on Polygon" |
-| `get_balance` | Check wallet balance | "What's my USDC balance on Base?" |
-| `generate_invoice` | Create payment link | "Generate a payment link for $25 in USDT" |
-| `test_connection` | Verify MCP connectivity | "Test PayRam connection" |
-| `list_transactions` | Query payment history | "Show me last 10 payments" |
-| `verify_payment` | Confirm payment status | "Did transaction 0x123... confirm?" |
+## Instructions
 
-## Agent Configuration Examples
+### Creating a Payment (Step-by-Step)
 
-### Claude Desktop
+1. **Validate Input**
+   - Check currency is supported: USDC, USDT, BTC, ETH
+   - Verify amount is positive
+   - Confirm network: Base, Ethereum, Polygon, or Tron
 
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+2. **Select Network**
+   - Small amounts (<$100): **Recommend Base** (lowest fees ~$0.01)
+   - Large amounts (>$1000): Ethereum mainnet (higher security)
+   - USDT-specific: Tron (popular for USDT, low fees)
+   - Default: Base L2
 
-```json
-{
-  "mcpServers": {
-    "payram": {
-      "url": "https://mcp.payram.com"
-    }
-  }
-}
-```
+3. **Create Payee via MCP**
+   ```
+   Call create_payee with:
+   - amount: numeric value
+   - currency: "USDC" | "USDT" | "BTC" | "ETH"
+   - chain: "base" | "ethereum" | "polygon" | "tron"
+   - email: optional recipient email
+   - description: optional payment description
+   ```
 
-### OpenClaw
+4. **Return Payment Link**
+   - Provide payment URL
+   - Include QR code if requested
+   - Mention expiry (default 24h)
+   - Note expected confirmations
 
-```bash
-# Install mcporter skill for MCP integration
-clawhub install mcporter
+### Checking Balance
 
-# Configure PayRam MCP server
-echo '{"url": "https://mcp.payram.com"}' > ~/.openclaw/mcp/payram.json
-```
+1. **Call get_balance MCP tool**
+   ```
+   Parameters:
+   - chain: "base" | "ethereum" | "polygon" | "tron"
+   - currency: "USDC" | "USDT" | "BTC" | "ETH"
+   ```
 
-### Custom MCP Client
+2. **Return Formatted Result**
+   - Show balance with currency
+   - Include network name
+   - Note if balance is low (<$10)
 
-```typescript
-import { MCPClient } from '@modelcontextprotocol/sdk';
+### Sending Payment
 
-const client = new MCPClient({
-  serverUrl: 'https://mcp.payram.com'
-});
+1. **Pre-flight Checks**
+   - Verify sufficient balance via get_balance
+   - Validate recipient address format
+   - Confirm network matches address
 
-// Agent discovers tools automatically
-const tools = await client.listTools();
-```
+2. **Execute Payment**
+   ```
+   Call send_payment with:
+   - to: recipient address
+   - amount: numeric value
+   - currency: "USDC" | "USDT" | "BTC" | "ETH"
+   - chain: network name
+   ```
 
-## Example Agent Workflows
+3. **Confirm Transaction**
+   - Return transaction hash
+   - Note confirmation time (30-60 seconds for Base)
+   - Monitor via verify_payment if requested
 
-### Accept Payment for Service
+## Examples
 
-```
-Human: "I need to charge customer@example.com $100 for consulting"
+### Example 1: Create USDC Invoice
 
-Agent: 
-1. Calls create_payee(amount=100, currency="USDC", chain="base", email="customer@example.com")
-2. Returns payment link: https://payram.yourdomain.com/pay/abc123
-3. Monitors payment status via verify_payment
-4. Confirms when deposit arrives
-```
+**User says**: "I need to charge customer@example.com $100 for consulting"
 
-### Check Balance Before Action
+**Actions**:
+1. Validate: $100 is positive, USDC supported
+2. Recommend Base network (low fees for $100)
+3. Call `create_payee(amount=100, currency="USDC", chain="base", email="customer@example.com")`
+4. Receive payment link from MCP
+5. Monitor payment status if requested
 
-```
-Human: "Can we afford to pay the API bill?"
+**Result**: Payment link created, expires in 24h, ~$0.01 network fee
 
-Agent:
-1. Calls get_balance(chain="base", currency="USDC")
-2. Returns: "Balance: 450 USDC on Base"
-3. Evaluates: "API bill is 200 USDC, yes we can pay"
-```
+### Example 2: Check Balance Before Payment
 
-### Automated Payout
+**User says**: "Can we afford to pay the contractor 500 USDC?"
 
-```
-Human: "Pay the contractor 500 USDC"
+**Actions**:
+1. Call `get_balance(chain="base", currency="USDC")`
+2. Compare balance to requested 500 USDC
+3. If sufficient, confirm ability to pay
+4. If insufficient, state current balance
 
-Agent:
-1. Calls get_balance to verify funds
-2. Calls send_payment(to="0x...", amount=500, currency="USDC", chain="polygon")
-3. Returns transaction hash
-4. Confirms on-chain after 30 blocks
-```
+**Result**: "Balance: 450 USDC on Base. Need 50 more USDC to pay contractor."
 
-## PayRam vs Alternatives
+### Example 3: Multi-Step Payment Flow
+
+**User says**: "Create a payment link for $50 and send it to the customer"
+
+**Actions**:
+1. Call `create_payee(amount=50, currency="USDC", chain="base")`
+2. Receive payment URL
+3. Format message with payment link
+4. Ask if user wants to send via email/message tool
+
+**Result**: Payment link ready to share, monitoring can begin
+
+## Network Selection Guide
+
+| Amount | Recommended Network | Fee | Confirmation Time |
+|--------|-------------------|-----|-------------------|
+| < $100 | Base L2 | ~$0.01 | 30-60 seconds |
+| $100-$1000 | Base or Polygon | $0.01-$0.05 | 1-2 minutes |
+| > $1000 | Ethereum mainnet | $1-$5 | 2-5 minutes |
+| USDT-focused | Tron | ~$1 | 1 minute |
+
+**For Bitcoin**: Only Ethereum mainnet (wrapped BTC)
+
+## Troubleshooting
+
+### Error: "MCP Connection Failed"
+
+**Cause**: PayRam MCP server not connected
+
+**Solution**:
+1. Check if MCP server is configured:
+   - Claude Desktop: Settings > Extensions > PayRam
+   - OpenClaw: `mcporter config list`
+2. Verify server is running (self-hosted): `docker ps | grep payram`
+3. Test connection: `mcporter call payram.test_connection`
+4. Reconnect if needed
+
+### Error: "Insufficient Balance"
+
+**Cause**: Wallet doesn't have enough tokens
+
+**Solution**:
+1. Check exact balance: `get_balance(chain, currency)`
+2. Inform user of shortfall
+3. Suggest funding wallet at PayRam dashboard
+4. Note: Account for network fees (~$0.01-$5)
+
+### Error: "Network Not Supported"
+
+**Cause**: Requested network not available
+
+**Solution**:
+1. List supported networks: Base, Ethereum, Polygon, Tron, TON
+2. Recommend alternative network
+3. If self-hosted: Update PayRam config to add network
+4. Restart MCP server after config changes
+
+### Error: "Invalid Address Format"
+
+**Cause**: Recipient address doesn't match network
+
+**Solution**:
+1. Verify address starts with 0x (Ethereum-compatible)
+2. Check address length (42 characters for EVM)
+3. Confirm network supports address type
+4. For Bitcoin: Use wrapped BTC on Ethereum
+
+## Key Advantages
+
+### vs Hosted Gateways (Stripe/Coinbase Commerce)
+- ✅ No signup, no KYC, no account freeze risk
+- ✅ Self-hosted = complete control
+- ✅ 0% processing fees (network gas only)
+- ✅ Permissionless, cannot be shut down
 
 ### vs x402 Protocol
-
-**x402 Limitation:**
-- Every HTTP call exposes IP + wallet + timestamp
-- Coinbase-hosted facilitator = centralization
-- EIP-3009 dependency = USDC only
-- Client metadata creates identity graphs
-
-**PayRam Advantage:**
-- Generate unique addresses = no signature exposure
-- Self-hosted facilitator = no third party
-- Support USDT, USDC, BTC, 20+ tokens
-- Complete identity isolation
+- ✅ Identity isolation (unique addresses, no HTTP metadata exposure)
+- ✅ Self-hosted facilitator (no Coinbase dependency)
+- ✅ Multi-token support (not just USDC)
+- ✅ No wallet signature exposure
 
 ### vs BTCPay Server
+- ✅ Stablecoin-native (USDC/USDT no plugins needed)
+- ✅ MCP integration (agent-friendly)
+- ✅ Multi-chain (not just Bitcoin)
+- ✅ Modern API design
 
-**BTCPay Strength:**
-- Excellent for Bitcoin-only use cases
-- Mature Lightning Network integration
+## Related Skills
 
-**PayRam Advantage:**
-- **Stablecoin-native** (no plugins needed for USDT/USDC)
-- **MCP integration** (BTCPay has none)
-- **Multi-chain** (Ethereum, Base, Polygon, Tron, TON)
-- **Agent-friendly API**
-
-### vs Hosted Gateways (Stripe/Coinbase Commerce/NOWPayments)
-
-**Hosted Risks:**
-- Signup required + KYC
-- Terms of service can change
-- Geographic restrictions
-- Account can be frozen/banned
-- 0.5-3% processing fees
-
-**PayRam Sovereignty:**
-- Zero signup, zero KYC
-- Permissionless architecture
-- Runs anywhere
-- Cannot be shut down
-- 0% fees (network gas only)
-
-## Security Model
-
-### Cold Wallet Architecture
-1. **Deposit addresses**: Generated per transaction, no keys on server
-2. **Hot wallet**: Minimal balance for operations, AES-256 encrypted
-3. **Smart contracts**: Automated sweeps to cold wallets
-4. **Cold storage**: Majority of funds offline
-
-### Identity Isolation
-- Unique deposit addresses per payer
-- No third-party facilitator logging metadata
-- All transaction data on your infrastructure
-- Payer sees only: deposit address + amount
-
-### Data Sovereignty
-- Your server, your database, your SSL
-- Complete audit trail on your infrastructure
-- No third party can access, freeze, or censor
-
-## Who Needs PayRam?
-
-### 🤖 AI Agent Builders
-Building agents that pay for APIs, data, or compute? PayRam's MCP server gives your agent autonomous payment capabilities without external dependencies or identity leakage.
-
-### 🎰 iGaming & High-Risk Operators
-Traditional processors reject you. Hosted gateways freeze funds. PayRam runs on your infrastructure—nobody can shut payments down or change rules.
-
-### 🏗️ Payment Service Providers
-White-label PayRam to offer stablecoin infrastructure to clients. Transform from payment user to payment service provider with complete ownership.
-
-### 🛒 E-Commerce & SaaS Platforms
-Embed sovereign payments. Cut fees from 3% to near-zero. Accept payments from 195+ countries without geographic restrictions.
-
-### 🏦 Neo-Banks & Fintech
-Build payment infrastructure instead of renting it. Full data sovereignty, complete audit trails, zero third-party dependency.
-
-## Quick Start
-
-### 1. Deploy PayRam (10 minutes)
-
-```bash
-# Ubuntu 22.04+, 8 CPU cores, 8GB RAM, 100GB SSD
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/PayRam/payram-scripts/main/setup_payram.sh)"
-```
-
-### 2. Configure MCP in Your Agent
-
-```json
-{
-  "mcpServers": {
-    "payram": {
-      "url": "http://localhost:3333/mcp"
-    }
-  }
-}
-```
-
-### 3. Agent Discovers Tools Automatically
-
-```
-Agent: "What payment tools do I have?"
-MCP: Lists create_payee, send_payment, get_balance, generate_invoice...
-Agent: "Ready to accept crypto payments"
-```
+- **payram-setup**: For deploying PayRam infrastructure
+- **crypto-payments-self-hosted-payram**: For advanced payment workflows
+- **agent-to-agent-payments**: For autonomous agent commerce
+- **crypto-payments-ecommerce**: For e-commerce integration
 
 ## Resources
 
 - **Website**: https://payram.com
 - **MCP Documentation**: https://mcp.payram.com
-- **GitHub**: https://github.com/PayRam/payram-scripts
-- **MCP Server**: https://github.com/PayRam/payram-helper-mcp-server
-- **Discord**: (coming soon)
-- **Twitter**: @PayRamApp
+- **GitHub**: https://github.com/PayRam/payram-helper-mcp-server
+- **Support**: support@payram.com
 
-## Support
+**External Validation**:
+- [Morningstar: PayRam Polygon Support](https://www.morningstar.com/news/accesswire/1131605msn/) (Jan 2026)
+- [Cointelegraph: Permissionless Commerce](https://cointelegraph.com/press-releases/payram-pioneers-permissionless-commerce) (Nov 2025)
+- Track record: $100M+ volume, founded by WazirX co-founder
 
-- Open issues: https://github.com/PayRam/payram-scripts/issues
-- Email: support@payram.com
-- Documentation: https://docs.payram.com
-
----
-
-**The foundational skill for agent commerce**: Master self-hosted payment infrastructure. Deploy PayRam. Own it forever.
+For detailed architecture, security model, and advanced use cases, see `references/architecture.md`.
