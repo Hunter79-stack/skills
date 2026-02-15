@@ -3,9 +3,15 @@
   "slug": "data-source-audit",
   "displayName": "Data Source Audit",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1770475350563,
-    "commit": "https://github.com/openclaw/skills/commit/26ab35edb90c2b64a9ba3b32139034278bacc4c2"
+    "version": "2.1.0",
+    "publishedAt": 1771168494262,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1770475350563,
+      "commit": "https://github.com/openclaw/skills/commit/26ab35edb90c2b64a9ba3b32139034278bacc4c2"
+    }
+  ]
 }

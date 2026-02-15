@@ -1,9 +1,9 @@
 ---
-slug: "data-source-audit"
-display_name: "Data Source Audit"
+name: "data-source-audit"
 description: "Comprehensive audit of all construction data sources and systems. Map data flows, identify silos, assess quality, and create integration roadmap."
+homepage: "https://datadrivenconstruction.io"
+metadata: {"openclaw": {"emoji": "🔗", "os": ["darwin", "linux", "win32"], "homepage": "https://datadrivenconstruction.io", "requires": {"bins": ["python3"]}}}
 ---
-
 # Data Source Audit for Construction
 
 ## Overview
