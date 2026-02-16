@@ -56,6 +56,15 @@ export async function apiGet(path: string, privateKeyHex: string): Promise<any> 
   return data;
 }
 
+export async function apiPublicGet(path: string): Promise<any> {
+  const res = await fetch(`${config.serverUrl}${path}`);
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error ?? `HTTP ${res.status}`);
+  }
+  return data;
+}
+
 export async function apiDelete(path: string, privateKeyHex: string): Promise<any> {
   const signed = signRequest({}, privateKeyHex);
   const res = await fetch(`${config.serverUrl}${path}`, {

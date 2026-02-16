@@ -3,11 +3,16 @@
   "slug": "uniclaw",
   "displayName": "UniClaw Prediction Market",
   "latest": {
-    "version": "0.1.13",
-    "publishedAt": 1770923318517,
-    "commit": "https://github.com/openclaw/skills/commit/f698a04aee82cdec60a27fada0b64e6982648c9d"
+    "version": "0.1.17",
+    "publishedAt": 1771245320437,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.1.13",
+      "publishedAt": 1770923318517,
+      "commit": "https://github.com/openclaw/skills/commit/f698a04aee82cdec60a27fada0b64e6982648c9d"
+    },
     {
       "version": "0.1.12",
       "publishedAt": 1770760440511,
