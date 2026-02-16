@@ -1,83 +1,69 @@
 ---
-name: "Brief"
-description: "Condense internal information into actionable briefings. Auto-learns format, depth, and structure preferences."
+name: Brief
+slug: brief
+version: 1.0.1
+description: Condense information into actionable briefings. User specifies sources, skill structures the output.
+changelog: Added explicit data sources and storage location
+metadata: {"clawdbot":{"emoji":"📋","requires":{"bins":[]},"os":["linux","darwin","win32"]}}
 ---
 
-## Core Role
-
-Brief = prepare your human to act or decide. Projects, metrics, team updates, meeting context — condensed for action.
-
-**Not:** external news/trends (→ use Digest), document synthesis (→ use Synthesize)
-
-## Protocol
+## Data Storage
 
 ```
-Scope → Gather → Distill → Structure → Format → Deliver → Learn
+~/brief/
+├── preferences.md    # Learned format preferences
+└── templates/        # Custom brief templates
 ```
 
-### 1. Scope
+Create on first use: `mkdir -p ~/brief/templates`
 
-Define what this brief covers:
-- Project status? Executive summary? Meeting prep?
-- Who's the audience? (Just them? Their boss? External?)
-- What decisions does this enable?
+## Scope
 
-### 2. Gather
+This skill:
+- ✅ Structures information user provides into briefs
+- ✅ Learns format preferences from explicit feedback
+- ✅ Stores preferences in ~/brief/preferences.md
 
-Pull relevant internal information:
-- Project status, metrics, blockers
-- Recent decisions and their rationale
-- Open questions, pending items
-- Stakeholder context
+**User-driven model:**
+- User specifies WHAT information to include
+- User grants access to any needed sources
+- Skill handles STRUCTURE and FORMAT
 
-### 3. Distill
+This skill does NOT:
+- ❌ Access files, email, or calendar without user request
+- ❌ Pull data from sources user hasn't specified
+- ❌ Store content (only format preferences)
 
-Reduce to what matters for the action:
-- Cut nice-to-know, keep need-to-know
-- Surface the non-obvious
-- Highlight risks and dependencies
-- Extract decision points
+## Quick Reference
 
-### 4. Structure
+| Topic | File |
+|-------|------|
+| Format dimensions | `dimensions.md` |
+| Brief templates | `templates.md` |
 
-Organize per brief type (see `templates.md`):
-- Executive: BLUF → context → recommendation
-- Project: status → blockers → next steps
-- Meeting: purpose → context → decisions needed
-- Handoff: state → gotchas → priorities
+## Core Rules
 
-### 5. Format
+### 1. User Specifies Sources
+When user requests a brief:
+1. User provides the information OR specifies where to get it
+2. If source requires access, user grants it explicitly
+3. Skill structures and formats the output
 
-Apply user preferences (see `dimensions.md`):
-- Length (one-pager vs detailed)
-- Tone (formal vs internal casual)
-- Visuals (charts, status indicators)
-- Medium (doc, message, PDF)
+Example:
+```
+User: "Brief me on project X status"
+Agent: "I'll need access to the project docs. Can you share 
+        the status doc or grant access to the project folder?"
+User: [shares doc or grants access]
+→ Brief generated from user-provided source
+```
 
-### 6. Deliver
-
-Timing per context:
-- Pre-meeting (30min before)
-- Start of day/week
-- On-demand for decisions
-
-### 7. Learn
-
-Observe what lands:
-- "Perfect, exactly what I needed" → reinforce
-- "Too detailed" → shorten
-- "Missing X" → adjust gather scope
-- "Wrong emphasis" → rebalance
-
-Update `preferences.md` following pattern/confirm/lock cycle.
-
-## Output Format (Default)
-
+### 2. Brief Structure
 ```
 📋 [BRIEF TYPE] — [SUBJECT]
 
 ⚡ BOTTOM LINE
-[1-2 sentences: what they need to know/decide]
+[1-2 sentences: key takeaway]
 
 📊 KEY POINTS
 • [Point 1]
@@ -85,14 +71,28 @@ Update `preferences.md` following pattern/confirm/lock cycle.
 • [Point 3]
 
 🎯 ACTION NEEDED
-[What decision or action this enables]
-
-📎 DETAILS
-[Expanded context if needed]
+[Decision or action required]
 ```
 
-Adapt format entirely based on learned preferences and brief type.
+### 3. Learn from Explicit Feedback
+- "Too detailed" → shorten future briefs
+- "Missing X" → ask about X in future
+- "Perfect" → reinforce current format
+- Store preferences in ~/brief/preferences.md
 
----
+### 4. Preference Storage Format
+One line per preference:
+```
+- Prefers bullet points over paragraphs
+- Executive summary first
+- Include metrics when available
+- Max 1 page for status briefs
+```
 
-*References: `dimensions.md`, `preferences.md`, `templates.md`*
+### 5. Brief Types
+| Type | When | Key elements |
+|------|------|-------------|
+| Executive | Decision needed | BLUF, recommendation, risks |
+| Project | Status update | Progress, blockers, next steps |
+| Meeting | Before meeting | Purpose, context, decisions |
+| Handoff | Transition | Current state, gotchas, priorities |
