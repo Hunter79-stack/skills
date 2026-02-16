@@ -20,6 +20,13 @@ node scripts/search-notion.js "query" --token-file ~/.notion-token
 echo "$NOTION_API_KEY" | node scripts/search-notion.js "query" --token-stdin
 ```
 
+## JSON Output Mode
+
+All scripts accept `--json` to emit machine-readable output and suppress stderr progress logs.
+
+- Success output is JSON
+- Errors are JSON objects: `{ "error": "..." }`
+
 ## Scripts Reference
 
 ### search-notion.js
@@ -28,7 +35,7 @@ Search pages and databases by title or content.
 
 **Signature:**
 ```bash
-node scripts/search-notion.js "<query>" [--filter page|database] [--limit 10]
+node scripts/search-notion.js "<query>" [--filter page|database] [--limit 10] [--json]
 ```
 
 **Options:**
@@ -44,7 +51,7 @@ Query database contents with advanced filters and sorting.
 
 **Signature:**
 ```bash
-node scripts/query-database.js <database-id> [--filter <json>] [--sort <json>] [--limit 10]
+node scripts/query-database.js <database-id> [--filter <json>] [--sort <json>] [--limit 10] [--json]
 ```
 
 **Filter Patterns:**
@@ -68,7 +75,7 @@ Update database page properties.
 
 **Signature:**
 ```bash
-node scripts/update-page-properties.js <page-id> <property-name> <value> [--type <type>]
+node scripts/update-page-properties.js <page-id> <property-name> <value> [--type <type>] [--json]
 ```
 
 **Property Types:**
@@ -81,13 +88,39 @@ node scripts/update-page-properties.js <page-id> <property-name> <value> [--type
 - `date`: ISO date (YYYY-MM-DD)
 - `rich_text`: Plain text
 
+### batch-update.js
+
+Batch update a property across multiple pages.
+
+**Signatures:**
+```bash
+# Query + update
+node scripts/batch-update.js <database-id> <property-name> <value> --filter '<json>' [--type <type>] [--dry-run] [--limit 100]
+
+# IDs from stdin
+echo "page-id-1\npage-id-2" | node scripts/batch-update.js --stdin <property-name> <value> [--type <type>] [--dry-run] [--limit 100]
+```
+
+**Options:**
+- `--filter <json>`: Notion database query filter (required in query mode)
+- `--stdin`: read page IDs (one per line) from stdin instead of querying a database
+- `--type <type>`: `select`, `multi_select`, `checkbox`, `number`, `url`, `email`, `date`, `rich_text`
+- `--dry-run`: no writes; prints page IDs + current values to stderr and returns preview JSON
+- `--limit <n>`: max pages to process (default: 100)
+
+**Behavior:**
+- Uses database `data_source_id` when available
+- Supports query pagination (`has_more` + `next_cursor`) up to `--limit`
+- Adds 300ms delay between updates to reduce 429 rate limits
+- Emits progress to stderr and JSON results to stdout (`[{id, url, updated}]`)
+
 ### md-to-notion.js
 
 Convert markdown to Notion page.
 
 **Signature:**
 ```bash
-node scripts/md-to-notion.js "<markdown-file>" "<parent-page-id>" "<title>"
+node scripts/md-to-notion.js "<markdown-file>" "<parent-page-id>" "<title>" [--json]
 ```
 
 **Supported Markdown:**
@@ -109,7 +142,7 @@ Convert Notion page to markdown.
 
 **Signature:**
 ```bash
-node scripts/notion-to-md.js <page-id> [output-file]
+node scripts/notion-to-md.js <page-id> [output-file] [--json]
 ```
 
 **Output:** Writes markdown to file or stdout
@@ -120,7 +153,7 @@ Monitor page for changes.
 
 **Signature:**
 ```bash
-node scripts/watch-notion.js [--state-file <path>] <page-id> <local-path>
+node scripts/watch-notion.js [--state-file <path>] <page-id> <local-path> [--json]
 ```
 
 **State File:** Default `memory/notion-watch-state.json` (relative to cwd), overridable with `--state-file` (supports `~` expansion)
@@ -146,7 +179,7 @@ Inspect database structure.
 
 **Signature:**
 ```bash
-node scripts/get-database-schema.js <database-id>
+node scripts/get-database-schema.js <database-id> [--json]
 ```
 
 **Returns:** JSON with database properties and their types
@@ -157,7 +190,7 @@ Archive page (soft delete).
 
 **Signature:**
 ```bash
-node scripts/delete-notion-page.js <page-id>
+node scripts/delete-notion-page.js <page-id> [--json]
 ```
 
 **Note:** Sets `archived: true`, doesn't permanently delete
