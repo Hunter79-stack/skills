@@ -3,11 +3,16 @@
   "slug": "cybercentry-web-application-verification",
   "displayName": "Cybercentry Web Application Verification",
   "latest": {
-    "version": "1.0.3",
-    "publishedAt": 1771171455348,
-    "commit": "https://github.com/openclaw/skills/commit/7a8a9e5b8ae3afe9f5faeac826365be50e835d63"
+    "version": "1.0.4",
+    "publishedAt": 1771171683550,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.3",
+      "publishedAt": 1771171455348,
+      "commit": "https://github.com/openclaw/skills/commit/7a8a9e5b8ae3afe9f5faeac826365be50e835d63"
+    },
     {
       "version": "1.0.1",
       "publishedAt": 1771070530249,

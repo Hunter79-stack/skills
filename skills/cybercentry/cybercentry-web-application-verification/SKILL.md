@@ -55,16 +55,34 @@ Web applications and dApp frontends are primary attack vectors. A single XSS vul
 
 ### Prerequisites
 
+**ACP CLI Installation (Standard Virtuals Protocol Marketplace Client):**
+
+The ACP CLI is the standard client for interacting with Virtuals Protocol Agent Commerce Protocol marketplace. This is the official marketplace client maintained by Virtuals Protocol, not third-party software.
+
 ```bash
-# Install the ACP skill from GitHub
-Install the skill from https://github.com/Virtual-Protocol/openclaw-acp
+# Install the official ACP marketplace client from Virtuals Protocol
 git clone https://github.com/Virtual-Protocol/openclaw-acp
 cd openclaw-acp
 npm install
 
-# Setup and authenticate
+# Setup and authenticate with the ACP marketplace
 acp setup
 ```
+
+**Authentication & Wallet Requirements:**
+
+The `acp setup` command will prompt you to configure:
+- **Wallet Connection**: You'll connect a Web3 wallet (MetaMask, WalletConnect, hardware wallet, etc.)
+- **USDC for Payments**: Ensure wallet has USDC on the appropriate chain for $1.00 payments per scan
+- **Transaction Signing**: Each job creation requires your explicit wallet signature approval
+- **No Private Keys Shared**: ACP uses standard Web3 wallet connections - your private keys never leave your wallet
+- **Local Configuration**: ACP stores your wallet address and preferences locally in `~/.acp/config`
+
+**Verify installation integrity:**
+- Repository: https://github.com/Virtual-Protocol/openclaw-acp (official Virtuals Protocol)
+- Repository owner: Virtual-Protocol (https://github.com/Virtual-Protocol)
+- Check commits and releases before installation
+- Run in isolated environment if preferred (VM/container)
 
 ## IMPORTANT: Security & Privacy
 
@@ -127,7 +145,7 @@ Before sending any funds, verify the Cybercentry wallet address using the **Cybe
 - Security scan results and vulnerability reports
 - Job timestamps and payment records
 
-**What data is NOT collected (if you sanitisConvertedall instances of US English "sanitize/sanitized/sanitizing/sanitization" to UK English "sanitise/sanitised/sanitising/sanitisation" across five SKILL files (Web App, Private Data, Cyber Security, OpenClaw, and Solidity). This completes the UK English standardisation across all documentation text while preserving code syntax and technical identifiers as requirede properly):**
+**What data is NOT collected (if you sanitise properly):**
 - Authentication tokens or API keys
 - Internal network URLs
 - Admin credentials
@@ -140,7 +158,7 @@ Before sending any funds, verify the Cybercentry wallet address using the **Cybe
 - ACP authentication: Managed by Virtuals Protocol ACP platform
 
 **Your responsibility:**
-- You must sanitisConvertedall instances of US English "sanitize/sanitized/sanitizing/sanitization" to UK English "sanitise/sanitised/sanitising/sanitisation" across five SKILL files (Web App, Private Data, Cyber Security, OpenClaw, and Solidity). This completes the UK English standardisation across all documentation text while preserving code syntax and technical identifiers as requirede URLs before submission (remove all credentials/tokens)
+- You must sanitise URLs before submission (remove all credentials/tokens)
 - Cybercentry cannot be held responsible for sensitive URLs you submit
 - Review all URLs before creating verification jobs
 
