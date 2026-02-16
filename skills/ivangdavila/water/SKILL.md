@@ -1,6 +1,8 @@
 ---
 name: "Water Tracker"
 description: "Auto-learns your hydration habits. Tracks water intake from casual mentions without precise measuring."
+version: "1.0.1"
+changelog: "Preferences now persist across skill updates"
 ---
 
 ## Auto-Adaptive Hydration Tracking
@@ -21,29 +23,38 @@ This skill auto-evolves. Fills in as you learn how the user hydrates and what af
 
 ---
 
-### Sources
+## Memory Storage
+
+User preferences persist in: `~/water/memory.md`
+
+Create and maintain this file with learned data:
+
+```markdown
+## Sources
 <!-- Where hydration data comes from. Format: "source: what" -->
 <!-- Examples: conversation: meal mentions, fitness: post-workout -->
 
-### Containers
+## Containers
 <!-- Learned container sizes. Format: "container: size" -->
 <!-- Examples: usual glass: 300ml, gym bottle: 750ml, restaurant: 250ml -->
 
-### Schedule
+## Schedule
 <!-- Detected hydration patterns. Format: "pattern" -->
 <!-- Examples: always with lunch, coffee then water AM, evening tea -->
 
-### Correlations
+## Correlations
 <!-- What affects their hydration. Format: "factor: effect" -->
 <!-- Examples: gym days: +500ml, hot weather: extra glass, coffee: follows with water -->
 
-### Preferences
+## Preferences
 <!-- How they want hydration tracked. Format: "preference" -->
 <!-- Examples: no reminders, just log silently, weekly summary only -->
 
-### Flags
+## Flags
 <!-- Signs of low hydration to watch. Format: "signal" -->
 <!-- Examples: headache, fatigue, dark urine mentioned, skipped water at lunch -->
+```
+
+*Empty sections = no data yet. Observe and fill.*
 
 ---
-*Empty sections = no data yet. Observe and fill.*
