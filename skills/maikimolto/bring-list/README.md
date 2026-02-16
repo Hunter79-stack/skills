@@ -1,97 +1,73 @@
-# 🛒 bring-list — Bring! Shopping Lists for OpenClaw
+# 🛒 bring-list — The Best Bring! Skill for OpenClaw
 
-The most complete Bring! skill for OpenClaw. Zero dependencies beyond `curl` and `jq` — no Node.js, no Python, no npm packages. Clean, auditable bash code.
+**Zero dependencies. Most features. Clean code. No security flags.**
+
+The only Bring! skill that runs everywhere — just `curl` and `jq`, no Node.js, no Python, no pip, no npm. Works on any Linux, any container, any VPS out of the box.
 
 ## Why bring-list?
 
-There are several Bring! skills on ClawHub. Here's why this one is different:
+There are 6+ Bring! skills on ClawHub. Here's why this one wins:
 
+### 🏆 Most features
+Other skills only do add + remove. **bring-list** does everything:
+- ✅ Add items (with quantity/description like "low fat, 1L")
+- ✅ Add multiple items in one go ("Milk, Bread, Cheese|Gouda, Butter|Irish")
+- ✅ Check off items when you've bought them
+- ✅ Uncheck items (move back to shopping list)
+- ✅ Remove items completely
+- ✅ Remove or check off multiple items at once
+- ✅ View all your lists and items
+- ✅ JSON output for automation
+
+### 🪶 Zero dependencies
 | | **bring-list** | Others |
 |---|---|---|
-| Dependencies | `curl` + `jq` only | Node.js + npm packages |
-| Features | add, remove, complete, uncomplete, multi-ops | add, remove only |
-| Default list | By name (partial match) | By UUID only |
-| Agent Setup Guide | Step-by-step for agents | None |
-| Batch operations | add/remove/complete-multi | Not available |
-| Special characters | Full support (quotes, umlauts, emoji) | Varies |
-| Security | Clean code, no flags | Some flagged by VirusTotal |
+| Needs | `curl` + `jq` | Node.js + npm, or Python + pip |
+| Install time | Instant | Minutes of downloading packages |
+| Works in containers | Always | Often breaks |
 
-## Features
+### 🧠 Built for AI agents
+- **Step-by-step Agent Setup Guide** — your agent knows exactly how to help you set up
+- **Default list support** — say "put milk on the list" without naming the list every time
+- **Partial name matching** — "einkauf" finds "Einkaufsliste"
+- **Smart argument parsing** — the agent figures out what's an item and what's a list name
 
-- **Add items** to any Bring! list (with optional quantity/description)
-- **Add multiple items** at once
-- **View** your shopping lists and items
-- **Complete/uncomplete** items (check off or move back)
-- **Remove** items entirely
-- **Multiple lists** supported with partial name matching
-- **JSON output** for programmatic use
+### 🔒 Clean & secure
+- No VirusTotal flags (some other Bring! skills are flagged as suspicious!)
+- Credentials stored with `chmod 600` (owner-only)
+- No external services — talks directly to Bring! API
+- Fully auditable: one bash script, ~850 lines, no magic
 
 ## Installation
 
 ```bash
-clawhub install bring
+clawhub install bring-list
 ```
 
-## Setup
+## Quick Setup
 
-You need a [Bring!](https://getbring.com) account (free).
+Tell your agent: *"Set up the Bring shopping list skill"* — it will walk you through it.
 
-### Option 1: Interactive Setup
+Or manually:
 ```bash
 scripts/bring.sh setup
 ```
-Follow the prompts to enter your email and password. Credentials are stored securely at `~/.config/bring/credentials.json` (chmod 600).
 
-### Option 2: Environment Variables
-```bash
-export BRING_EMAIL="your@email.com"
-export BRING_PASSWORD="your-password"
-```
+You need a [Bring!](https://getbring.com) account (free). If you signed up via Google/Apple, set a direct password first in the Bring! app (Settings → Account → Change Password).
 
-## Usage Examples
+## Just Talk Naturally
 
-Talk to your agent naturally:
 - *"Put milk and eggs on the shopping list"*
-- *"What's on our grocery list?"*
-- *"Check off the butter"*
-- *"Remove bread from the list"*
+- *"What's on our list?"*
+- *"Check off the butter, we got it"*
+- *"Add bread, cheese, and yogurt to the list"*
+- *"Remove the tomatoes"*
 
-### CLI Commands
-
-```bash
-# List all your Bring! lists
-scripts/bring.sh lists
-
-# Show items on a list
-scripts/bring.sh show "Einkaufsliste"
-
-# Add an item with description
-scripts/bring.sh add "Einkaufsliste" "Milch" "fettarm, 1L"
-
-# Add multiple items at once
-scripts/bring.sh add-multi "Einkaufsliste" "Brot" "Käse|Gouda" "Butter|irische"
-
-# Check off an item
-scripts/bring.sh complete "Einkaufsliste" "Milch"
-
-# Move item back to purchase list
-scripts/bring.sh uncomplete "Einkaufsliste" "Milch"
-
-# Remove an item entirely
-scripts/bring.sh remove "Einkaufsliste" "Milch"
-```
-
-## Requirements
-
-- `curl`
-- `jq`
-
-No Python, Node.js, or other runtimes needed.
+Your agent handles the rest.
 
 ## Configuration
 
-Optional fields in `~/.config/bring/credentials.json`:
-
+`~/.config/bring/credentials.json`:
 ```json
 {
   "email": "your@email.com",
@@ -101,29 +77,19 @@ Optional fields in `~/.config/bring/credentials.json`:
 }
 ```
 
-- `default_list` — Skip typing the list name on every command
-- `country` — Country code for Bring API item catalog (default: `DE`). Use `AT`, `CH`, `US`, `FR`, etc.
+- `default_list` — Skip typing the list name every time
+- `country` — Item catalog language (default: `DE`). Use `AT`, `CH`, `US`, `FR`, etc.
 
-## Important Notes
+## Good to Know
 
-- **Google/Apple SSO:** If you signed up for Bring! via Google or Apple, you may not have a direct password. You'll need to set one in the Bring! app (Settings → Account → Change Password) before using this skill.
-- **Unofficial API:** This skill uses the same REST API as the Bring! mobile app. It is not an official public API and could change without notice. The skill is tested and stable as of February 2026.
-- **Creating/deleting lists:** Not supported by the API. Create and delete lists in the Bring! app — the skill can immediately work with any list you create there.
-- **Shared lists:** Changes sync instantly to all phones/devices sharing the same list. Your partner will see items you add immediately.
+- **Shared lists sync instantly** — your partner sees changes in real time
+- **Lists must be created/deleted in the Bring! app** — API limitation, not ours
+- **Special characters fully supported** — umlauts, quotes, emoji, all fine
+- **Token auto-refreshes** — no manual re-login needed
 
-## How It Works
+## Privacy
 
-This skill uses the unofficial Bring! REST API (same endpoints as the mobile app). Your credentials are used to obtain an auth token, which is cached locally at `~/.cache/bring/token.json` and auto-refreshed when expired.
-
-**Your credentials never leave your machine.** They are stored locally and only sent directly to Bring!'s authentication servers.
-
-## Privacy & Security
-
-- Credentials stored with `chmod 600` (owner-only access)
-- Token cached locally, auto-refreshed
-- No external services involved — direct communication with Bring! API only
-- No credentials are included in the skill package
-- The API key in the script is a public app key (same for every Bring! client) — not a secret
+Your credentials never leave your machine. They're stored locally and only sent directly to Bring!'s servers. No third-party services, no telemetry, no cloud.
 
 ## License
 
