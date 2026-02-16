@@ -3,9 +3,15 @@
   "slug": "geekbench",
   "displayName": "Geekbench",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1771162011700,
-    "commit": "https://github.com/openclaw/skills/commit/97789dacc1aab2b16baeb833f128ce8ade8d9a27"
+    "version": "1.0.1",
+    "publishedAt": 1771207609281,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1771162011700,
+      "commit": "https://github.com/openclaw/skills/commit/97789dacc1aab2b16baeb833f128ce8ade8d9a27"
+    }
+  ]
 }
