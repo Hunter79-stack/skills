@@ -1,13 +1,18 @@
 {
   "owner": "sergiorico1",
   "slug": "thrd",
-  "displayName": "Thrd Email",
+  "displayName": "Thrd Skill",
   "latest": {
-    "version": "1.2.7",
-    "publishedAt": 1771195762349,
-    "commit": "https://github.com/openclaw/skills/commit/13fe137227817b0d0b074c8d918df4e39922e067"
+    "version": "1.4.1",
+    "publishedAt": 1771256408371,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.2.7",
+      "publishedAt": 1771195762349,
+      "commit": "https://github.com/openclaw/skills/commit/13fe137227817b0d0b074c8d918df4e39922e067"
+    },
     {
       "version": "1.2.1",
       "publishedAt": 1771074691058,

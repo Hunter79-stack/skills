@@ -30,8 +30,11 @@ def create_checkout(plan):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python3 checkout.py <limited|verified>")
+        print("Usage: python3 checkout.py <sandbox|limited|verified>")
         sys.exit(1)
     
     plan_name = sys.argv[1].lower()
+    if plan_name not in {"sandbox", "limited", "verified"}:
+        print(json.dumps({"ok": False, "error": "invalid_plan", "allowed": ["sandbox", "limited", "verified"]}))
+        sys.exit(1)
     create_checkout(plan_name)
