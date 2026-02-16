@@ -98,19 +98,23 @@ async function sendPost(options) {
             body: JSON.stringify(messageBody)
         });
         
-        if (!res.ok) {
-             const errorText = await res.text();
-             throw new Error(`HTTP ${res.status} ${res.statusText}: ${errorText}`);
-        }
-
         const text = await res.text();
         let data;
-        // ... (existing code)
         
         try {
             data = JSON.parse(text);
         } catch (e) {
+             if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}: ${text}`);
              throw new Error(`Invalid JSON response: ${text.slice(0, 200)}...`);
+        }
+        
+        if (!res.ok) {
+            // Check if it's a recoverable error (like invalid emoji)
+            const isEmojiError = data.code === 230001 && data.msg && data.msg.includes("emoji_type is invalid");
+            if (!isEmojiError) {
+                 throw new Error(`HTTP ${res.status} ${res.statusText}: ${JSON.stringify(data)}`);
+            }
+            // If it is an emoji error, flow through to the fallback logic below
         }
         
         if (data.code !== 0) {

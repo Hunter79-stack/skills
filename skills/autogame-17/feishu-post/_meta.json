@@ -3,11 +3,16 @@
   "slug": "feishu-post",
   "displayName": "Feishu Post",
   "latest": {
-    "version": "1.1.8",
-    "publishedAt": 1770892448641,
-    "commit": "https://github.com/openclaw/skills/commit/873733598b2ddc95a9073f6401366d6fcf5f5f29"
+    "version": "1.1.7",
+    "publishedAt": 1771169184529,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.1.8",
+      "publishedAt": 1770892448641,
+      "commit": "https://github.com/openclaw/skills/commit/873733598b2ddc95a9073f6401366d6fcf5f5f29"
+    },
     {
       "version": "1.1.7",
       "publishedAt": 1770791738004,
