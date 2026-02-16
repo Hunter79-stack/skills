@@ -63,7 +63,7 @@ def get_config(require_credentials: bool = True):
     """Get Hyperliquid configuration from environment."""
     account_address = os.getenv('HL_ACCOUNT_ADDRESS')
     secret_key = os.getenv('HL_SECRET_KEY')
-    use_testnet = os.getenv('HL_TESTNET', 'true').lower() == 'true'
+    use_testnet = os.getenv('HL_TESTNET', 'false').lower() == 'true'
 
     if require_credentials and (not account_address or not secret_key):
         print(f"{Colors.RED}Error: Hyperliquid credentials not configured.{Colors.END}")
@@ -968,14 +968,14 @@ def cmd_transfer(args):
 
     if token_name:
         # User specified the token directly
-        for idx, (name, pair) in _COLLATERAL_SPOT_PAIRS.items():
+        for idx, (name, pair, _slippage) in _COLLATERAL_SPOT_PAIRS.items():
             if name.upper() == token_name.upper():
                 spot_pair = pair
                 token_name = name
                 break
         if not spot_pair:
             print(f"{Colors.RED}Unknown collateral token: {token_name}")
-            print(f"Known tokens: {', '.join(name for name, _ in _COLLATERAL_SPOT_PAIRS.values())}{Colors.END}")
+            print(f"Known tokens: {', '.join(name for name, _p, _s in _COLLATERAL_SPOT_PAIRS.values())}{Colors.END}")
             return
     else:
         # Default to USDH (most common: km, flx, vntl)
@@ -999,13 +999,13 @@ def cmd_transfer(args):
                 hold_str = f" (hold: {hold:.2f})" if hold > 0.01 else ""
                 print(f"  {coin:<8} {total:.2f}{hold_str}")
 
-        # Execute spot swap
-        # Buy collateral: is_buy=True, size=amount in collateral, price=1.002 (slight premium)
-        # Sell collateral: is_buy=False, size=amount in collateral, price=0.998 (slight discount)
+        # Execute spot swap (IOC = fill at best available price, limit just sets ceiling/floor)
+        # Slippage is per-token: tight for liquid strict-list tokens, wider for thin books.
+        slippage = _get_swap_slippage(token_name)
         if is_sell:
-            result = exchange.order(spot_pair, False, float(amount), 0.998, {'limit': {'tif': 'Ioc'}})
+            result = exchange.order(spot_pair, False, float(amount), 1.0 - slippage, {'limit': {'tif': 'Ioc'}})
         else:
-            result = exchange.order(spot_pair, True, float(amount), 1.002, {'limit': {'tif': 'Ioc'}})
+            result = exchange.order(spot_pair, True, float(amount), 1.0 + slippage, {'limit': {'tif': 'Ioc'}})
 
         if result.get('status') == 'ok':
             _invalidate_proxy_cache(config)
@@ -1034,13 +1034,16 @@ def cmd_transfer(args):
         print(f"{Colors.RED}Error: {e}{Colors.END}")
 
 
-# Map of HIP-3 dex collateral token index → (token name, USDC spot pair coin)
+# Map of HIP-3 dex collateral token index → (token name, USDC spot pair coin, slippage)
 # Built from perp_dex meta collateralToken field + spot pair lookup.
 # Token 0 = USDC (no swap needed).
+# Slippage: max distance from $1.00 for IOC fill. Tight for liquid strict-list tokens,
+# wider for thin books. IOC always fills at best available — this is just a guard rail.
 _COLLATERAL_SPOT_PAIRS = {
-    360: ('USDH', '@230'),   # km, flx, vntl
-    235: ('USDe', '@150'),   # hyna
-    268: ('USDT0', '@166'),  # cash
+    360: ('USDH', '@230', 0.002),    # km, flx, vntl — strict list, tight spreads
+    235: ('USDe', '@150', 0.002),    # hyna — strict list, tight spreads
+    268: ('USDT0', '@166', 0.002),   # cash — strict list, tight spreads
+    239: ('USDXL', '@152', 0.02),    # Last USD — not on strict list, wider spreads
 }
 
 
@@ -1060,6 +1063,14 @@ def _get_dex_collateral(info, dex_name):
         return (token_idx, f'token#{token_idx}', None)
     except Exception:
         return (0, 'USDC', None)
+
+
+def _get_swap_slippage(token_name):
+    """Get the IOC slippage limit for a collateral token swap."""
+    for _idx, (name, _pair, slippage) in _COLLATERAL_SPOT_PAIRS.items():
+        if name.upper() == token_name.upper():
+            return slippage
+    return 0.002  # default: tight
 
 
 
@@ -1313,6 +1324,59 @@ def cmd_limit_sell(args):
         print(f"{Colors.RED}Error placing limit sell: {e}{Colors.END}")
 
 
+def _get_position_for_coin(info, address, coin):
+    """Return the open position dict for a specific coin, or None if not found."""
+    dex = coin.split(':', 1)[0] if ':' in coin else ''
+    try:
+        state = info.user_state(address, dex=dex) if dex else info.user_state(address)
+    except Exception:
+        return None
+
+    for pos in state.get('assetPositions', []):
+        p = pos.get('position', {})
+        if p.get('coin') != coin:
+            continue
+        try:
+            if float(p.get('szi', 0)) != 0:
+                return p
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def _get_mid_price_for_coin(info, coin):
+    """Get current mid price for native or HIP-3 coin."""
+    try:
+        if ':' in coin:
+            dex = coin.split(':', 1)[0]
+            mids = info.all_mids(dex=dex)
+        else:
+            mids = info.all_mids()
+        px = mids.get(coin)
+        return float(px) if px is not None else None
+    except Exception:
+        return None
+
+
+def _validate_trigger_side(trigger_type: str, position_size: float, trigger_price: float, current_price: Optional[float]) -> str | None:
+    """Validate trigger is on the correct side of current price for the position."""
+    if current_price is None:
+        return None  # Best effort only if mid price is unavailable
+
+    is_long = position_size > 0
+    if trigger_type == 'sl':
+        if is_long and trigger_price >= current_price:
+            return "For LONG stop-loss, trigger must be below current price."
+        if not is_long and trigger_price <= current_price:
+            return "For SHORT stop-loss, trigger must be above current price."
+    elif trigger_type == 'tp':
+        if is_long and trigger_price <= current_price:
+            return "For LONG take-profit, trigger must be above current price."
+        if not is_long and trigger_price >= current_price:
+            return "For SHORT take-profit, trigger must be below current price."
+    return None
+
+
 def cmd_stop_loss(args):
     """Place a stop-loss trigger order. Closes position at market when trigger price is hit."""
     exchange, info, config = setup_exchange()
@@ -1325,16 +1389,34 @@ def cmd_stop_loss(args):
         print(f"{Colors.YELLOW}[TESTNET]{Colors.END}")
 
     try:
-        # Get current price for reference
-        all_mids = info.all_mids()
-        if coin in all_mids:
-            current_price = float(all_mids[coin])
+        position = _get_position_for_coin(info, config['account_address'], coin)
+        if not position:
+            print(f"{Colors.RED}Error: No open position for {coin}{Colors.END}")
+            return
+
+        position_size = float(position.get('szi', 0))
+        max_close_size = abs(position_size)
+        if size <= 0:
+            print(f"{Colors.RED}Error: Size must be greater than 0{Colors.END}")
+            return
+        if size > max_close_size:
+            print(f"{Colors.RED}Error: Size {size} exceeds open position size {max_close_size:.4f}{Colors.END}")
+            return
+
+        # Closing side is defined by position direction, not trigger relative price.
+        is_buy = position_size < 0
+        side_label = "SHORT" if position_size < 0 else "LONG"
+        print(f"Position: {side_label} {max_close_size:.4f}")
+
+        current_price = _get_mid_price_for_coin(info, coin)
+        if current_price:
             diff_pct = ((trigger_price - current_price) / current_price) * 100
             print(f"Current price: {format_price(current_price)} ({diff_pct:+.2f}% from trigger)")
 
-        # Determine direction: if trigger is below current price, it's a sell stop (closing a long)
-        # If trigger is above current price, it's a buy stop (closing a short)
-        is_buy = trigger_price > current_price if coin in all_mids else not args.buy
+        validation_error = _validate_trigger_side('sl', position_size, trigger_price, current_price)
+        if validation_error:
+            print(f"{Colors.RED}Error: {validation_error}{Colors.END}")
+            return
 
         order_type = {
             "trigger": {
@@ -1379,16 +1461,34 @@ def cmd_take_profit(args):
         print(f"{Colors.YELLOW}[TESTNET]{Colors.END}")
 
     try:
-        # Get current price for reference
-        all_mids = info.all_mids()
-        if coin in all_mids:
-            current_price = float(all_mids[coin])
+        position = _get_position_for_coin(info, config['account_address'], coin)
+        if not position:
+            print(f"{Colors.RED}Error: No open position for {coin}{Colors.END}")
+            return
+
+        position_size = float(position.get('szi', 0))
+        max_close_size = abs(position_size)
+        if size <= 0:
+            print(f"{Colors.RED}Error: Size must be greater than 0{Colors.END}")
+            return
+        if size > max_close_size:
+            print(f"{Colors.RED}Error: Size {size} exceeds open position size {max_close_size:.4f}{Colors.END}")
+            return
+
+        # Closing side is defined by position direction, not trigger relative price.
+        is_buy = position_size < 0
+        side_label = "SHORT" if position_size < 0 else "LONG"
+        print(f"Position: {side_label} {max_close_size:.4f}")
+
+        current_price = _get_mid_price_for_coin(info, coin)
+        if current_price:
             diff_pct = ((trigger_price - current_price) / current_price) * 100
             print(f"Current price: {format_price(current_price)} ({diff_pct:+.2f}% from trigger)")
 
-        # For take-profit: if trigger is above current price, it's a sell (closing a long)
-        # If trigger is below current price, it's a buy (closing a short)
-        is_buy = trigger_price < current_price if coin in all_mids else args.buy
+        validation_error = _validate_trigger_side('tp', position_size, trigger_price, current_price)
+        if validation_error:
+            print(f"{Colors.RED}Error: {validation_error}{Colors.END}")
+            return
 
         order_type = {
             "trigger": {
@@ -1488,7 +1588,8 @@ def cmd_cancel(args):
 
     # Need to find the coin for this order
     try:
-        open_orders = info.open_orders(config['account_address'])
+        # Search across native + all HIP-3 dexes
+        open_orders = _get_all_open_orders(info, config['account_address'])
 
         order = None
         for o in open_orders:
@@ -1522,18 +1623,30 @@ def cmd_cancel_all(args):
     print(f"\n{Colors.BOLD}Canceling all open orders{Colors.END}")
 
     try:
-        open_orders = info.open_orders(config['account_address'])
+        # Collect open orders across native + all HIP-3 dexes
+        open_orders = _get_all_open_orders(info, config['account_address'])
 
-        if not open_orders:
+        cancel_requests = []
+        seen = set()
+        for order in open_orders:
+            coin = order.get('coin')
+            oid = order.get('oid')
+            if not coin or oid is None:
+                continue
+            key = (coin, str(oid))
+            if key in seen:
+                continue
+            seen.add(key)
+            try:
+                cancel_requests.append({"coin": coin, "oid": int(oid)})
+            except (TypeError, ValueError):
+                continue
+
+        if not cancel_requests:
             print(f"{Colors.DIM}No open orders to cancel{Colors.END}")
             return
 
-        print(f"Found {len(open_orders)} open orders")
-
-        cancel_requests = [
-            {"coin": order.get('coin'), "oid": int(order.get('oid'))}
-            for order in open_orders
-        ]
+        print(f"Found {len(cancel_requests)} open orders")
 
         result = exchange.bulk_cancel(cancel_requests)
 
@@ -1566,11 +1679,11 @@ def cmd_modify_order(args):
 
     try:
         # Find the existing order to get coin and side
-        open_orders = info.frontend_open_orders(config['account_address'])
+        open_orders = _get_all_open_orders(info, config['account_address'])
 
         order = None
         for o in open_orders:
-            if o.get('oid') == oid:
+            if str(o.get('oid')) == str(oid):
                 order = o
                 break
 
@@ -2963,9 +3076,9 @@ def main():
     leverage_parser.add_argument('leverage', type=int, help='Leverage multiplier (e.g., 5 for 5x)')
     leverage_parser.add_argument('--isolated', action='store_true', help='Use isolated margin (default: cross)')
 
-    swap_parser = subparsers.add_parser('swap', help='Swap USDC to HIP-3 dex collateral (USDH, USDe, USDT0)')
+    swap_parser = subparsers.add_parser('swap', help='Swap USDC to HIP-3 dex collateral (USDH, USDe, USDT0, USDXL)')
     swap_parser.add_argument('amount', type=float, help='Amount to swap')
-    swap_parser.add_argument('--token', default=None, help='Collateral token (default: USDH). Options: USDH, USDe, USDT0')
+    swap_parser.add_argument('--token', default=None, help='Collateral token (default: USDH). Options: USDH, USDe, USDT0, USDXL')
     swap_parser.add_argument('--to-usdc', action='store_true', help='Reverse: sell collateral back to USDC')
 
     buy_parser = subparsers.add_parser('buy', help='Market buy')

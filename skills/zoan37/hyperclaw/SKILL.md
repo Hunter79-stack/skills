@@ -27,7 +27,7 @@ Then configure `.env` in the skill root directory with your Hyperliquid API cred
 ```
 HL_ACCOUNT_ADDRESS=0x_your_wallet_address
 HL_SECRET_KEY=0x_your_api_wallet_private_key
-HL_TESTNET=true
+HL_TESTNET=false
 ```
 
 Get API keys from: https://app.hyperliquid.xyz/API — use a separate API wallet, not your main wallet private key.
@@ -61,7 +61,7 @@ After configuring `.env`, start the caching proxy (prevents rate limiting):
 | `check` | Position health check (book ratio, funding, PnL, leverage, liquidation warnings) | `hyperliquid_tools.py check` or `check --address 0x...` |
 | `user-funding` | Your funding payments received/paid | `hyperliquid_tools.py user-funding --lookback 7d` |
 | `portfolio` | Portfolio performance (PnL, volume by period) | `hyperliquid_tools.py portfolio` or `portfolio --address 0x...` |
-| `swap` | Swap USDC ↔ HIP-3 dex collateral (USDH, USDe, USDT0) | `hyperliquid_tools.py swap 20` or `swap 20 --token USDe` or `swap 10 --to-usdc` |
+| `swap` | Swap USDC ↔ HIP-3 dex collateral (USDH, USDe, USDT0, USDXL) | `hyperliquid_tools.py swap 20` or `swap 20 --token USDe` or `swap 10 --to-usdc` |
 
 ### Market Data
 
@@ -152,6 +152,9 @@ hyperliquid_tools.py funding xyz:TSLA vntl:SPACEX km:US500
 | USDH | `swap <amount>` (default) |
 | USDe | `swap <amount> --token USDe` |
 | USDT0 | `swap <amount> --token USDT0` |
+| USDXL | `swap <amount> --token USDXL` |
+
+**Note on USDXL:** USDXL (Last USD) is not on Hyperliquid's strict list and has lower liquidity than other collateral tokens. Expect wider spreads when swapping. No HIP-3 dex currently uses USDXL as collateral, but the swap is available if needed.
 
 To swap collateral back to USDC: `swap <amount> --to-usdc` (or `swap <amount> --token USDe --to-usdc`).
 
@@ -207,7 +210,7 @@ The proxy caches `/info` read responses (metadata 300s, prices 5s, user state 2s
 |----------|----------|-------------|
 | `HL_ACCOUNT_ADDRESS` | For trading/status | Hyperliquid wallet address |
 | `HL_SECRET_KEY` | For trading | API wallet private key |
-| `HL_TESTNET` | No | `true` for testnet (default), `false` for mainnet |
+| `HL_TESTNET` | No | `false` for mainnet (default), `true` for testnet |
 | `HL_PROXY_URL` | Recommended | Caching proxy URL (default: `http://localhost:18731`) |
 | `HL_ENV_FILE` | No | Override `.env` file path. When set, loads env vars from this file instead of default `.env` discovery. Useful for wrapper scripts that route to hyperclaw from other projects. |
 | `XAI_API_KEY` | For intelligence | Grok API key for sentiment/unlocks/devcheck |
