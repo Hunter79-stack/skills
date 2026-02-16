@@ -1,7 +1,7 @@
 ---
-name: agenthc-market-intelligence
-description: Get real-time market intelligence for trading and macro analysis. Query 46 modules including market regime detection, volatility analysis, treasury yields, crypto metrics, Fed/liquidity tracking, correlation anomalies, alpha signals, credit cycle, institutional positioning, and sector rotation. Use when the user asks about markets, stocks, crypto, bonds, economy, Fed policy, trading signals, or financial conditions.
-homepage: https://github.com/traderhc123/main
+name: stock-market-intelligence
+description: Real-time market intelligence API for AI agents. 47 modules — equities, bonds, crypto, macro, Fed, volatility, regime detection, alpha signals, and more. Bitcoin Lightning micropayments.
+homepage: https://x.com/traderhc
 metadata:
   clawdbot:
     emoji: "📊"
@@ -11,9 +11,9 @@ metadata:
     primaryEnv: "AGENTHC_API_KEY"
 ---
 
-# AgentHC Market Intelligence
+# Stock Market Intelligence
 
-Institutional-grade market intelligence API for AI agents. 46 modules covering equities, bonds, crypto, macro, Fed, liquidity, regime detection, alpha signals, and more. Built by @traderhc.
+Institutional-grade market intelligence API for AI agents. 47 modules covering equities, bonds, crypto, macro, Fed, liquidity, regime detection, alpha signals, options flow, and more. Bitcoin Lightning micropayments. Built by @traderhc.
 
 ## Setup
 
@@ -22,7 +22,7 @@ Institutional-grade market intelligence API for AI agents. 46 modules covering e
 ```bash
 curl -s -X POST "https://api.traderhc.com/api/v1/agents/register" \
   -H "Content-Type: application/json" \
-  -d '{"name": "MyOpenClawAgent", "description": "OpenClaw agent using AgentHC intelligence"}' | jq '.'
+  -d '{"name": "MyAgent", "description": "AI agent using Stock Market Intelligence"}' | jq '.'
 ```
 
 Save the `api_key` from the response.
@@ -35,35 +35,27 @@ export AGENTHC_API_KEY=your_api_key_here
 
 ## Free Modules (no payment required)
 
-### Market Overview
-Get market snapshot: S&P 500, VIX, treasury yields, DXY, commodities, sector performance, Fear & Greed, and market regime.
+### Market Intelligence
+Real-time market snapshot: S&P 500, VIX, treasury yields, DXY, commodities, sector performance, Fear & Greed, and market regime.
 
 ```bash
 curl -s "https://api.traderhc.com/api/v1/intelligence/market_intelligence" \
   -H "X-API-Key: $AGENTHC_API_KEY" | jq '.data'
 ```
 
-### News Sentiment
-Breaking news with sentiment scoring, category classification, and event extraction.
+### Educational Content
+Trading concepts, historical lessons, and market psychology frameworks.
 
 ```bash
-curl -s "https://api.traderhc.com/api/v1/intelligence/news_sentiment" \
+curl -s "https://api.traderhc.com/api/v1/intelligence/educational_content" \
   -H "X-API-Key: $AGENTHC_API_KEY" | jq '.data'
 ```
 
-### Crypto Intelligence
-Bitcoin, Ethereum, BTC dominance, halving cycle, alt season detection, crypto Fear & Greed.
+### Polymarket Intelligence
+Fed/FOMC prediction markets, recession odds, crypto price predictions, political/regulatory odds.
 
 ```bash
-curl -s "https://api.traderhc.com/api/v1/intelligence/crypto_intelligence" \
-  -H "X-API-Key: $AGENTHC_API_KEY" | jq '.data'
-```
-
-### Economic Calendar
-Upcoming and released economic events (NFP, CPI, FOMC, ISM) with beat/miss detection.
-
-```bash
-curl -s "https://api.traderhc.com/api/v1/intelligence/economic_calendar" \
+curl -s "https://api.traderhc.com/api/v1/intelligence/polymarket_intelligence" \
   -H "X-API-Key: $AGENTHC_API_KEY" | jq '.data'
 ```
 
@@ -119,27 +111,35 @@ curl -s "https://api.traderhc.com/api/v1/intelligence/volatility_analyzer" \
   -H "X-API-Key: $AGENTHC_API_KEY" | jq '.data'
 ```
 
-### Sector Rotation
-Business cycle rotation, sector leadership, risk-on/off flows, seasonal patterns.
+### Volatility Surface
+VIX ecosystem (VIX, VIX9D, VIX3M, VIX6M, VVIX), term structure, skew analysis, vol regime detection.
 
 ```bash
-curl -s "https://api.traderhc.com/api/v1/intelligence/sector_rotation" \
+curl -s "https://api.traderhc.com/api/v1/intelligence/volatility_surface" \
   -H "X-API-Key: $AGENTHC_API_KEY" | jq '.data'
 ```
 
-### ETF Flows
-Bitcoin ETF flows (IBIT, FBTC, GBTC), equity ETF flows, rotation signals.
+### Crypto Intelligence
+Bitcoin, Ethereum, BTC dominance, halving cycle, alt season detection, crypto Fear & Greed.
 
 ```bash
-curl -s "https://api.traderhc.com/api/v1/intelligence/etf_flows" \
+curl -s "https://api.traderhc.com/api/v1/intelligence/crypto_intelligence" \
   -H "X-API-Key: $AGENTHC_API_KEY" | jq '.data'
 ```
 
-### Polymarket Intelligence
-Fed/FOMC prediction markets, recession odds, crypto price predictions.
+### Options Intelligence
+Options open interest, volume, gamma exposure from OCC public data (T+1).
 
 ```bash
-curl -s "https://api.traderhc.com/api/v1/intelligence/polymarket_intelligence" \
+curl -s "https://api.traderhc.com/api/v1/intelligence/options_intelligence" \
+  -H "X-API-Key: $AGENTHC_API_KEY" | jq '.data'
+```
+
+### CME FedWatch
+Fed rate probability expectations from CME FedWatch proxy.
+
+```bash
+curl -s "https://api.traderhc.com/api/v1/intelligence/cme_fedwatch" \
   -H "X-API-Key: $AGENTHC_API_KEY" | jq '.data'
 ```
 
@@ -230,75 +230,93 @@ curl -s -X POST "https://api.traderhc.com/api/v1/intelligence/batch" \
   -d '{"modules": ["market_intelligence", "bond_intelligence", "fed_intelligence"]}' | jq '.'
 ```
 
-## Real-Time Events (SSE Streaming)
+## Real-Time Events (Webhooks)
 
-Subscribe to live market events via Server-Sent Events:
+Subscribe to 20+ market event types via webhooks with HMAC-SHA256 signatures:
 
-```bash
-curl -N "https://api.traderhc.com/api/v1/events/stream?types=market.regime_change,market.vix_spike,market.flash_crash" \
-  -H "X-API-Key: $AGENTHC_API_KEY"
-```
-
-Events include: regime changes, VIX spikes, flash crashes, correlation breaks, tail risk alerts, alpha signal flips, breaking news.
+- Regime changes, VIX spikes, flash crashes
+- Correlation breaks, credit stress spikes
+- Alpha signal flips, tail risk alerts
+- Breaking news, unusual options activity
+- Fed rate probability shifts
 
 ## Lightning Payment (L402)
 
-For per-request payment without registration, the API supports L402 protocol. Request a premium endpoint without auth to receive a 402 response with a Lightning invoice. Pay and retry with the preimage.
+For per-request payment without registration:
 
-## All 46 Modules
+1. Request a premium endpoint without auth
+2. Receive 402 response with BOLT11 Lightning invoice + macaroon
+3. Pay the invoice (any Lightning wallet)
+4. Re-request with `Authorization: L402 <macaroon>:<preimage>`
+5. Token valid for 24 hours — reuse across requests
+
+## MCP Integration
+
+Connect via Model Context Protocol (streamable-http transport):
+
+```
+Endpoint: https://api.traderhc.com/mcp
+Protocol: 2025-03-26
+Tools: 28
+```
+
+## All 47 Modules
 
 | Module | Tier | Description |
 |--------|------|-------------|
 | market_intelligence | Free | Market snapshot, regime, Fear & Greed |
-| news_sentiment | Free | Breaking news with sentiment |
-| crypto_intelligence | Free | BTC, ETH, dominance, halving cycle |
-| economic_calendar | Free | Economic events, beat/miss |
+| educational_content | Free | Trading concepts, historical lessons |
+| polymarket_intelligence | Free | Prediction market odds |
 | technical_analysis | Premium | TA for any ticker (RSI, MACD, etc.) |
-| bond_intelligence | Premium | Yields, curve, credit spreads |
+| economic_calendar | Premium | Economic events, beat/miss |
 | fed_intelligence | Premium | Fed balance sheet, FOMC, ISM |
 | macro_intelligence | Premium | Inflation, employment, M2, credit |
+| bond_intelligence | Premium | Yields, curve, credit spreads |
 | correlation_tracker | Premium | Cross-market correlation anomalies |
-| volatility_analyzer | Premium | VIX regime, term structure, skew |
+| volatility_analyzer | Premium | VIX regime, term structure, VVIX |
+| volatility_surface | Premium | VIX ecosystem, skew, IV vs RV |
+| crypto_intelligence | Premium | BTC, ETH, dominance, halving cycle |
+| credit_cycle | Premium | Credit cycle phase, spreads, financial conditions |
 | sector_rotation | Premium | Business cycle sector rotation |
-| divergence_detection | Premium | Price/breadth/volume divergences |
-| etf_flows | Premium | BTC ETF, equity ETF flows |
 | intermarket_analysis | Premium | Stock/bond/dollar/commodity signals |
 | earnings_calendar | Premium | Upcoming earnings, reactions |
-| crypto_derivatives | Premium | Funding rates, open interest |
-| onchain_metrics | Premium | Hash rate, mempool, NVT |
-| finnhub_intelligence | Premium | Earnings, insider, analyst ratings |
-| reddit_sentiment | Premium | WSB, r/stocks sentiment |
+| news_sentiment | Premium | Breaking news with sentiment scoring |
+| smart_money_tracker | Premium | Smart vs dumb money divergence |
+| divergence_detection | Premium | Price/breadth/volume divergences |
 | market_structure | Premium | Breadth, A/D, McClellan |
-| polymarket_intelligence | Premium | Prediction market odds |
-| educational_content | Premium | Trading concepts |
+| exchange_stats | Premium | Market breadth, advance/decline |
+| cme_fedwatch | Premium | Fed rate probability expectations |
+| options_intelligence | Premium | OCC options OI, volume, gamma |
 | alpha_signals | Institutional | Multi-factor signal composite |
-| regime_engine | Institutional | 12 market regimes |
+| regime_engine | Institutional | 12 market regimes, transitions |
 | tail_risk_engine | Institutional | Crisis detection, early warnings |
-| hedge_fund_playbooks | Institutional | 20+ institutional setups |
 | liquidity_intelligence | Institutional | Fed net liquidity, regime |
-| credit_cycle | Institutional | Credit cycle phase, spreads |
+| hedge_fund_playbooks | Institutional | 20+ institutional setups |
 | institutional_positioning | Institutional | COT, sentiment, smart money |
-| smart_money_tracker | Institutional | Smart vs dumb money |
-| market_microstructure | Institutional | Gamma, vanna, dealer positioning |
-| volatility_surface | Institutional | VIX ecosystem, skew, IV vs RV |
 | currency_intelligence | Institutional | DXY, carry trades, FX |
+| factor_analysis | Institutional | Factor rotation, crowding |
+| trend_exhaustion_scanner | Institutional | Trend exhaustion signals |
+| advanced_risk | Institutional | Kelly, VaR, drawdown protocols |
 | valuation_intelligence | Institutional | CAPE, Buffett indicator, ERP |
+| global_flows | Institutional | Dollar cycle, capital rotation |
 | geopolitical_risk | Institutional | Risk scoring, hedging |
 | central_bank_dashboard | Institutional | All major central banks |
-| factor_analysis | Institutional | Factor rotation, crowding |
+| market_microstructure | Institutional | Gamma, vanna, dealer positioning |
 | narrative_tracker | Institutional | Market narrative lifecycle |
-| advanced_risk | Institutional | Kelly, VaR, drawdown protocols |
-| global_flows | Institutional | Dollar cycle, capital rotation |
 | wealth_knowledge | Institutional | Legendary investor wisdom |
 | institutional_content | Institutional | Viral FinTwit content |
 | market_knowledge | Institutional | Deep market knowledge base |
 | sentiment_engine | Institutional | Multi-source sentiment |
+| sec_edgar | Institutional | SEC insider filings |
+| intelligence_service | Institutional | AI synthesis /ask endpoint |
+| historical_parallels | Institutional | Historical analogue engine |
+| agent_consensus | Institutional | Agent attention signal |
 
 ## Pricing
 
-- **Free**: 4 modules, 100 requests/day
-- **Premium**: 24 modules, 5,000 requests/day, 100 sats/query (~$0.10)
-- **Institutional**: 46 modules, 50,000 requests/day, 500 sats/query (~$0.50)
+- **Free**: 3 modules, 10/min, 100/day
+- **Premium**: 23 modules, 60/min, 5,000/day, 100 sats/query (~$0.10)
+- **Institutional**: All 47 modules, 120/min, 50,000/day, 500 sats/query (~$0.50)
 
 Payment via Bitcoin Lightning Network. Instant settlement, no KYC.
 
