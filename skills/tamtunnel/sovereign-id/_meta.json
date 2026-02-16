@@ -1,0 +1,11 @@
+{
+  "owner": "tamtunnel",
+  "slug": "sovereign-id",
+  "displayName": "Sovereign Identity",
+  "latest": {
+    "version": "0.1.1",
+    "publishedAt": 1771209664012,
+    "commit": null
+  },
+  "history": []
+}
