@@ -3,11 +3,16 @@
   "slug": "rnwy",
   "displayName": "RNWY.com",
   "latest": {
-    "version": "1.0.3",
-    "publishedAt": 1771081817724,
-    "commit": "https://github.com/openclaw/skills/commit/13c14c3ef5d0161ee7eab7d1e95af16b7d8d0936"
+    "version": "1.0.4",
+    "publishedAt": 1771143295645,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.3",
+      "publishedAt": 1771081817724,
+      "commit": "https://github.com/openclaw/skills/commit/13c14c3ef5d0161ee7eab7d1e95af16b7d8d0936"
+    },
     {
       "version": "1.0.0",
       "publishedAt": 1771015933470,
