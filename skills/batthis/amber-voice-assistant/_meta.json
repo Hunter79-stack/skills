@@ -3,11 +3,16 @@
   "slug": "amber-voice-assistant",
   "displayName": "Amber Voice Assistant",
   "latest": {
-    "version": "3.4.0",
-    "publishedAt": 1771270786315,
-    "commit": "https://github.com/openclaw/skills/commit/8860b5db8e7a377f4fedee011ec2296e6940aad5"
+    "version": "3.5.1",
+    "publishedAt": 1771283344295,
+    "commit": null
   },
   "history": [
+    {
+      "version": "3.4.0",
+      "publishedAt": 1771270786315,
+      "commit": "https://github.com/openclaw/skills/commit/8860b5db8e7a377f4fedee011ec2296e6940aad5"
+    },
     {
       "version": "1.1.0",
       "publishedAt": 1771270217435,
