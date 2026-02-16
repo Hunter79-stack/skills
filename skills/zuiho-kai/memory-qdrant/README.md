@@ -2,6 +2,8 @@
 
 OpenClaw 本地语义记忆插件，基于 Qdrant 和 Transformers.js 实现零配置的语义搜索。
 
+**📦 ClawHub**: https://clawhub.ai/skills/memory-qdrant
+
 ## 特性
 
 - 🧠 **本地语义搜索** - 使用 Transformers.js 在本地生成 embeddings

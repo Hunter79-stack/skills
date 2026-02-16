@@ -1,11 +1,17 @@
 {
   "owner": "zuiho-kai",
   "slug": "memory-qdrant",
-  "displayName": "Memory Qdrant",
+  "displayName": "OpenClaw Memory Qdrant",
   "latest": {
-    "version": "1.0.2",
-    "publishedAt": 1771245920970,
-    "commit": "https://github.com/openclaw/skills/commit/94e5d63e5c0c51bf93013bc74260298e627685fd"
+    "version": "1.0.5",
+    "publishedAt": 1771262236679,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.2",
+      "publishedAt": 1771245920970,
+      "commit": "https://github.com/openclaw/skills/commit/94e5d63e5c0c51bf93013bc74260298e627685fd"
+    }
+  ]
 }

@@ -2,7 +2,7 @@
   "id": "memory-qdrant",
   "kind": "memory",
   "name": "Memory (Qdrant)",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "description": "本地语义记忆系统（Qdrant + Transformers.js，完全本地运行）",
   "configSchema": {
     "type": "object",
@@ -35,9 +35,9 @@
   "uiHints": {
     "qdrantUrl": {
       "label": "Qdrant URL",
-      "placeholder": "留空使用内存模式（零配置）",
+      "placeholder": "Leave empty for in-memory mode (zero config)",
       "advanced": true,
-      "help": "外部 Qdrant 服务地址，留空则使用内存存储"
+      "help": "External Qdrant server URL. Leave empty to use in-memory storage."
     },
     "collectionName": {
       "label": "Collection Name",
@@ -45,16 +45,16 @@
       "advanced": true
     },
     "autoCapture": {
-      "label": "自动捕获",
-      "help": "在对话结束后自动保存重要信息"
+      "label": "Auto Capture",
+      "help": "Auto-save important info after conversations. Note: trigger patterns match emails and phone numbers, so enabling this may capture PII. Disabled by default."
     },
     "autoRecall": {
-      "label": "自动召回",
-      "help": "在对话开始前自动注入相关记忆"
+      "label": "Auto Recall",
+      "help": "Auto-inject relevant memories before conversations"
     },
     "captureMaxChars": {
-      "label": "捕获最大长度",
-      "help": "单条记忆的最大字符数",
+      "label": "Capture Max Length",
+      "help": "Maximum characters per captured memory",
       "advanced": true
     }
   }
