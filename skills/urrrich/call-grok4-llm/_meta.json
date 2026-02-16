@@ -1,0 +1,11 @@
+{
+  "owner": "urrrich",
+  "slug": "call-grok4-llm",
+  "displayName": "Call Grok4 Llm",
+  "latest": {
+    "version": "0.1.1",
+    "publishedAt": 1771143893753,
+    "commit": null
+  },
+  "history": []
+}
