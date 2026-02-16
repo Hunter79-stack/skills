@@ -8,6 +8,7 @@ It supports:
 - Updating ERP data through Holded API actions
 - Safe execution with structured command output (`--json`)
 - Action discovery and parameter inspection before execution (`actions list` + `actions describe`)
+- Purchase receipt handling: enforce `docType=purchase` and `"isReceipt": true`
 
 ## Safety Policy
 
@@ -18,7 +19,7 @@ No write command should run without a clear affirmative confirmation from the us
 This skill also verifies action availability and accepted parameters before execution using:
 
 - `holded actions list`
-- `holded actions describe <action-id|operation-id>`
+- `holded actions describe <action> --json`
 
 ## Repository Structure
 

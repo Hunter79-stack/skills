@@ -12,7 +12,7 @@ Use `holdedcli` to read and modify Holded data with a safe, repeatable workflow.
 
 1. Confirm technical prerequisites.
 2. Discover available actions with `holded actions list`.
-3. Inspect the selected action with `holded actions describe <action-id|operation-id>`.
+3. Inspect the selected action with `holded actions describe <action> --json`.
 4. Classify the action as read or write.
 5. If it is a write operation, ask for explicit confirmation before execution.
 6. Run with `--json` and summarize IDs, HTTP status, and applied changes.
@@ -27,7 +27,8 @@ Use `holdedcli` to read and modify Holded data with a safe, repeatable workflow.
 
 - Treat any `POST`, `PUT`, `PATCH`, or `DELETE` action as **write**.
 - Treat any `GET` action (or `HEAD` when present) as **read**.
-- Always run `holded actions list` and `holded actions describe` before execution to validate action availability and accepted parameters.
+- Before any operation, always run `holded actions describe <action> --json` (after `holded actions list`) to validate accepted parameters.
+- For purchase receipts, always enforce `docType=purchase` and include `"isReceipt": true` in the JSON body. Since holdedcli validates against Holded's schema (which doesn't include `isReceipt`), you **must** use `--skip-validation` flag.
 - Ask for explicit user confirmation **every time** before any write action.
 - Do not execute writes on ambiguous replies (`ok`, `go ahead`, `continue`) without clarification.
 - Repeat the exact command before confirmation to avoid unintended changes.
@@ -59,18 +60,19 @@ Execute only after an explicit affirmative response.
 ### Read Operations
 
 1. Locate the action with `holded actions list --json` (use `--filter`).
-2. Verify accepted path/query/body parameters with `holded actions describe <action-id|operation-id> --json`.
+2. Verify accepted path/query/body parameters with `holded actions describe <action> --json`.
 3. Run `holded actions run <action> ... --json`.
 4. Return a clear summary and relevant IDs for follow-up steps.
 
 ### Write Operations
 
 1. Locate and validate the action.
-2. Run `holded actions describe <action-id|operation-id> --json` to verify required/optional parameters.
+2. Run `holded actions describe <action> --json` to verify required/optional parameters.
 3. Prepare the final payload.
-4. Request mandatory confirmation.
-5. Run the command after confirmation.
-6. Report result (`status_code`, affected ID, API response).
+4. If creating a purchase receipt/ticket, verify `docType=purchase` and `"isReceipt": true`, and use `--skip-validation` flag.
+5. Request mandatory confirmation.
+6. Run the command after confirmation.
+7. Report result (`status_code`, affected ID, API response).
 
 ## Base Commands
 
@@ -93,6 +95,30 @@ holded actions run invoice.update-contact \
   --json
 ```
 
+Purchase receipt rule (mandatory for purchase tickets):
+
+```bash
+holded actions describe invoice.create-document --json
+holded actions run invoice.create-document \
+  --path docType=purchase \
+  --body '{"isReceipt": true, "date": 1770764400, "contactId": "<contactId>", "items": [{"name": "Description", "units": 1, "subtotal": 29.4, "tax": 0}]}' \
+  --skip-validation \
+  --json
+```
+
+**Important notes:**
+- Use `--skip-validation` flag because holdedcli validates against Holded's schema which doesn't include `isReceipt`.
+- Use `subtotal` in items (not `price`) - this is the field name Holded's API expects.
+- Timestamps must be in seconds (Unix epoch) and in **Europe/Madrid timezone**.
+
+**Timestamp calculation (Python):**
+```python
+from datetime import datetime, timezone, timedelta
+# For 11/02/2026 00:00 in Madrid:
+dt = datetime(2026, 2, 11, 0, 0, 0, tzinfo=timezone(timedelta(hours=1)))
+print(int(dt.timestamp()))  # 1770764400
+```
+
 ## Error Handling
 
 - If `MISSING_API_KEY` appears, configure API key through `--api-key`, `HOLDED_API_KEY`, or `holded auth set`.
@@ -105,4 +131,4 @@ holded actions run invoice.update-contact \
 - Read `{baseDir}/references/holdedcli-reference.md` for quick commands and criteria.
 - Use dynamic action discovery and parameter inspection via:
   - `holded actions list --json`
-  - `holded actions describe <action-id|operation-id> --json`
+  - `holded actions describe <action> --json`

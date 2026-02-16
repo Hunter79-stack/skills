@@ -3,9 +3,15 @@
   "slug": "holded-skill",
   "displayName": "Holded Skill",
   "latest": {
-    "version": "0.1.1",
-    "publishedAt": 1771093517154,
-    "commit": "https://github.com/openclaw/skills/commit/850a147321873319ab7257a8facb30580ed8cdbb"
+    "version": "0.2.2",
+    "publishedAt": 1771231027728,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.1.1",
+      "publishedAt": 1771093517154,
+      "commit": "https://github.com/openclaw/skills/commit/850a147321873319ab7257a8facb30580ed8cdbb"
+    }
+  ]
 }

@@ -44,7 +44,7 @@ holded actions describe "Get Contact" --json
 Always run this preflight first:
 
 1. `holded actions list --json` (or `--filter`).
-2. `holded actions describe <action-id|operation-id> --json`.
+2. `holded actions describe <action> --json`.
 
 ```bash
 holded actions run <action-id|operation-id> \
@@ -68,6 +68,15 @@ Do not use both at the same time.
 
 If the action is a write operation, request explicit confirmation before execution.
 
+## Purchase Receipt Rule
+
+When creating a purchase receipt (purchase ticket), always set:
+
+- `docType=purchase`
+- `"isReceipt": true` in the JSON body
+
+Validate this with `holded actions describe` before execution.
+
 ## Examples
 
 Read a contact:
@@ -84,6 +93,16 @@ holded actions describe invoice.update-contact --json
 holded actions run invoice.update-contact \
   --path contactId=abc123 \
   --body-file payload.json \
+  --json
+```
+
+Create a purchase receipt (requires prior confirmation):
+
+```bash
+holded actions describe invoice.create-document --json
+holded actions run invoice.create-document \
+  --path docType=purchase \
+  --body '{"isReceipt": true}' \
   --json
 ```
 
