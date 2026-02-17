@@ -1,6 +1,6 @@
 ---
 name: fints-banking
-description: "Support for German FinTS banking standard. Out of the box support for many german banks. Uses system keychain to keep credentials safe. Native Human-in-the-loop experince for transactions. Built in recovery and onboarding flows."
+description: "Support for German personal online banking following FinTS banking standard. Out of the box support for many german banks. Uses system keychain to keep credentials safe. Native Human-in-the-loop experince for transactions. Built in recovery and onboarding flows."
 metadata: {"openclaw":{"emoji":"🏦","homepage":"https://github.com/h4gen/fints-agent-cli","requires":{"bins":["fints-agent-cli"]},"install":[{"id":"uv","kind":"uv","package":"fints-agent-cli","bins":["fints-agent-cli"],"label":"Install fints-agent-cli (uv)"}]}}
 ---
 
@@ -9,6 +9,9 @@ metadata: {"openclaw":{"emoji":"🏦","homepage":"https://github.com/h4gen/fints
 Use this skill when you need to operate German FinTS banking tasks through `fints-agent-cli`.
 
 This document is written for agents. It defines deterministic flows, expected outputs, and exact next actions.
+
+Detailed command reference:
+- `COMMANDS.md` (in this same skill folder)
 
 ## Project Links
 

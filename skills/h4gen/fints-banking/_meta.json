@@ -3,11 +3,16 @@
   "slug": "fints-banking",
   "displayName": "FinTS Banking",
   "latest": {
-    "version": "1.0.2",
-    "publishedAt": 1771331844487,
-    "commit": "https://github.com/openclaw/skills/commit/707b86c79997af3e3c33939a49a7f267c8253ec8"
+    "version": "1.0.3",
+    "publishedAt": 1771350871879,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.2",
+      "publishedAt": 1771331844487,
+      "commit": "https://github.com/openclaw/skills/commit/707b86c79997af3e3c33939a49a7f267c8253ec8"
+    },
     {
       "version": "1.0.1",
       "publishedAt": 1771327300460,
