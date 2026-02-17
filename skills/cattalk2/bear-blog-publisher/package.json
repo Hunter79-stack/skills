@@ -1,0 +1,53 @@
+{
+  "name": "bear-blog-publisher",
+  "version": "1.0.0",
+  "description": "Auto-publish blog posts to Bear Blog - supports both AI-generated content and user-provided markdown.",
+  "author": "OpenClaw Community",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/bear-blog-publisher"
+  },
+  "keywords": [
+    "bearblog",
+    "blog",
+    "publish",
+    "automation",
+    "content"
+  ],
+  "openclaw": {
+    "requires": {
+      "bins": ["python3"],
+      "python": ["requests", "playwright"]
+    },
+    "install": [
+      {
+        "id": "playwright",
+        "kind": "python",
+        "package": "playwright",
+        "postInstall": "playwright install chromium",
+        "label": "Install Playwright"
+      }
+    ],
+    "config": {
+      "schema": {
+        "email": {
+          "type": "string",
+          "description": "Bear Blog email (optional if using env vars or runtime params)"
+        },
+        "password": {
+          "type": "string",
+          "description": "Bear Blog password (optional if using env vars or runtime params)"
+        }
+      }
+    },
+    "entry": {
+      "when": "user wants to publish a blog post to Bear Blog",
+      "examples": [
+        "Publish a blog about Python best practices",
+        "Write a blog post about my travel experience",
+        "Create a blog about system design"
+      ]
+    }
+  }
+}
