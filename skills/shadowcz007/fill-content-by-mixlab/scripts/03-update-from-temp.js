@@ -2,10 +2,10 @@
 
 /**
  * 从 temp 文件读取内容并更新到 mixdao
- * 读取 temp/{cachedStoryId}.txt，调用 PATCH API 更新
+ * 读取 temp/{cachedStoryId}.txt，批量 PATCH（body: { items: [{ cachedStoryId, content }, ...] }）
  *
  * 用法: node scripts/03-update-from-temp.js list <temp/fill-content-{date}.json>   # 列出待更新（必须传 JSON）
- *       node scripts/03-update-from-temp.js <id1> [<id2> ...]                      # 更新指定的一条或多条（必须传至少一个 id）
+ *       node scripts/03-update-from-temp.js <id1> [<id2> ...]                      # 批量更新指定的一条或多条（必须传至少一个 id）
  */
 
 import fs from 'fs';
@@ -18,17 +18,23 @@ const __dirname = path.dirname(__filename);
 
 const API_URL = 'https://www.mixdao.world/api/latest/recommendation';
 const tempDir = path.join(__dirname, '..', 'temp');
+const BATCH_SIZE = 50; // 单次 PATCH 最多条数，与 recommendation 接口一致
 
-function updateContent(cachedStoryId, content) {
+/** 批量 PATCH：body 为 { items: [{ cachedStoryId, content }, ...] }，返回 { ok, results: [{ cachedStoryId, ok }, ...] } */
+function batchUpdateContent(items) {
   return new Promise((resolve, reject) => {
     const apiKey = process.env.MIXDAO_API_KEY;
     if (!apiKey) {
       reject(new Error('MIXDAO_API_KEY is not set.'));
       return;
     }
+    if (!items.length) {
+      resolve({ ok: true, results: [] });
+      return;
+    }
 
     const url = new URL(API_URL);
-    const body = JSON.stringify({ cachedStoryId, content });
+    const body = JSON.stringify({ items });
 
     const opts = {
       hostname: url.hostname,
@@ -51,7 +57,12 @@ function updateContent(cachedStoryId, content) {
       res.on('end', () => {
         const responseBody = Buffer.concat(chunks).toString('utf8');
         if (res.statusCode >= 200 && res.statusCode < 300) {
-          resolve(responseBody);
+          try {
+            const data = JSON.parse(responseBody || '{}');
+            resolve(data);
+          } catch (e) {
+            resolve({ ok: true, results: [] });
+          }
         } else {
           reject(new Error(`API returned ${res.statusCode}: ${responseBody.slice(0, 200)}`));
         }
@@ -64,32 +75,25 @@ function updateContent(cachedStoryId, content) {
   });
 }
 
-async function updateOne(cachedStoryId) {
-  const tempFile = path.join(tempDir, `${cachedStoryId}.txt`);
-
-  if (!fs.existsSync(tempFile)) {
-    console.error(`[ERROR] temp/${cachedStoryId}.txt 不存在`);
-    return false;
+/** 从 temp 目录读取并校验，返回可提交的 items: [{ cachedStoryId, content }, ...]，无效的会打 log 并跳过 */
+function collectItems(ids) {
+  const items = [];
+  const minContentLen = 50;
+  for (const id of ids) {
+    const cachedStoryId = id.trim();
+    const tempFile = path.join(tempDir, `${cachedStoryId}.txt`);
+    if (!fs.existsSync(tempFile)) {
+      console.error(`[SKIP] temp/${cachedStoryId}.txt 不存在`);
+      continue;
+    }
+    const content = fs.readFileSync(tempFile, 'utf8');
+    if (!content || content.trim().length < minContentLen) {
+      console.error(`[SKIP] 内容太短: ${cachedStoryId} (${(content || '').length} 字符)`);
+      continue;
+    }
+    items.push({ cachedStoryId, content });
   }
-
-  const content = fs.readFileSync(tempFile, 'utf8');
-
-  if (!content || content.trim().length < 50) {
-    console.error(`[ERROR] 内容太短: ${content.length} 字符`);
-    return false;
-  }
-
-  console.log(`[UPDATE] ${cachedStoryId}`);
-  console.log(`  内容预览: ${content.slice(0, 100)}...`);
-
-  try {
-    const result = await updateContent(cachedStoryId, content);
-    console.log(`  [OK] 已更新`);
-    return true;
-  } catch (err) {
-    console.error(`  [ERROR] ${err.message}`);
-    return false;
-  }
+  return items;
 }
 
 async function main() {
@@ -160,21 +164,39 @@ async function main() {
     return;
   }
 
-  // 更新：必须传至少一个 id（Agent 判断后传入要更新的 id 列表）
+  // 更新：必须传至少一个 id（Agent 判断后传入要更新的 id 列表），批量 PATCH
   const ids = args.filter(a => a.trim().length > 0);
   if (ids.length === 0) {
     console.error('[ERROR] 更新模式必须传入至少一个 cachedStoryId');
     console.error('示例: node scripts/03-update-from-temp.js cmlpr8xsb005al70adaskpzl4 cmlpr8xd7002jl70ax1ytgrrt');
     process.exit(1);
   }
-  console.log(`共 ${ids.length} 条待更新\n`);
+  const items = collectItems(ids);
+  if (items.length === 0) {
+    console.error('[ERROR] 没有可更新的条目（文件缺失或内容过短）');
+    process.exit(1);
+  }
+  console.log(`共 ${ids.length} 个 id，有效 ${items.length} 条，批量提交\n`);
   let success = 0;
   let failed = 0;
-  for (const cachedStoryId of ids) {
-    const ok = await updateOne(cachedStoryId.trim());
-    if (ok) success++;
-    else failed++;
-    await new Promise(r => setTimeout(r, 300));
+  for (let i = 0; i < items.length; i += BATCH_SIZE) {
+    const chunk = items.slice(i, i + BATCH_SIZE);
+    try {
+      const data = await batchUpdateContent(chunk);
+      const results = data.results || [];
+      for (const r of results) {
+        if (r.ok) {
+          success++;
+          console.log(`[OK] ${r.cachedStoryId}`);
+        } else {
+          failed++;
+          console.error(`[FAIL] ${r.cachedStoryId}`);
+        }
+      }
+    } catch (err) {
+      console.error(`[ERROR] 批量请求失败: ${err.message}`);
+      failed += chunk.length;
+    }
   }
   console.log(`\n===== 完成 =====`);
   console.log(`成功: ${success}`);
