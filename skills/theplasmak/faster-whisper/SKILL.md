@@ -1,7 +1,7 @@
 ---
 name: faster-whisper
 description: Local speech-to-text using faster-whisper. 4-6x faster than OpenAI Whisper with identical accuracy; GPU acceleration enables ~20x realtime transcription. Supports standard and distilled models with word-level timestamps.
-version: 1.0.7
+version: 1.1.0
 author: ThePlasmak
 homepage: https://github.com/ThePlasmak/faster-whisper
 tags: ["audio", "transcription", "whisper", "speech-to-text", "ml", "cuda", "gpu"]
@@ -33,13 +33,15 @@ Use this skill when you need to:
 
 | Task | Command | Notes |
 |------|---------|-------|
-| **Basic transcription** | `./scripts/transcribe audio.mp3` | Uses default distil-large-v3 |
+| **Basic transcription** | `./scripts/transcribe audio.mp3` | Batched inference, VAD on by default |
 | **Faster English** | `./scripts/transcribe audio.mp3 --model distil-medium.en --language en` | English-only, 6.8x faster |
 | **Maximum accuracy** | `./scripts/transcribe audio.mp3 --model distil-large-v3 --beam-size 10` | Preferred default; use large-v3 if accuracy critical |
 | **Word timestamps** | `./scripts/transcribe audio.mp3 --word-timestamps` | For subtitles/captions |
 | **JSON output** | `./scripts/transcribe audio.mp3 --json -o output.json` | Programmatic access |
 | **Multilingual** | `./scripts/transcribe audio.mp3 --model large-v3-turbo` | Auto-detects language |
-| **Remove silence** | `./scripts/transcribe audio.mp3 --vad` | Voice activity detection |
+| **Boost rare terms** | `./scripts/transcribe audio.mp3 --hotwords "Kubernetes gRPC"` | Improves recognition of specific words |
+| **Reduce batch size** | `./scripts/transcribe audio.mp3 --batch-size 4` | If OOM on GPU |
+| **Disable batching** | `./scripts/transcribe audio.mp3 --no-batch` | Use standard WhisperModel |
 
 ## Model Selection
 
@@ -164,7 +166,10 @@ uv pip install --python .venv/bin/python torch --index-url https://download.pyto
 --language, -l     Language code (e.g., en, es, fr - auto-detect if omitted)
 --word-timestamps  Include word-level timestamps
 --beam-size        Beam search size (default: 5, higher = more accurate but slower)
---vad              Enable voice activity detection (removes silence)
+--batch-size       Batched inference batch size (default: 8; reduce if OOM)
+--no-batch         Disable batched inference, use standard WhisperModel
+--no-vad           Disable voice activity detection (VAD on by default)
+--hotwords         Space-separated hotwords to boost recognition (e.g. 'OpenAI GPT-4')
 --json, -j         Output as JSON
 --output, -o       Save transcript to file
 --device           cpu or cuda (auto-detected)
@@ -211,12 +216,15 @@ done
 ## Performance Notes
 
 - **First run**: Downloads model to `~/.cache/huggingface/` (one-time)
-- **GPU**: Automatically uses CUDA if available (~10-20x faster)
+- **Batched inference**: Enabled by default via `BatchedInferencePipeline` — ~3x faster than standard mode; VAD on by default
+- **GPU**: Automatically uses CUDA if available
 - **Quantization**: INT8 used on CPU for ~4x speedup with minimal accuracy loss
+- **Benchmark** (RTX 3070, 21-min file, distil-large-v3): **~23s** with batched inference vs ~69s without
 - **Memory**:
   - `distil-large-v3`: ~2GB RAM / ~1GB VRAM
   - `large-v3-turbo`: ~4GB RAM / ~2GB VRAM
   - `tiny/base`: <1GB RAM
+- **OOM**: Lower `--batch-size` (try 4) if you hit out-of-memory errors
 
 ## Why faster-whisper?
 

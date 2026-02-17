@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 faster-whisper transcription CLI
-High-performance speech-to-text using CTranslate2 backend
+High-performance speech-to-text using CTranslate2 backend with batched inference.
 """
 
 import sys
@@ -10,7 +10,7 @@ import argparse
 from pathlib import Path
 
 try:
-    from faster_whisper import WhisperModel
+    from faster_whisper import WhisperModel, BatchedInferencePipeline
 except ImportError:
     print("Error: faster-whisper not installed", file=sys.stderr)
     print("Run setup: ./setup.sh", file=sys.stderr)
@@ -30,7 +30,7 @@ def check_cuda_available():
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Transcribe audio with faster-whisper"
+        description="Transcribe audio with faster-whisper (batched inference)"
     )
     parser.add_argument(
         "audio",
@@ -62,9 +62,33 @@ def main():
         help="Beam search size; higher = more accurate but slower (default: 5)"
     )
     parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=8,
+        metavar="N",
+        help="Batched inference batch size (default: 8; reduce if OOM)"
+    )
+    parser.add_argument(
         "--vad",
         action="store_true",
-        help="Enable voice activity detection to skip silence"
+        default=True,
+        help="Enable voice activity detection (default: on for batched mode)"
+    )
+    parser.add_argument(
+        "--no-vad",
+        action="store_true",
+        help="Disable voice activity detection"
+    )
+    parser.add_argument(
+        "--no-batch",
+        action="store_true",
+        help="Disable batched inference (use standard WhisperModel instead)"
+    )
+    parser.add_argument(
+        "--hotwords",
+        default=None,
+        metavar="WORDS",
+        help="Space-separated hotwords to boost recognition (e.g. 'OpenAI GPT-4')"
     )
     parser.add_argument(
         "-j", "--json",
@@ -105,7 +129,6 @@ def main():
     # Auto-detect device and compute type
     device = args.device
     compute_type = args.compute_type
-
     cuda_available, gpu_name = check_cuda_available()
 
     if device == "auto":
@@ -113,33 +136,31 @@ def main():
             device = "cuda"
         else:
             device = "cpu"
-            # Warn if no CUDA but not explicitly requested CPU
             if not args.quiet:
                 print("⚠️  CUDA not available — using CPU (this will be slow!)", file=sys.stderr)
                 print("   To enable GPU: pip install torch --index-url https://download.pytorch.org/whl/cu121", file=sys.stderr)
-                print("   Or re-run: ./setup.sh", file=sys.stderr)
                 print("", file=sys.stderr)
 
     if compute_type == "auto":
-        # Optimize based on device
-        if device == "cuda":
-            compute_type = "float16"  # Best for GPU
-        else:
-            compute_type = "int8"  # Best for CPU (4x speedup)
+        compute_type = "float16" if device == "cuda" else "int8"
+
+    use_batched = not args.no_batch
+    vad_filter = not args.no_vad
 
     if not args.quiet:
+        mode = f"batched (batch_size={args.batch_size})" if use_batched else "standard"
         if device == "cuda" and gpu_name:
-            print(f"Loading model: {args.model} ({device}, {compute_type}) on {gpu_name}", file=sys.stderr)
+            print(f"Loading model: {args.model} ({device}, {compute_type}) on {gpu_name} [{mode}]", file=sys.stderr)
         else:
-            print(f"Loading model: {args.model} ({device}, {compute_type})", file=sys.stderr)
+            print(f"Loading model: {args.model} ({device}, {compute_type}) [{mode}]", file=sys.stderr)
 
     # Load model
     try:
-        model = WhisperModel(
-            args.model,
-            device=device,
-            compute_type=compute_type
-        )
+        model = WhisperModel(args.model, device=device, compute_type=compute_type)
+        if use_batched:
+            pipeline = BatchedInferencePipeline(model)
+        else:
+            pipeline = model
     except Exception as e:
         print(f"Error loading model: {e}", file=sys.stderr)
         sys.exit(1)
@@ -149,13 +170,17 @@ def main():
         if not args.quiet:
             print(f"Transcribing: {audio_path.name}", file=sys.stderr)
 
-        segments, info = model.transcribe(
-            str(audio_path),
+        transcribe_kwargs = dict(
             language=args.language,
             beam_size=args.beam_size,
             word_timestamps=args.word_timestamps,
-            vad_filter=args.vad,
+            vad_filter=vad_filter,
+            hotwords=args.hotwords,
         )
+        if use_batched:
+            transcribe_kwargs["batch_size"] = args.batch_size
+
+        segments, info = pipeline.transcribe(str(audio_path), **transcribe_kwargs)
 
         # Collect results
         result = {
