@@ -124,20 +124,7 @@ MIT — CacheForge 2026
 
 ---
 
-*Powered by CacheForge 🤿*
+Built by **[CacheForge](https://app.anvil-ai.io/)**.
 
-## More from CacheForge
-
-Production-grade agent skills for engineers who ship.
-
-| Skill | What it does |
-|-------|-------------|
-| **[prom-query](https://clawhub.com/cacheforge/prom-query)** | Query Prometheus metrics and interpret alerts |
-| **[kube-medic](https://clawhub.com/cacheforge/kube-medic)** | Kubernetes cluster triage and diagnostics |
-| **[tf-plan-review](https://clawhub.com/cacheforge/tf-plan-review)** | Terraform plan risk assessment |
-| **[pager-triage](https://clawhub.com/cacheforge/pager-triage)** | PagerDuty incident triage |
-| **[dep-audit](https://clawhub.com/cacheforge/dep-audit)** | Dependency vulnerability scanning |
-| **[vibe-check](https://clawhub.com/cacheforge/vibe-check)** | Code quality auditing |
-| **[feed-diet](https://clawhub.com/cacheforge/feed-diet)** | Information diet analysis |
-| **[meeting-autopilot](https://clawhub.com/cacheforge/meeting-autopilot)** | Meeting transcript → action items |
-| **[rug-checker](https://clawhub.com/cacheforge/rug-checker)** | Solana token risk analysis |
+CacheForge helps reduce wasted LLM spend on agent workflows (results vary by provider/workload).
+Start with: `clawhub install cacheforge`
