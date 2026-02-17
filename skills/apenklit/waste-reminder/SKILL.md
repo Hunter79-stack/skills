@@ -6,15 +6,28 @@ A flexible, token-efficient skill for automated waste container collection remin
 
 This skill helps automate waste collection reminders based on user-defined schedules. It uses simple JSON configuration for maximum flexibility and minimal token usage.
 
+**How it works:**
+The skill reads your config and schedule, determines which reminders need to be sent, and outputs them in a format that your AI assistant can process. The AI then sends the actual messages to the specified channels.
+
+Output format:
+```
+SEND_TO:recipient_id
+CHANNEL:whatsapp
+Your message here
+---
+```
+
+This approach keeps your configuration simple and token-efficient - the skill doesn't need API keys or direct network access.
+
 ## Features
 
 - Multiple container types
 - Custom reminder schedules (up to 4 times per pickup)
 - Flexible targeting (group, personal, escalation)
-- Multi-channel support (WhatsApp, Telegram, Discord, Email)
+- Multi-channel support (WhatsApp, Telegram, Discord, Email) - messages sent by your AI
 - Confirmation system (stops further reminders)
 - Single schedule file
-- Token-efficient
+- Token-efficient - generates reminders without using AI tokens
 
 ## Installation
 
@@ -144,6 +157,8 @@ Add ONE cron job that runs every 15 minutes:
 - Name: "Waste Reminder Check"
 - Schedule: every 15 minutes
 - Script: `/data/.openclaw/workspace/skills/waste-reminder/waste_cron.py`
+
+The cron script checks if any reminders need to be sent and outputs them. Your AI assistant (triggered by the cron job) reads this output and sends the actual messages to the appropriate channels.
 
 ## User Commands
 
