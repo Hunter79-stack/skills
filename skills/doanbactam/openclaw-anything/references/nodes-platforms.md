@@ -1,56 +1,34 @@
-# OpenClaw Nodes & Platforms Reference
+﻿# OpenClaw Nodes and Platforms
 
-Comprehensive guide for running OpenClaw across various platforms and hardware devices.
+Reference normalized against:
+- `https://docs.openclaw.ai/platforms`
+- `https://docs.openclaw.ai/platforms/windows`
+- `https://docs.openclaw.ai/platforms/macos`
+- `https://docs.openclaw.ai/platforms/linux`
+- `https://docs.openclaw.ai/cli/pairing`
 
-## 📱 Platforms
+Last verified: 2026-02-17.
 
-### Windows (WSL2)
-- **Requirement**: Ubuntu/Debian on WSL2.
-- **Systemd**: Must be enabled in `/etc/wsl.conf` to run the gateway as a stable background service.
-- **Networking**: Using `Tailscale` is recommended for connecting iOS/Android apps to a Gateway running inside WSL2.
+## Windows (WSL2)
+- Use a Linux distro on WSL2 for stable daemon behavior.
+- Keep gateway on loopback unless remote access is intentionally configured.
+- For remote node access, prefer private networking (for example Tailscale).
 
-### macOS
-- **Companion App**: Install `OpenClaw.app` for menu bar integration and voice wake support.
-- **iMessage**: Using the `imessage` channel requires an active login on macOS and the `imsg` CLI utility.
+## macOS
+- Use macOS-specific platform guidance from docs for companion integrations.
+- Ensure required local permissions are granted before enabling device features.
 
-### Linux
-- **Daemon**: Managed via `systemctl --user`.
-- **Browser**: Requires installing Playwright dependencies if using managed browser features.
+## Linux
+- Install gateway service for persistent runtime.
+- Validate prerequisites for browser tooling when using managed browser commands.
 
-## 🔗 Nodes & Devices
+## Mobile Nodes and Pairing
+- Run `openclaw pairing` to start pairing flow.
+- Complete pairing from OpenClaw mobile app.
+- Verify node availability from dashboard or status commands.
 
-### Pairing
-- Use the `openclaw pairing` command to generate a QR code.
-- Scan the code with the OpenClaw app on iOS/Android to transform your phone into an active "Node".
-
-### Supported Node Types:
-1. **Camera Node**: Allows the agent to capture photos from the mobile device.
-2. **Audio Node**: Sends and receives voice messages, supports translation and Text-to-Speech (TTS).
-3. **Canvas Node**: Displays an interactive Web UI (Canvas) served from the Gateway.
-4. **Location**: Access GPS coordinates (requires explicit user consent).
-
-## 🤖 Automation
-
-### Cron Jobs
-Define scheduled tasks in `openclaw.json`:
-```json
-{
-  "cron": {
-    "jobs": [
-      {
-        "schedule": "0 9 * * *",
-        "action": "message",
-        "target": "me",
-        "text": "Good morning! Here is your daily report."
-      }
-    ]
-  }
-}
-```
-
-### Heartbeat
-Used to monitor device uptime. Configure via `system heartbeat enable`.
-
-## 🛡️ Security
-- **Gateway Token**: Always require a token when binding to a public IP or virtual network (Tailnet).
-- **DM Safety**: Use `dmPolicy` to restrict who can initiate chats with the Agent.
+## Node Security Baseline
+- Require gateway token for non-loopback bind.
+- Restrict who can message/control agent via channel policy.
+- Review permissions before enabling camera, microphone, or location features.
+- Treat pairing and sensor access as high-risk actions requiring explicit approval.

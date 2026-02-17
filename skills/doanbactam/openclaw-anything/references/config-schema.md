@@ -1,58 +1,64 @@
-# OpenClaw Configuration Schema Reference
+﻿# OpenClaw Configuration Reference
 
-The default configuration file is located at: `~/.openclaw/openclaw.json`
+Reference normalized against:
+- `https://docs.openclaw.ai/cli/config`
+- `https://docs.openclaw.ai/gateway/configuration`
 
-## Basic JSON Structure
+Last verified: 2026-02-17.
 
-```json
+## Config File Location
+Default state directory:
+- `~/.openclaw`
+
+Default config file:
+- `~/.openclaw/openclaw.json5`
+
+## CLI-first Config Management
+Use CLI first to avoid manual syntax errors:
+
+- `openclaw config --list`
+- `openclaw config --get gateway.bind`
+- `openclaw config --set gateway.bind=127.0.0.1`
+- `openclaw config --set gateway.port=18789`
+
+## Minimal Config Example
+```json5
 {
-  "gateway": {
-    "auth": {
-      "token": "your-gateway-token"
-    },
-    "bind": "127.0.0.1",
-    "port": 18789
-  },
-  "channels": {
-    "whatsapp": {
-      "allowFrom": ["+123456789"],
-      "groups": {
-        "*": { "requireMention": true }
-      }
-    },
-    "telegram": {
-      "accounts": [
-        { "token": "your-bot-token", "enabled": true }
-      ]
+  gateway: {
+    bind: "127.0.0.1",
+    port: 18789,
+    auth: {
+      token: "replace-with-strong-token"
     }
   },
-  "agents": {
-    "list": [
-      {
-        "identity": "pi",
-        "rpc": true,
-        "enabled": true
+  channels: {
+    whatsapp: {
+      allowFrom: ["+1234567890"],
+      groups: {
+        "*": { requireMention: true }
       }
-    ],
-    "defaults": {
-      "workspace": "~/.openclaw/workspace"
     }
   },
-  "models": {
-    "default": "claude-3-5-sonnet-latest"
+  agents: {
+    defaults: {
+      workspace: "~/.openclaw/workspace"
+    }
+  },
+  models: {
+    default: "claude-3-5-sonnet-latest"
   }
 }
 ```
 
-## Key Configuration Options
-- **`gateway.bind`**: IP address for the gateway to listen on. Use `0.0.0.0` or `tailnet` for remote access.
-- **`channels.whatsapp.allowFrom`**: Whitelist of phone numbers allowed to control the bot.
-- **`channels.whatsapp.groups.requireMention`**: If `true`, the bot only responds when mentioned (@bot) in groups.
-- **`agents.list[].rpc`**: Enables Remote Procedure Call mode for the agent.
-- **`models.aliases`**: Map defining model aliases (e.g., "gpt4" -> "gpt-4o").
+## High-impact Keys
+- `gateway.bind`: Interface binding. Keep `127.0.0.1` unless remote access is required.
+- `gateway.port`: Gateway port (default `18789`).
+- `gateway.auth.token`: Required when binding beyond loopback.
+- `channels.*`: Channel-specific policy and auth settings.
+- `agents.defaults.workspace`: Base workspace for agent tasks.
+- `models.default`: Default model used by agents.
 
 ## Environment Variables
-You can override configuration using environment variables:
-- `OPENCLAW_CONFIG_PATH`: Path to the configuration JSON file.
-- `OPENCLAW_STATE_DIR`: Directory for storing state (WhatsApp sessions, etc.).
-- `OPENCLAW_HOME`: Base directory for OpenClaw resources.
+- `OPENCLAW_CONFIG_PATH`: Override config file path.
+- `OPENCLAW_STATE_DIR`: Override state directory.
+- `OPENCLAW_HOME`: Override OpenClaw home directory.

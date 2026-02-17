@@ -1,53 +1,62 @@
-# OpenClaw Full CLI Reference
+﻿# OpenClaw Full CLI Reference
 
-Complete reference for OpenClaw CLI commands (v1.x).
+Reference normalized against `https://docs.openclaw.ai/cli`.
+Last verified: 2026-02-17.
 
-## 🌍 Global & System Commands
-- `openclaw onboard [--install-daemon]`: Run the interactive setup wizard.
-- `openclaw doctor`: Verify system health, environment variables, and connectivity.
-- `openclaw status`: View the overall status of the Gateway, channels, and agents.
-- `openclaw version`: Check the current CLI version.
-- `openclaw reset`: Wipe all configuration and state data.
-- `openclaw tui`: Launch the Terminal User Interface.
-- `openclaw dashboard [--no-open]`: Retrieve the Control UI URL and access token.
+Safety note:
+- Commands listed here reflect upstream CLI surface.
+- Local wrapper policy may block high-risk groups unless `OPENCLAW_WRAPPER_ALLOW_RISKY=1`.
+- See `references/security-policy.md`.
 
-## 📡 Gateway & Service Management
-- `openclaw gateway service {start|stop|restart|logs|status}`: Manage the background daemon.
-- `openclaw gateway [--port <n>] [--bind <ip>] [--token <t>]`: Manual Gateway startup.
-- `openclaw gateway logs [--follow]`: Monitor real-time Gateway logs.
+## Core Commands
+- `openclaw onboard`: Run onboarding wizard.
+- `openclaw doctor`: Validate local install and health.
+- `openclaw status`: Show global OpenClaw status.
+- `openclaw version`: Print CLI version.
+- `openclaw dashboard [--no-open]`: Open or print dashboard URL.
+- `openclaw config [--list|--get <key>|--set <key=value>]`: Inspect or modify config values.
+- `openclaw update`: Update CLI to latest stable build.
+- `openclaw uninstall`: Remove CLI and optionally data.
 
-## 💬 Communication Channels
-- `openclaw channels list`: List configured channels and their connection status.
-- `openclaw channels login --channel <whatsapp|telegram|discord>`: Authenticate with a channel.
-- `openclaw channels logout --channel <name>`: Disconnect a channel session.
-- `openclaw pairing`: Manage pairing codes for mobile devices (iOS/Android Nodes).
+## Gateway Commands
+- `openclaw gateway`: Start gateway in foreground.
+- `openclaw gateway status`: Show gateway runtime status.
+- `openclaw gateway health`: Check gateway health endpoint.
+- `openclaw gateway restart`: Restart managed gateway process.
+- `openclaw gateway stop`: Stop managed gateway process.
+- `openclaw gateway install`: Install gateway background service.
+- `openclaw gateway uninstall`: Remove gateway background service.
+- `openclaw gateway call <path> [--method ...] [--data ...]`: Call gateway APIs.
 
-## 🤖 Agent & Messaging Management
-- `openclaw agents`: List active agents in the system.
-- `openclaw message send --target <id> --message <text>`: Send a direct message.
-- `openclaw message list --session <id>`: View message history for a specific session.
+## Channels and Pairing
+- `openclaw channels list`: List configured channels.
+- `openclaw channels login --channel <name>`: Authenticate a channel.
+- `openclaw channels logout --channel <name>`: Disconnect a channel.
+- `openclaw pairing`: Show pairing flow for mobile nodes (high-risk).
 
-## 🧠 Models & Authentication
-- `openclaw models list`: List available AI models.
-- `openclaw models set <name>`: Define the default model.
-- `openclaw models auth {add|list|remove} [--provider <name>]`: Manage OAuth authentication (Anthropic/OpenAI).
-- `openclaw models aliases {list|add|remove}`: Manage model naming aliases.
-- `openclaw models scan`: Discover local models (e.g., from LM Studio).
+## Models
+- `openclaw models list`: Show available models.
+- `openclaw models set <model>`: Set default model.
+- `openclaw models auth add --provider <openai|anthropic>`: Add model provider auth.
+- `openclaw models auth list`: Show provider auth entries.
+- `openclaw models auth remove --provider <name>`: Remove provider auth.
+- `openclaw models aliases list`: List alias map.
+- `openclaw models aliases add <alias> <model>`: Add alias.
+- `openclaw models aliases remove <alias>`: Remove alias.
+- `openclaw models scan`: Discover local models.
 
-## ⏱️ Automation (Cron)
-- `openclaw cron list [--all]`: List scheduled periodic tasks.
-- `openclaw cron add --name <n> --cron <c> --message <m> --deliver --to <id>`: Create a new cron job.
-- `openclaw cron run <jobId> [--force]`: Execute a job immediately.
-- `openclaw cron remove <jobId>`: Delete a job.
-- `openclaw system event --mode now --text <msg>`: Trigger a system event immediately.
+## Automation
+- `openclaw cron list`: List cron jobs.
+- `openclaw cron add ...`: Create cron job (high-risk).
+- `openclaw cron run <jobId>`: Run job immediately (high-risk).
+- `openclaw cron remove <jobId>`: Delete job (high-risk).
 
-## 🌐 Managed Browser
-- `openclaw browser {status|start|stop}`: Manage the OpenClaw-controlled Playwright browser.
-- `openclaw browser open <url>`: Navigate to a website.
-- `openclaw browser screenshot [--full-page]`: Capture a screenshot of the current page.
-- `openclaw browser snapshot --format aria`: Fetch page representation (DOM/ARIA tree).
-
-## 🧩 Plugins & OpenProse
-- `openclaw plugins {list|enable|disable|install}`: Manage extension components.
-- `openclaw plugins enable open-prose`: Activate the OpenProse engine.
-- `/prose run <file.prose>`: (In Chat) Execute an OpenProse program.
+## Browser and Plugins
+- `openclaw browser status|start|stop`: Manage browser runtime (high-risk).
+- `openclaw browser open <url>`: Navigate browser (high-risk).
+- `openclaw browser screenshot [--full-page]`: Capture screenshot.
+- `openclaw browser snapshot --format aria`: Capture structured page snapshot.
+- `openclaw plugins list`: List plugins.
+- `openclaw plugins install <path-or-url>`: Install plugin (high-risk).
+- `openclaw plugins enable <name>`: Enable plugin (high-risk).
+- `openclaw plugins disable <name>`: Disable plugin.

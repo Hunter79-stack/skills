@@ -1,56 +1,108 @@
----
+﻿---
 name: openclaw
-description: Comprehensive skill for installing, configuring, and managing the OpenClaw ecosystem (Gateway, Channels, Models, Automation, Nodes, and Deployment).
+description: OpenClaw CLI wrapper and docs companion for gateway, channels, models, automation, and operational workflows.
 ---
 
 # OpenClaw Skill
 
-This is the ultimate command center for OpenClaw. It provides instructions and scripts to manage every aspect of the platform, from first installation to advanced multi-agent orchestration.
+Local skill package for operating OpenClaw from the terminal.
+This repository does not install platform dependencies by itself. It wraps the `openclaw` CLI and provides local reference docs aligned to `https://docs.openclaw.ai`.
 
-## 🌟 Core Capabilities
-- **Infrastructure**: Native services, Docker Compose, Nix flakes, and rollback management.
-- **Connectivity**: Global channels (WhatsApp, Telegram, Discord, Bot APIs).
-- **Intelligence**: OAuth auth for major LLMs, model aliases, and local model scanning.
-- **Surface & Hardware**: Mobile Nodes (Camera, Audio, GPS), macOS companion, and Canvas.
-- **Advanced Logic**: OpenProse (parallel agents), Sub-agents, and Managed Browser control.
+## Scope
+- Install and onboarding flows
+- Gateway lifecycle and health operations
+- Channel connection management
+- Model listing, authentication, and aliases
+- Scheduled automation and browser tooling
+- Plugin management
+- Deployment references (Docker, Nix, update, rollback)
 
-## 🛠️ Unified Command Utility
-All operations are handled via the unified script:
+## Prerequisites
+Required:
+- `openclaw` CLI available in `PATH`
+
+Common external prerequisites (depends on feature):
+- Node.js and npm (for install/update flows in official docs)
+- Playwright system dependencies (for browser tooling)
+- Platform-specific tools such as `imsg` (macOS iMessage channel)
+- Private networking setup such as Tailscale (if remote node access is needed)
+
+Environment variables used by OpenClaw runtime:
+- `OPENCLAW_CONFIG_PATH`
+- `OPENCLAW_STATE_DIR`
+- `OPENCLAW_HOME`
+
+## Security Boundaries
+Default stance is least privilege.
+
+Allowed by default:
+- Read-only status and diagnostics (`status`, `doctor`, `version`, `gateway status`, `gateway health`)
+- Config inspection and non-destructive operational checks
+
+High-risk capabilities (explicit user approval required per action):
+- Arbitrary shell execution (`exec` tool in upstream runtime)
+- Elevated privilege flows
+- Sub-agent spawning and delegated execution
+- Plugin installation from untrusted sources
+- Cron creation/modification
+- Browser automation against remote websites
+- Device pairing and sensor access (camera/audio/location)
+
+Wrapper opt-in gate:
+- Commands mapped to high-risk areas require `OPENCLAW_WRAPPER_ALLOW_RISKY=1`
+
+## Non-goals
+- This repo is not the OpenClaw runtime source code.
+- This repo does not provision system packages automatically.
+- This repo does not manage host networking, VPN, or mobile OS permissions.
+- This repo does not authorize autonomous privileged execution.
+
+## Unified Command Utility
+Primary wrapper script:
 `bash scripts/openclaw.sh [command] [args]`
 
-### 1. Setup & Maintenance
-- `install`: Install or update the CLI.
-- `setup`: Run the onboarding wizard and install the service.
-- `doctor`: Comprehensive health and config check.
-- `status`: High-level overview of connections and agents.
-- `reset`: Full system reset.
+### Command Mapping
+The wrapper routes to official `openclaw` commands:
 
-### 2. Services & Deployment
-- `service {start|stop|restart|logs}`: Manage the background daemon.
-- `docker {setup|up|down|logs}`: Manage containerized environments.
+- `install|setup|doctor|status|reset|version|tui|dashboard`
+  - Pass-through to `openclaw ...`
+- `service ...`
+  - `openclaw gateway service ...`
+- `channel login <name>`
+  - `openclaw channels login --channel <name>`
+- `channel list`
+  - `openclaw channels list`
+- `channel logout <name>`
+  - `openclaw channels logout --channel <name>`
+- `channel pairing`
+  - `openclaw pairing` (risky-gated)
+- `model auth ...`
+  - `openclaw models auth ...`
+- `model alias ...`
+  - `openclaw models aliases ...`
+- `model scan|list|set ...`
+  - `openclaw models ...`
+- `cron ...`
+  - `openclaw cron ...` (risky-gated)
+- `browser ...`
+  - `openclaw browser ...` (risky-gated)
+- `plugin ...`
+  - `openclaw plugins ...` (risky-gated)
+- `msg ...`
+  - `openclaw message send ...`
+- `prose ...`
+  - Enables `open-prose` plugin (risky-gated)
 
-### 3. Channels & Authentication
-- `channel login [whatsapp|telegram|discord]`: Connect a messaging account.
-- `channel list`: View active channel connections.
-- `auth {anthropic|openai}`: Manage OAuth provider tokens.
-- `pairing`: Manage device authorization for mobile nodes.
+## Documentation
+- `references/security-policy.md`: Guardrails and approval policy
+- `references/prerequisites.md`: Dependency and capability boundaries
+- `references/cli-full.md`: Consolidated CLI commands
+- `references/config-schema.md`: Config and env variable references
+- `references/nodes-platforms.md`: Platform and node notes
+- `references/deployment.md`: Docker, Nix, update, rollback
+- `references/advanced-tools.md`: Plugins, browser, gateway helpers
+- `references/hubs.md`: Docs hub links
 
-### 4. Advanced Interaction
-- `browser {start|open|screenshot}`: Playwright-powered browser control.
-- `cron {list|add|remove}`: Schedule periodic tasks.
-- `plugin {install|enable}`: Manager Gateway extensions.
-- `msg [target] [message]`: Send a message from the terminal.
-
-## 📂 Documentation & References
-Use these local guides for detailed technical specifics:
-- `references/cli-full.md`: Complete list of all CLI commands and sub-commands.
-- `references/config-schema.md`: `openclaw.json` structure and environment variables.
-- `references/nodes-platforms.md`: Guide for Windows (WSL2), macOS, and Mobile Nodes.
-- `references/deployment.md`: Docker, Nix, Hetzner, and Update/Rollback procedures.
-- `references/advanced-tools.md`: OpenProse, Browsers, Plugins, and Sub-agents.
-- `references/hubs.md`: Centralized list of online documentation links.
-
-## 💡 Troubleshooting
-- **Permission Errors**: Use `sudo` for global installs or check `~/.openclaw` recursive permissions.
-- **Connection Lost**: Ensure Node.js >= 22. Use `openclaw.sh service restart` to refresh the gateway.
-- **Can't scan QR**: Ensure the gateway port (18789) is accessible via loopback or tunnel.
+## Maintenance Notes
+- Last docs normalization: 2026-02-17
+- Source of truth: `https://docs.openclaw.ai`

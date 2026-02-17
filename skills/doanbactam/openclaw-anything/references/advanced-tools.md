@@ -1,47 +1,57 @@
-# OpenClaw Advanced Tools & Execution Reference
+﻿# OpenClaw Advanced Tools Reference
 
-Detailed guide for specialized OpenClaw execution modes and tools.
+Reference normalized against:
+- `https://docs.openclaw.ai/tools`
+- `https://docs.openclaw.ai/tools/browser`
+- `https://docs.openclaw.ai/automation/cron-jobs`
+- `https://docs.openclaw.ai/plugins`
+- `https://docs.openclaw.ai/cli/gateway`
 
-## 🚀 Execution Tools
+Last verified: 2026-02-17.
 
-### Exec Tool (High-level CLI Access)
-The `exec` tool allows agents to run shell commands within the configured sandbox or native environment.
-- **Config**: `tools.exec.enabled: true`.
-- **CLI**: `openclaw exec --command "ls -la"`.
-- **Policy**: Controlled by `tools.policy` in `openclaw.json`.
+## Safety First
+This file documents advanced capabilities for operator awareness.
+It does not grant blanket authorization to execute privileged or high-risk operations.
+See `references/security-policy.md`.
 
-### Elevated Mode
-Allows the agent to request temporary high-privilege permissions for specific tasks.
-- **Usage**: Agent sends a request; user approves via Control UI or CLI (`openclaw doctor --fix`).
+## Gateway API Utility
+Use gateway API calls directly from CLI:
+- `openclaw gateway call <path>`
 
-### Sub-agents
-Hierarchical agent management where a primary agent can spawn and manage specialized sub-agents.
-- **Tool**: `subagents` (e.g., `spawn`, `delegate`).
-- **Context**: Sub-agents inherit specific parts of the parent's environment.
+Typical patterns:
+- health checks
+- custom automation hooks
+- debugging specific gateway endpoints
 
-### Thinking & Verbose Mode
-Enables detailed "Chain of Thought" logging and verbose output for debugging model reasoning.
-- **Toggle**: `openclaw gateway --verbose` or `/thinking high` in chat.
+## Managed Browser (High-risk)
+- `openclaw browser start`
+- `openclaw browser open <url>`
+- `openclaw browser screenshot [--full-page]`
+- `openclaw browser snapshot --format aria`
+- `openclaw browser stop`
 
-## 🎭 Chat Integration
+Requires explicit approval and wrapper opt-in.
 
-### OpenProse (Workflow Orchestration)
-Advanced multi-agent scripting for parallel research and synthesis.
-- **Command**: `/prose run [path|url]`.
-- **File**: `.prose` files containing agent definitions and parallel blocks.
+## Cron Automation (High-risk)
+- `openclaw cron list`
+- `openclaw cron add ...`
+- `openclaw cron run <jobId>`
+- `openclaw cron remove <jobId>`
 
-### Talk Mode & Voice Wake
-Real-time interaction via speech.
-- **Hardware**: Requires Audio Node pairing (iOS/Android) or macOS companion app.
-- **CLI**: `openclaw system voice start`.
-- **Wake Word**: "Hey OpenClaw" (configurable on macOS).
+Creation, run, and delete operations require explicit approval.
 
-## 🧩 Extension System
+## Plugins (High-risk)
+- `openclaw plugins list`
+- `openclaw plugins install <path-or-url>`
+- `openclaw plugins enable <name>`
+- `openclaw plugins disable <name>`
 
-### Plugin Manifest
-Plugins are defined by a `manifest.json` and can extend the Gateway features.
-- **Install**: `openclaw plugins install [path]`.
-- **Enable**: `openclaw plugins enable [name]`.
+Install and enable operations should be limited to trusted sources.
 
-### Custom Tools
-Users can add custom JS/TS tools by placing them in the `tools/` directory of the workspace.
+## Upstream Runtime Capabilities (Awareness)
+Depending on OpenClaw runtime configuration, upstream may expose:
+- `exec` style arbitrary command execution
+- elevated permission workflows
+- sub-agent delegation
+
+Treat these as privileged features with explicit, per-action approval.

@@ -1,48 +1,43 @@
-# OpenClaw Deployment & Infrastructure Reference
+﻿# OpenClaw Deployment and Operations
 
-Guides for deploying and maintaining OpenClaw in production or shared environments.
+Reference normalized against:
+- `https://docs.openclaw.ai/install`
+- `https://docs.openclaw.ai/install/docker`
+- `https://docs.openclaw.ai/install/updating`
+- `https://docs.openclaw.ai/install/uninstall`
 
-## 🐳 Docker Deployment
+Last verified: 2026-02-17.
 
-### Docker Compose setup
-Used for containerized environments.
-- **Bootstrapping**: Run `./docker-setup.sh`.
-- **Primary Commands**:
-    - `docker compose up -d` (Start services).
-    - `docker compose run --rm openclaw-cli onboard` (Configure).
-    - `docker compose logs -f` (View output).
+## Local Install and Onboarding
+- Install CLI via official install flow from docs.
+- Run `openclaw onboard` to initialize and connect providers/channels.
+- Validate with `openclaw doctor`.
 
-### Environment Variables (.env)
-- `OPENCLAW_DOCKER_APT_PACKAGES`: Extra packages to install during build.
-- `OPENCLAW_EXTRA_MOUNTS`: Host paths for agent persistence.
-- `OPENCLAW_HOME_VOLUME`: Persistent named volume for `/home/node`.
+## Docker Deployment
+- Use the official Docker guide under `/install/docker`.
+- Typical lifecycle:
+  - `docker compose up -d`
+  - `docker compose logs -f`
+  - `docker compose down`
+- Keep OpenClaw state mounted on persistent volume.
 
-## ❄️ Nix Integration
-OpenClaw provides a Nix flake for reproducible environments.
-- **Run**: `nix run github:openclaw/openclaw`.
-- **Develop**: `nix develop`.
+## Service Lifecycle
+- `openclaw gateway install`: Install background service.
+- `openclaw gateway restart`: Restart service.
+- `openclaw gateway status`: Check runtime status.
+- `openclaw gateway uninstall`: Remove service.
 
-## 🔼 Maintenance & Updates
+## Updating and Rollback
+- Update CLI: `openclaw update`
+- If rollback is needed, reinstall pinned version using the official package path described in docs.
+- Re-run `openclaw doctor` after updates.
 
-### Updating the CLI
-- **NPM**: `npm install -g openclaw@latest`.
-- **Shell**: `curl -fsSL https://openclaw.ai/install.sh | bash`.
+## Uninstall
+- Use `openclaw uninstall` for full removal flow.
+- Confirm whether state data should be preserved or removed.
 
-### Rolling Back
-If an update causes issues, install a specific version:
-`npm install -g openclaw@x.y.z`.
-
-### Resetting State
-Wipe specific session or entire config:
-- `openclaw reset --sessions` (Logout channels only).
-- `openclaw reset --all` (Factory reset).
-
-## ☁️ Remote Hosting
-
-### Hetzner / VPS
-- **Recommended**: Deploy via Docker for isolated environments.
-- **Binding**: Use `openclaw gateway --bind 0.0.0.0 --token [SECRET]` and connect via SSH tunnel or VPN (Tailscale).
-
-### Health Checks
-Monitor the gateway endpoint:
-`GET http://[ip]:18789/health` -> returns `200 OK`.
+## Production Safety Checklist
+- Set strong `gateway.auth.token`.
+- Avoid public bind unless required.
+- Use VPN/Tailscale or private network for remote access.
+- Monitor with `openclaw gateway health`.

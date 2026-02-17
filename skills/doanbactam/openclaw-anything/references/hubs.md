@@ -1,38 +1,41 @@
-# OpenClaw Documentation Hubs
+﻿# OpenClaw Documentation Hubs
 
-Comprehensive list of all major documentation hubs within the OpenClaw ecosystem.
+Primary docs root:
+- https://docs.openclaw.ai/
 
-## 🚀 Quick Start
-- [Index Overview](https://docs.openclaw.ai/)
-- [Getting Started](https://docs.openclaw.ai/start/getting-started)
-- [Onboarding Guide](https://docs.openclaw.ai/start/onboarding)
-- [Setup Wizard](https://docs.openclaw.ai/start/wizard)
-- [Setup Reference](https://docs.openclaw.ai/start/setup)
-- [Help & Support](https://docs.openclaw.ai/help)
+Last verified: 2026-02-17.
 
-## 📦 Installation & Updates
-- [Docker Deployment](https://docs.openclaw.ai/install/docker)
-- [Nix Integration](https://docs.openclaw.ai/install/nix)
-- [Updating / Rollback](https://docs.openclaw.ai/install/updating)
-- [Bun Workflow (Experimental)](https://docs.openclaw.ai/install/bun)
+## Start and Install
+- https://docs.openclaw.ai/start/getting-started
+- https://docs.openclaw.ai/start/onboarding
+- https://docs.openclaw.ai/install
+- https://docs.openclaw.ai/install/docker
+- https://docs.openclaw.ai/install/updating
+- https://docs.openclaw.ai/install/migrating
+- https://docs.openclaw.ai/install/uninstall
 
-## 🛠️ Tools & Automation
-- [Tools Surface](https://docs.openclaw.ai/tools)
-- [CLI Reference](https://docs.openclaw.ai/cli)
-- [Exec Tool](https://docs.openclaw.ai/tools/exec)
-- [Cron Jobs](https://docs.openclaw.ai/automation/cron-jobs)
-- [Browser Control](https://docs.openclaw.ai/tools/browser)
-- [Sub-agents](https://docs.openclaw.ai/tools/subagents)
+## CLI and Gateway
+- https://docs.openclaw.ai/cli
+- https://docs.openclaw.ai/cli/config
+- https://docs.openclaw.ai/cli/gateway
+- https://docs.openclaw.ai/cli/channels
+- https://docs.openclaw.ai/cli/models
+- https://docs.openclaw.ai/cli/cron
+- https://docs.openclaw.ai/cli/browser
+- https://docs.openclaw.ai/cli/plugins
+- https://docs.openclaw.ai/cli/pairing
 
-## 📱 Platforms
-- [macOS Guide](https://docs.openclaw.ai/platforms/macos)
-- [Windows (WSL2)](https://docs.openclaw.ai/platforms/windows)
-- [Linux Setup](https://docs.openclaw.ai/platforms/linux)
-- [Android / iOS Nodes](https://docs.openclaw.ai/platforms)
-- [Web Surfaces](https://docs.openclaw.ai/web)
+## Platform and Architecture
+- https://docs.openclaw.ai/platforms
+- https://docs.openclaw.ai/platforms/windows
+- https://docs.openclaw.ai/platforms/macos
+- https://docs.openclaw.ai/platforms/linux
+- https://docs.openclaw.ai/gateway/configuration
+- https://docs.openclaw.ai/gateway/network-model
+- https://docs.openclaw.ai/gateway/multiple-gateways
 
-## 🧠 Core Concepts
-- [AI Models](https://docs.openclaw.ai/concepts/models)
-- [Gateway Configuration](https://docs.openclaw.ai/gateway/configuration)
-- [Nodes Overview](https://docs.openclaw.ai/nodes)
-- [Service Discovery](https://docs.openclaw.ai/gateway/discovery)
+## Tools and Automation
+- https://docs.openclaw.ai/tools
+- https://docs.openclaw.ai/tools/browser
+- https://docs.openclaw.ai/automation/cron-jobs
+- https://docs.openclaw.ai/plugins
