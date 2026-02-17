@@ -32,18 +32,6 @@ class Config:
             except (json.JSONDecodeError, IOError):
                 self._config = {}
         
-        # Also check legacy credentials location
-        if not self._config.get("apiKey"):
-            legacy_creds = Path.home() / ".clawdbot" / "credentials" / "linear.json"
-            if legacy_creds.exists():
-                try:
-                    with open(legacy_creds, "r") as f:
-                        legacy = json.load(f)
-                        if "apiKey" in legacy and "apiKey" not in self._config:
-                            self._config["apiKey"] = legacy["apiKey"]
-                except (json.JSONDecodeError, IOError):
-                    pass
-        
         # Environment variables override config file
         env_mappings = {
             "LINEAR_API_KEY": "apiKey",
@@ -77,10 +65,10 @@ class Config:
         """Get the done state ID."""
         return self._config.get("doneStateId")
     
-    def save(self, api_key: str, team_id: str, state_id: str, 
+    def save(self, api_key: str, team_id: str, state_id: str,
              done_state_id: Optional[str] = None) -> None:
         """Save configuration to file.
-        
+
         Args:
             api_key: Linear API key
             team_id: Team ID for todos
@@ -88,19 +76,22 @@ class Config:
             done_state_id: State ID for completed todos
         """
         self.CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-        
+
         config = {
             "apiKey": api_key,
             "teamId": team_id,
             "stateId": state_id,
         }
-        
+
         if done_state_id:
             config["doneStateId"] = done_state_id
-        
+
+        # Write with restrictive permissions (user read/write only)
+        import stat
         with open(self.CONFIG_FILE, "w") as f:
             json.dump(config, f, indent=2)
-        
+        self.CONFIG_FILE.chmod(stat.S_IRUSR | stat.S_IWUSR)
+
         self._config = config
     
     def is_configured(self) -> bool:

@@ -1,11 +1,78 @@
 ---
 name: linear-todos
-description: Manage todos and reminders using Linear as the backend. Create tasks with natural language dates ("tomorrow", "next Monday"), priorities, and smart scheduling. Includes daily review and CLI tools for complete todo workflow.
+description: A CLI tool that executes Python source code to manage todos via Linear's API. Creates tasks with natural language dates, priorities, and scheduling. This is a source-execution skill - code in src/linear_todos/ runs when commands are invoked.
 author: K
 tags: [todos, linear, tasks, reminders, productivity]
+metadata:
+  openclaw:
+    primaryEnv: LINEAR_API_KEY
+    requires:
+      env: [LINEAR_API_KEY]
+      config: [~/.config/linear-todos/config.json]
+    install:
+      - kind: uv
+        id: linear-todos
+        label: Linear Todos CLI
 ---
 
 # Linear Todos
+
+> **⚠️  This is a SOURCE-EXECUTION skill.** The agent runs Python code from `src/linear_todos/` when you invoke CLI commands. This is **not** instruction-only. Review `src/linear_todos/api.py` before first use.
+>
+> **🔐 Security Note:** This skill stores your Linear API key in plaintext JSON at `~/.config/linear-todos/config.json` **only if you run the `setup` command**. Use a dedicated API key with minimal scope. The key is only used for Linear API calls and is never transmitted elsewhere. Prefer environment variables (`LINEAR_API_KEY`) to avoid persisted state.
+>
+> **Audit Info:** This skill makes HTTPS requests **only** to `api.linear.app` (Linear's official GraphQL API). No data is sent elsewhere. See `src/linear_todos/api.py` for the API client implementation.
+
+## Credentials
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `LINEAR_API_KEY` | **Yes** | Your Linear API key from [linear.app/settings/api](https://linear.app/settings/api) |
+| `LINEAR_TEAM_ID` | No | Default team ID for todos |
+| `LINEAR_STATE_ID` | No | Default state for new todos |
+| `LINEAR_DONE_STATE_ID` | No | State for completed todos |
+
+**Config Path:** `~/.config/linear-todos/config.json` (created by `setup`, permissions 0o600)
+
+## Security & Auditing
+
+### What This Skill Does
+
+- **HTTP Requests:** Makes HTTPS requests **only** to `https://api.linear.app/graphql` (Linear's official API). No telemetry, no third-party services.
+- **Data Storage:** Stores your API key and config in `~/.config/linear-todos/config.json` (plaintext, permissions 0o600) **only if you run the `setup` command**. Team/issue data is fetched fresh each run — nothing is cached locally except your config.
+- **Runtime Behavior:** This skill runs from bundled Python source code (not preinstalled system tools). The agent executes `main.py` and code in `src/linear_todos/` when you run CLI commands.
+- **Setup Behavior:** During interactive setup, the wizard temporarily sets `LINEAR_API_KEY` in the process environment to test the key. This is only during the setup session and is not persisted.
+- **No Auto-Enable:** Does not request platform privileges (`always: false`). Will not auto-enable itself for all agents.
+- **Code Locations:**
+  - `src/linear_todos/api.py` — All HTTP requests to Linear
+  - `src/linear_todos/config.py` — Config file handling
+  - `src/linear_todos/setup_wizard.py` — Interactive setup
+  - `src/linear_todos/cli.py` — CLI commands
+
+### Recommended Security Practices
+
+1. **Use a dedicated API key:** Create a separate Linear API token with minimal scope for this skill. Revoke it if you uninstall or stop using the skill.
+2. **Prefer environment variables:** Set `LINEAR_API_KEY` in your shell instead of running `setup` — no plaintext file is created.
+3. **Audit the code:** Review `src/linear_todos/api.py` to verify HTTP destinations before first use.
+4. **Run initial setup in isolation:** If unsure, run the skill in a container/VM for the first setup to inspect behavior.
+
+### Cron Jobs (Optional)
+
+The file `cron-jobs.txt` contains **example** cron entries for daily digests. **It does NOT automatically install them.** Adding cron jobs requires manual action:
+
+```bash
+# Review the examples first:
+cat cron-jobs.txt
+
+# If you want to use them, edit your crontab:
+crontab -e
+```
+
+**Preferred alternative:** Use OpenClaw's built-in cron instead of system crontab:
+```bash
+openclaw cron add --name "morning-digest" --schedule "0 8 * * *" \
+  --payload "linear-todos digest" --session-target isolated
+```
 
 A powerful todo management system built on Linear with smart date parsing, priorities, and a complete CLI workflow.
 
@@ -38,7 +105,7 @@ uv run python main.py review
 
 ### 1. Get API Key
 
-Get your API key from [linear.app/settings/api](https://linear.app/settings/api)
+Get your API key from [linear.app/settings/api](https://linear.app/settings/api). **Recommendation:** Create a dedicated API key with minimal scope for this skill.
 
 ### 2. Run Setup
 
@@ -51,7 +118,7 @@ This interactive wizard will:
 - List your Linear teams
 - Let you select your todo team
 - Configure initial and done states
-- Save settings to `~/.config/linear-todos/config.json`
+- Save settings to `~/.config/linear-todos/config.json` (plaintext JSON)
 
 ### 3. Manual Configuration (optional)
 

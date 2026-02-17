@@ -1,6 +1,6 @@
 """Linear Todos - A powerful todo management system built on Linear."""
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __all__ = ["Config", "LinearAPI", "DateParser", "cli"]
 
 from linear_todos.config import Config

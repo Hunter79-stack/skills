@@ -24,8 +24,8 @@ def run_setup():
         click.echo()
         click.echo("You can store it in one of these ways:")
         click.echo("  1. Environment variable: export LINEAR_API_KEY='lin_api_...'")
-        click.echo("  2. Credentials file: ~/.clawdbot/credentials/linear.json")
-        click.echo('     {"apiKey": "lin_api_..."}')
+        click.echo("  2. Config file (created by this wizard): ~/.config/linear-todos/config.json")
+        click.echo("     (Recommended: use env var for better security)")
         click.echo()
         api_key = click.prompt("Enter your Linear API key", hide_input=True)
         

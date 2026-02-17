@@ -132,20 +132,20 @@ class LinearAPI:
         Returns:
             List of state dictionaries with id, name, type
         """
-        query = f"""
-        {{
-            team(id: "{team_id}") {{
-                states {{
-                    nodes {{
+        query = """
+        query GetTeamStates($teamId: String!) {
+            team(id: $teamId) {
+                states {
+                    nodes {
                         id
                         name
                         type
-                    }}
-                }}
-            }}
-        }}
+                    }
+                }
+            }
+        }
         """
-        response = self._make_request(query)
+        response = self._make_request(query, {"teamId": team_id})
         return response["data"]["team"]["states"]["nodes"]
     
     def get_team_issues(self, team_id: str, include_completed: bool = False,
@@ -160,16 +160,11 @@ class LinearAPI:
         Returns:
             List of issue dictionaries
         """
-        if include_completed:
-            filter_str = ""
-        else:
-            filter_str = 'filter: { state: { type: { nin: ["completed", "canceled"] } } }'
-        
-        query = f"""
-        {{
-            team(id: "{team_id}") {{
-                issues(first: {first}, {filter_str}) {{
-                    nodes {{
+        query = """
+        query GetTeamIssues($teamId: String!, $first: Int) {
+            team(id: $teamId) {
+                issues(first: $first) {
+                    nodes {
                         id
                         identifier
                         title
@@ -177,22 +172,32 @@ class LinearAPI:
                         priority
                         dueDate
                         archivedAt
-                        state {{
+                        state {
                             id
                             name
                             type
-                        }}
-                        assignee {{
+                        }
+                        assignee {
                             id
                             name
-                        }}
-                    }}
-                }}
-            }}
-        }}
+                        }
+                    }
+                }
+            }
+        }
         """
-        response = self._make_request(query)
-        return response["data"]["team"]["issues"]["nodes"]
+        variables = {"teamId": team_id, "first": first}
+        response = self._make_request(query, variables)
+        issues = response["data"]["team"]["issues"]["nodes"]
+        
+        # Filter client-side to avoid GraphQL injection
+        if not include_completed:
+            issues = [
+                issue for issue in issues
+                if issue.get("state", {}).get("type") not in ("completed", "canceled")
+            ]
+        
+        return issues
     
     def get_issue(self, issue_id: str) -> Dict[str, Any]:
         """Get a single issue by ID.
@@ -203,38 +208,38 @@ class LinearAPI:
         Returns:
             Issue dictionary
         """
-        query = f"""
-        {{
-            issue(id: "{issue_id}") {{
+        query = """
+        query GetIssue($issueId: String!) {
+            issue(id: $issueId) {
                 id
                 identifier
                 title
                 description
-                state {{
+                state {
                     id
                     name
                     type
-                }}
-                assignee {{
+                }
+                assignee {
                     id
                     name
-                }}
-                team {{
+                }
+                team {
                     id
                     name
-                }}
+                }
                 priority
                 dueDate
                 url
-                labels {{
-                    nodes {{
+                labels {
+                    nodes {
                         name
-                    }}
-                }}
-            }}
-        }}
+                    }
+                }
+            }
+        }
         """
-        response = self._make_request(query)
+        response = self._make_request(query, {"issueId": issue_id})
         return response["data"]["issue"]
     
     def create_issue(self, team_id: str, title: str, 
@@ -257,41 +262,44 @@ class LinearAPI:
         Returns:
             Created issue dictionary with success flag
         """
-        # Build input fields
-        input_fields = [f'teamId: "{team_id}"', f'title: "{self._escape_string(title)}"']
-        
-        if description:
-            input_fields.append(f'description: "{self._escape_string(description)}"')
-        if state_id:
-            input_fields.append(f'stateId: "{state_id}"')
-        if priority is not None:
-            input_fields.append(f'priority: {priority}')
-        if due_date:
-            input_fields.append(f'dueDate: "{due_date}"')
-        if assignee_id:
-            input_fields.append(f'assigneeId: "{assignee_id}"')
-        
-        input_str = ", ".join(input_fields)
-        
-        query = f"""
-        mutation {{
-            issueCreate(input: {{ {input_str} }}) {{
+        query = """
+        mutation CreateIssue($input: IssueCreateInput!) {
+            issueCreate(input: $input) {
                 success
-                issue {{
+                issue {
                     id
                     identifier
                     title
                     url
                     dueDate
-                    state {{
+                    state {
                         name
-                    }}
-                }}
-            }}
-        }}
+                    }
+                }
+            }
+        }
         """
         
-        response = self._make_request(query)
+        # Build input variables safely
+        variables = {
+            "input": {
+                "teamId": team_id,
+                "title": title
+            }
+        }
+        
+        if description:
+            variables["input"]["description"] = description
+        if state_id:
+            variables["input"]["stateId"] = state_id
+        if priority is not None:
+            variables["input"]["priority"] = priority
+        if due_date:
+            variables["input"]["dueDate"] = due_date
+        if assignee_id:
+            variables["input"]["assigneeId"] = assignee_id
+        
+        response = self._make_request(query, variables)
         return response["data"]["issueCreate"]
     
     def update_issue(self, issue_id: str,
@@ -315,59 +323,47 @@ class LinearAPI:
         Returns:
             Updated issue dictionary with success flag
         """
-        # Build input fields
-        input_fields = []
-        
-        if title is not None:
-            input_fields.append(f'title: "{self._escape_string(title)}"')
-        if description is not None:
-            input_fields.append(f'description: "{self._escape_string(description)}"')
-        if state_id is not None:
-            input_fields.append(f'stateId: "{state_id}"')
-        if priority is not None:
-            input_fields.append(f'priority: {priority}')
-        if due_date is not None:
-            input_fields.append(f'dueDate: "{due_date}"')
-        if assignee_id is not None:
-            input_fields.append(f'assigneeId: "{assignee_id}"')
-        
-        if not input_fields:
-            raise LinearError("No update fields provided")
-        
-        input_str = ", ".join(input_fields)
-        
-        query = f"""
-        mutation {{
-            issueUpdate(id: "{issue_id}", input: {{ {input_str} }}) {{
+        query = """
+        mutation UpdateIssue($id: String!, $input: IssueUpdateInput!) {
+            issueUpdate(id: $id, input: $input) {
                 success
-                issue {{
+                issue {
                     id
                     identifier
                     title
                     dueDate
-                    state {{
+                    state {
                         id
                         name
-                    }}
-                }}
-            }}
-        }}
+                    }
+                }
+            }
+        }
         """
         
-        response = self._make_request(query)
+        # Build input variables safely
+        variables = {"input": {}}
+        
+        if title is not None:
+            variables["input"]["title"] = title
+        if description is not None:
+            variables["input"]["description"] = description
+        if state_id is not None:
+            variables["input"]["stateId"] = state_id
+        if priority is not None:
+            variables["input"]["priority"] = priority
+        if due_date is not None:
+            variables["input"]["dueDate"] = due_date
+        if assignee_id is not None:
+            variables["input"]["assigneeId"] = assignee_id
+        
+        if not variables["input"]:
+            raise LinearError("No update fields provided")
+        
+        variables["id"] = issue_id
+        
+        response = self._make_request(query, variables)
         return response["data"]["issueUpdate"]
-    
-    @staticmethod
-    def _escape_string(s: str) -> str:
-        """Escape special characters in a string for GraphQL.
-        
-        Args:
-            s: Input string
-            
-        Returns:
-            Escaped string
-        """
-        return s.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\r', '\\r')
     
     @staticmethod
     def priority_to_label(priority: int) -> str:

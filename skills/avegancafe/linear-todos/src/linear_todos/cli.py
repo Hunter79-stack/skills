@@ -1,6 +1,7 @@
 """Click CLI for Linear Todos."""
 
 import json
+import secrets
 import sys
 from typing import Optional
 
@@ -283,6 +284,7 @@ def snooze(ctx, issue_id, when):
 
 
 # Fun morning greetings for digest
+# Note: secrets.choice used below for security scan compliance (B311)
 MORNING_GREETINGS = [
     "🌅 Rise and grind!",
     "☕ Morning! Coffee's brewing, here's what's cooking:",
@@ -351,13 +353,13 @@ def digest(ctx):
         
         # Pick random greeting
         if due_today:
-            greeting = random.choice(MORNING_GREETINGS)
+            greeting = secrets.choice(MORNING_GREETINGS)
             click.echo(greeting)
             click.echo("")
             for line in due_today:
                 click.echo(line)
         else:
-            greeting = random.choice(NO_TASK_GREETINGS)
+            greeting = secrets.choice(NO_TASK_GREETINGS)
             click.echo(greeting)
             
     except LinearAPIError as e:
