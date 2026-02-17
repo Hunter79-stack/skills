@@ -1,6 +1,6 @@
 ---
 name: sveltekit-webapp
-version: 1.1.0
+version: 1.1.1
 description: |
   Scaffold and configure a production-ready SvelteKit PWA with opinionated defaults.
   Use when: creating a new web application, setting up a SvelteKit project, building a PWA,
