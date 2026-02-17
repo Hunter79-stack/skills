@@ -4,8 +4,16 @@
  * Apple Docs CLI - Query Apple Developer Documentation and WWDC Videos
  *
  * Direct integration with Apple's developer documentation APIs.
- * No external dependencies. All data from developer.apple.com.
+ * WWDC data indexed locally from developer.apple.com (see build-wwdc-index.js).
+ * No external dependencies or third-party packages.
  */
+
+import { readFileSync, existsSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const WWDC_DATA_DIR = join(__dirname, 'data', 'wwdc');
 
 // ============ APPLE API CONSTANTS ============
 
@@ -19,40 +27,6 @@ const APPLE_URLS = {
   TECHNOLOGY_OVERVIEWS_JSON: 'https://developer.apple.com/tutorials/data/documentation/TechnologyOverviews.json',
   SAMPLE_CODE_JSON: 'https://developer.apple.com/tutorials/data/documentation/SampleCode.json',
 };
-
-// WWDC - Apple's own pages
-const WWDC_URLS = {
-  SEARCH: 'https://developer.apple.com/search/',
-  VIDEO_PAGE: (year, id) => `https://developer.apple.com/videos/play/wwdc${year}/${id}/`,
-  VIDEOS_YEAR: (year) => `https://developer.apple.com/videos/wwdc${year}/`,
-  ALL_VIDEOS: 'https://developer.apple.com/videos/all-videos/',
-};
-
-// Static WWDC metadata (public knowledge, updated yearly)
-const WWDC_YEARS = [2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025];
-
-const WWDC_TOPICS = [
-  { name: 'Accessibility', slug: 'accessibility' },
-  { name: 'App Store & Distribution', slug: 'app-store-distribution' },
-  { name: 'Audio & Video', slug: 'audio-video' },
-  { name: 'Augmented Reality', slug: 'augmented-reality' },
-  { name: 'Design', slug: 'design' },
-  { name: 'Developer Tools', slug: 'developer-tools' },
-  { name: 'Extensions', slug: 'extensions' },
-  { name: 'Graphics & Games', slug: 'graphics-games' },
-  { name: 'Health & Fitness', slug: 'health-fitness' },
-  { name: 'Machine Learning & AI', slug: 'machine-learning-ai' },
-  { name: 'Maps & Location', slug: 'maps-location' },
-  { name: 'Networking', slug: 'networking' },
-  { name: 'Privacy & Security', slug: 'privacy-security' },
-  { name: 'Safari & Web', slug: 'safari-web' },
-  { name: 'Swift', slug: 'swift' },
-  { name: 'SwiftUI & UI Frameworks', slug: 'swiftui-ui-frameworks' },
-  { name: 'System Services', slug: 'system-services' },
-  { name: 'Testing', slug: 'testing' },
-  { name: 'visionOS', slug: 'visionos' },
-  { name: 'Widgets & App Intents', slug: 'widgets-app-intents' },
-];
 
 // ============ HTTP CLIENT ============
 
@@ -83,60 +57,62 @@ async function fetchText(url) {
   return response.text();
 }
 
+// ============ LOCAL WWDC DATA ============
+
+function loadJsonFile(path) {
+  if (!existsSync(path)) return null;
+  return JSON.parse(readFileSync(path, 'utf-8'));
+}
+
+function loadWwdcIndex() {
+  return loadJsonFile(join(WWDC_DATA_DIR, 'index.json'));
+}
+
+function loadAllVideos() {
+  return loadJsonFile(join(WWDC_DATA_DIR, 'all-videos.json'));
+}
+
+function loadWwdcTopics() {
+  return loadJsonFile(join(WWDC_DATA_DIR, 'topics.json'));
+}
+
+function loadYearVideos(year) {
+  return loadJsonFile(join(WWDC_DATA_DIR, 'by-year', `${year}.json`));
+}
+
+function loadTopicVideos(slug) {
+  return loadJsonFile(join(WWDC_DATA_DIR, 'by-topic', `${slug}.json`));
+}
+
 // ============ SEARCH ============
 
 async function searchAppleDocs(query, limit = 10) {
   const url = `${APPLE_URLS.SEARCH}?q=${encodeURIComponent(query)}`;
   const html = await fetchText(url);
-  return parseSearchResults(html, limit, 'documentation');
+  return parseSearchResults(html, limit);
 }
 
-function parseSearchResults(html, limit, type = null) {
+function parseSearchResults(html, limit) {
   const results = [];
   const seen = new Set();
 
-  // Match documentation links
-  if (!type || type === 'documentation') {
-    const docRegex = /<a[^>]+href="(\/documentation\/[^"]+)"[^>]*>([^<]+)<\/a>/gi;
-    let match;
-    while ((match = docRegex.exec(html)) !== null && results.length < limit) {
-      const url = match[1];
-      const title = match[2].trim().replace(/<[^>]*>/g, '');
-      if (seen.has(url)) continue;
-      seen.add(url);
-      if (url.includes('/design/human-interface-guidelines/')) continue;
-      if (url.includes('/download/')) continue;
+  const docRegex = /<a[^>]+href="(\/documentation\/[^"]+)"[^>]*>([^<]+)<\/a>/gi;
+  let match;
+  while ((match = docRegex.exec(html)) !== null && results.length < limit) {
+    const url = match[1];
+    const title = match[2].trim().replace(/<[^>]*>/g, '');
+    if (seen.has(url)) continue;
+    seen.add(url);
+    if (url.includes('/design/human-interface-guidelines/')) continue;
+    if (url.includes('/download/')) continue;
 
-      const frameworkMatch = url.match(/\/documentation\/([^/]+)\//);
-      results.push({
-        title: title || url.split('/').pop(),
-        url: `https://developer.apple.com${url}`,
-        framework: frameworkMatch ? frameworkMatch[1] : null,
-        type: 'documentation'
-      });
-    }
-  }
-
-  // Match video links
-  if (!type || type === 'video') {
-    const videoRegex = /<a[^>]+href="(\/videos\/play\/wwdc(\d{4})\/(\d+)\/?)"[^>]*>([^<]*)<\/a>/gi;
-    let match;
-    while ((match = videoRegex.exec(html)) !== null && results.length < limit) {
-      const url = match[1];
-      const year = match[2];
-      const id = match[3];
-      const title = match[4].trim().replace(/<[^>]*>/g, '');
-      if (seen.has(url)) continue;
-      seen.add(url);
-
-      results.push({
-        title: title || `WWDC${year} Session ${id}`,
-        url: `https://developer.apple.com${url}`,
-        year: parseInt(year),
-        id,
-        type: 'video'
-      });
-    }
+    const frameworkMatch = url.match(/\/documentation\/([^/]+)\//);
+    results.push({
+      title: title || url.split('/').pop(),
+      url: `https://developer.apple.com${url}`,
+      framework: frameworkMatch ? frameworkMatch[1] : null,
+      type: 'documentation'
+    });
   }
 
   return results;
@@ -145,8 +121,7 @@ function parseSearchResults(html, limit, type = null) {
 // ============ SYMBOL SEARCH ============
 
 async function searchFrameworkSymbols(query, limit = 20) {
-  const results = await searchAppleDocs(query, limit);
-  return results;
+  return await searchAppleDocs(query, limit);
 }
 
 // ============ FETCH DOC CONTENT ============
@@ -213,29 +188,25 @@ function extractTextFromContent(content) {
 // ============ LIST TECHNOLOGIES ============
 
 async function listTechnologies() {
-  const data = await fetchJson(APPLE_URLS.TECHNOLOGIES_JSON);
-  return data;
+  return await fetchJson(APPLE_URLS.TECHNOLOGIES_JSON);
 }
 
 // ============ RELATED APIS ============
 
 async function getRelatedApis(symbolName) {
-  const results = await searchAppleDocs(symbolName, 5);
-  return results;
+  return await searchAppleDocs(symbolName, 5);
 }
 
 // ============ PLATFORM COMPATIBILITY ============
 
 async function getPlatformCompatibility(symbolName) {
-  const results = await searchAppleDocs(`${symbolName} platform compatibility`, 5);
-  return results;
+  return await searchAppleDocs(`${symbolName} platform compatibility`, 5);
 }
 
 // ============ SIMILAR APIS ============
 
 async function findSimilarApis(symbolName) {
-  const results = await searchAppleDocs(`${symbolName} alternative replacement`, 5);
-  return results;
+  return await searchAppleDocs(`${symbolName} alternative replacement`, 5);
 }
 
 // ============ DOCUMENTATION UPDATES ============
@@ -254,11 +225,10 @@ async function getDocumentationUpdates(limit = 10) {
 async function getTechnologyOverviews(technology) {
   try {
     const data = await fetchJson(APPLE_URLS.TECHNOLOGY_OVERVIEWS_JSON);
-    const filtered = data.filter(t =>
+    return data.filter(t =>
       t.name?.toLowerCase().includes(technology.toLowerCase()) ||
       t.title?.toLowerCase().includes(technology.toLowerCase())
     );
-    return filtered;
   } catch {
     return [{ error: 'Could not fetch technology overviews' }];
   }
@@ -269,81 +239,75 @@ async function getTechnologyOverviews(technology) {
 async function getSampleCode(technology, limit = 10) {
   try {
     const data = await fetchJson(APPLE_URLS.SAMPLE_CODE_JSON);
-    const filtered = (data.sampleCode || data)
+    return (data.sampleCode || data)
       .filter(s => s.title?.toLowerCase().includes(technology.toLowerCase()))
       .slice(0, limit);
-    return filtered;
   } catch {
     return [{ error: 'Could not fetch sample code' }];
   }
 }
 
-// ============ WWDC - APPLE'S OWN PAGES ============
+// ============ WWDC - LOCAL INDEX ============
 
-async function searchWwdcVideos(query, year = null, limit = 10) {
-  // Use Apple's own search with video type filtering
-  const searchQuery = year ? `WWDC ${year} ${query}` : `WWDC ${query}`;
-  const url = `${WWDC_URLS.SEARCH}?q=${encodeURIComponent(searchQuery)}&type=Videos`;
-  const html = await fetchText(url);
-
-  // Parse video results from search HTML
-  const results = [];
-  const seen = new Set();
-
-  // Match video links from Apple's search results
-  const videoRegex = /<a[^>]+href="(\/videos\/play\/wwdc(\d{4})\/(\d+)\/?)"[^>]*>([\s\S]*?)<\/a>/gi;
-  let match;
-  while ((match = videoRegex.exec(html)) !== null && results.length < limit) {
-    const path = match[1];
-    const videoYear = parseInt(match[2]);
-    const id = match[3];
-    const rawTitle = match[4].replace(/<[^>]*>/g, '').trim();
-
-    if (year && videoYear !== parseInt(year)) continue;
-
-    const key = `${videoYear}-${id}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-
-    results.push({
-      id,
-      year: videoYear,
-      title: rawTitle || `Session ${id}`,
-      url: `https://developer.apple.com${path}`,
-    });
+function searchWwdcVideos(query, year = null, topic = null, limit = 10) {
+  const data = loadAllVideos();
+  if (!data) {
+    console.error('WWDC index not found. Run: node build-wwdc-index.js');
+    return [];
   }
 
-  // Fallback: try broader regex if first pass found nothing
-  if (results.length === 0) {
-    const broadRegex = /href="[^"]*\/videos\/play\/wwdc(\d{4})\/(\d+)\/?"/gi;
-    const titleRegex = /<h\d[^>]*>([^<]+)<\/h\d>/gi;
-    const titles = [];
-    let titleMatch;
-    while ((titleMatch = titleRegex.exec(html)) !== null) {
-      titles.push(titleMatch[1].trim());
-    }
+  let videos = data.videos || [];
 
-    let idx = 0;
-    while ((match = broadRegex.exec(html)) !== null && results.length < limit) {
-      const videoYear = parseInt(match[1]);
-      const id = match[2];
-      if (year && videoYear !== parseInt(year)) continue;
-
-      const key = `${videoYear}-${id}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-
-      results.push({
-        id,
-        year: videoYear,
-        title: titles[idx] || `WWDC${videoYear} Session ${id}`,
-        url: `https://developer.apple.com/videos/play/wwdc${videoYear}/${id}/`,
-      });
-      idx++;
-    }
+  // Filter by year
+  if (year) {
+    videos = videos.filter(v => v.year === parseInt(year));
   }
 
-  return results;
+  // Filter by topic
+  if (topic) {
+    const t = topic.toLowerCase();
+    videos = videos.filter(v =>
+      v.topics?.some(tp => tp.toLowerCase().includes(t))
+    );
+  }
+
+  // Search by query
+  if (query) {
+    const q = query.toLowerCase();
+    const terms = q.split(/\s+/);
+
+    // Score-based search for better results
+    videos = videos
+      .map(v => {
+        let score = 0;
+        const title = (v.title || '').toLowerCase();
+        const desc = (v.description || '').toLowerCase();
+        const topics = (v.topics || []).join(' ').toLowerCase();
+
+        for (const term of terms) {
+          if (title.includes(term)) score += 10;
+          if (topics.includes(term)) score += 5;
+          if (desc.includes(term)) score += 3;
+        }
+
+        // Exact phrase match bonus
+        if (title.includes(q)) score += 20;
+
+        return { ...v, _score: score };
+      })
+      .filter(v => v._score > 0)
+      .sort((a, b) => b._score - a._score);
+  }
+
+  return videos.slice(0, limit).map(v => ({
+    id: v.id,
+    year: v.year,
+    title: v.title,
+    duration: v.duration,
+    topics: v.topics,
+    url: v.url,
+    ...(v.description ? { description: v.description } : {}),
+  }));
 }
 
 async function getWwdcVideoDetails(videoId, includeTranscript = true) {
@@ -355,108 +319,146 @@ async function getWwdcVideoDetails(videoId, includeTranscript = true) {
 
   const year = match[1];
   const id = match[2];
-  const url = WWDC_URLS.VIDEO_PAGE(year, id);
+
+  // First, get data from local index
+  const data = loadAllVideos();
+  const localVideo = data?.videos?.find(v => v.id === id && v.year === parseInt(year));
+
+  // Then fetch the Apple video page for additional details
+  const url = `https://developer.apple.com/videos/play/wwdc${year}/${id}/`;
+  let output = [];
 
   try {
     const html = await fetchText(url);
-    return parseWwdcVideoPage(html, year, id, url, includeTranscript);
-  } catch (err) {
-    return { error: `Could not fetch video ${year}-${id}: ${err.message}` };
-  }
-}
 
-function parseWwdcVideoPage(html, year, id, url, includeTranscript) {
-  let output = [];
+    // Extract title
+    const titleMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/i) ||
+                      html.match(/<title>([^<|]+)/i);
+    const title = titleMatch ? titleMatch[1].trim() : (localVideo?.title || `WWDC${year} Session ${id}`);
 
-  // Extract title
-  const titleMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/i) ||
-                    html.match(/<title>([^<|]+)/i);
-  const title = titleMatch ? titleMatch[1].trim() : `WWDC${year} Session ${id}`;
+    output.push(`# ${title}`);
+    output.push(`\nYear: ${year} | Session: ${id}`);
+    if (localVideo?.duration) output.push(`Duration: ${localVideo.duration}`);
+    if (localVideo?.topics?.length) output.push(`Topics: ${localVideo.topics.join(', ')}`);
+    output.push(`URL: ${url}`);
 
-  output.push(`# ${title}`);
-  output.push(`\nYear: ${year} | Session: ${id}`);
-  output.push(`URL: ${url}`);
-
-  // Extract description
-  const descMatch = html.match(/<meta[^>]+name="description"[^>]+content="([^"]+)"/i);
-  if (descMatch) {
-    output.push(`\n## Description\n${descMatch[1]}`);
-  }
-
-  // Extract description from page body
-  const bodyDescMatch = html.match(/<p[^>]+class="[^"]*description[^"]*"[^>]*>([\s\S]*?)<\/p>/i);
-  if (bodyDescMatch) {
-    const desc = bodyDescMatch[1].replace(/<[^>]*>/g, '').trim();
-    if (desc) output.push(`\n${desc}`);
-  }
-
-  // Extract related resources/links
-  const relatedLinks = [];
-  const relatedRegex = /href="(\/videos\/play\/wwdc\d{4}\/\d+\/?)"[^>]*>([^<]+)/gi;
-  let relMatch;
-  while ((relMatch = relatedRegex.exec(html)) !== null) {
-    const relUrl = relMatch[1];
-    const relTitle = relMatch[2].trim();
-    if (relUrl !== `/videos/play/wwdc${year}/${id}/`) {
-      relatedLinks.push({ title: relTitle, url: `https://developer.apple.com${relUrl}` });
+    // Extract description
+    const descMatch = html.match(/<meta[^>]+name="description"[^>]+content="([^"]+)"/i);
+    if (descMatch) {
+      output.push(`\n## Description\n${descMatch[1]}`);
     }
-  }
 
-  if (relatedLinks.length > 0) {
-    output.push(`\n## Related Sessions`);
-    relatedLinks.forEach(r => output.push(`  - ${r.title} (${r.url})`));
-  }
-
-  // Extract topics/tags
-  const topicMatches = [];
-  const topicRegex = /data-tag="([^"]+)"/gi;
-  let tMatch;
-  while ((tMatch = topicRegex.exec(html)) !== null) {
-    topicMatches.push(tMatch[1]);
-  }
-  if (topicMatches.length > 0) {
-    output.push(`\nTopics: ${topicMatches.join(', ')}`);
-  }
-
-  // Look for transcript section
-  if (includeTranscript) {
-    const transcriptMatch = html.match(/<section[^>]+class="[^"]*transcript[^"]*"[^>]*>([\s\S]*?)<\/section>/i);
-    if (transcriptMatch) {
-      const transcript = transcriptMatch[1]
-        .replace(/<[^>]*>/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-      if (transcript) {
-        output.push(`\n## Transcript\n${transcript.substring(0, 2000)}...`);
-        output.push(`\n[Full transcript at: ${url}]`);
+    // Extract related videos
+    const relatedLinks = [];
+    const relatedRegex = /href="(\/videos\/play\/wwdc(\d{4})\/(\d+)\/?)"[^>]*>/gi;
+    const seen = new Set([`${year}-${id}`]);
+    let m;
+    while ((m = relatedRegex.exec(html)) !== null) {
+      const key = `${m[2]}-${m[3]}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        // Look up title from local index
+        const relatedVideo = data?.videos?.find(v => v.id === m[3] && v.year === parseInt(m[2]));
+        relatedLinks.push({
+          title: relatedVideo?.title || `Session ${m[3]}`,
+          year: m[2],
+          id: m[3],
+          url: `https://developer.apple.com${m[1]}`,
+        });
       }
     }
-  }
 
-  // Extract download links
-  const downloadLinks = [];
-  const dlRegex = /href="([^"]+\.(mp4|pdf|zip|key))[^"]*"/gi;
-  let dlMatch;
-  while ((dlMatch = dlRegex.exec(html)) !== null) {
-    downloadLinks.push(dlMatch[1]);
-  }
-  if (downloadLinks.length > 0) {
-    output.push(`\n## Downloads`);
-    downloadLinks.forEach(d => output.push(`  - ${d}`));
+    if (relatedLinks.length > 0) {
+      output.push(`\n## Related Sessions`);
+      relatedLinks.forEach(r => output.push(`  - ${r.title} (WWDC${r.year} ${r.id})`));
+    }
+
+    // Look for transcript
+    if (includeTranscript) {
+      const transcriptMatch = html.match(/<section[^>]+class="[^"]*transcript[^"]*"[^>]*>([\s\S]*?)<\/section>/i);
+      if (transcriptMatch) {
+        const transcript = transcriptMatch[1]
+          .replace(/<[^>]*>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        if (transcript) {
+          output.push(`\n## Transcript\n${transcript.substring(0, 3000)}...`);
+          output.push(`\n[Full transcript at: ${url}]`);
+        }
+      }
+    }
+
+    // Extract download links
+    const downloadLinks = [];
+    const dlRegex = /href="([^"]+\.(mp4|pdf|zip|key))[^"]*"/gi;
+    let dlMatch;
+    while ((dlMatch = dlRegex.exec(html)) !== null) {
+      downloadLinks.push(dlMatch[1]);
+    }
+    if (downloadLinks.length > 0) {
+      output.push(`\n## Downloads`);
+      downloadLinks.forEach(d => output.push(`  - ${d}`));
+    }
+
+  } catch (err) {
+    // Fallback to local data only
+    if (localVideo) {
+      output.push(`# ${localVideo.title}`);
+      output.push(`\nYear: ${year} | Session: ${id}`);
+      if (localVideo.duration) output.push(`Duration: ${localVideo.duration}`);
+      if (localVideo.topics?.length) output.push(`Topics: ${localVideo.topics.join(', ')}`);
+      output.push(`URL: ${url}`);
+      if (localVideo.description) output.push(`\n## Description\n${localVideo.description}`);
+      output.push(`\n(Could not fetch live page: ${err.message})`);
+    } else {
+      return { error: `Video ${year}-${id} not found` };
+    }
   }
 
   return output.join('\n');
 }
 
 function listWwdcTopics() {
-  return WWDC_TOPICS;
+  const topics = loadWwdcTopics();
+  if (!topics) return [];
+
+  // Enrich with counts from index
+  const index = loadWwdcIndex();
+  if (index?.topics) {
+    return index.topics;
+  }
+
+  return topics;
 }
 
 function listWwdcYears() {
+  const index = loadWwdcIndex();
+  if (index) {
+    return {
+      totalVideos: index.totalVideos,
+      years: index.years,
+    };
+  }
+
+  // Fallback
   return {
-    years: WWDC_YEARS,
-    totalYears: WWDC_YEARS.length
+    totalVideos: 0,
+    years: [2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025].map(y => ({ year: y, count: 0 })),
   };
+}
+
+function getWwdcByTopic(topicSlug, limit = 20) {
+  const data = loadTopicVideos(topicSlug);
+  if (!data) return [];
+
+  return (data.videos || []).slice(0, limit);
+}
+
+function getWwdcByYear(year) {
+  const data = loadYearVideos(year);
+  if (!data) return [];
+
+  return data.videos || [];
 }
 
 // ============ OUTPUT FORMATTING ============
@@ -493,7 +495,9 @@ function outputResults(results, title) {
       log(`\n${i + 1}. ${r.title || r.name}`, 'cyan');
       if (r.framework) log(`   Framework: ${r.framework}`, 'dim');
       if (r.year) log(`   Year: ${r.year}`, 'dim');
+      if (r.duration) log(`   Duration: ${r.duration}`, 'dim');
       if (r.topics) log(`   Topics: ${(Array.isArray(r.topics) ? r.topics.join(', ') : r.topics)}`, 'dim');
+      if (r.count !== undefined) log(`   Videos: ${r.count}`, 'dim');
       if (r.slug) log(`   Slug: ${r.slug}`, 'dim');
       if (r.url) log(`   URL: ${r.url}`, 'dim');
     } else {
@@ -621,7 +625,7 @@ async function cmdWwdcSearch(query, options = {}) {
   }
 
   log(`\nSearching WWDC videos for: "${query}"`, 'bright');
-  const results = await searchWwdcVideos(query, options.year, options.limit || 10);
+  const results = searchWwdcVideos(query, options.year, options.topic, options.limit || 10);
   outputResults(results, 'WWDC Videos');
 }
 
@@ -650,12 +654,39 @@ async function cmdWwdcTopics() {
 async function cmdWwdcYears() {
   const data = listWwdcYears();
 
-  log(`\nWWDC Years (${data.totalYears} conferences):`, 'bright');
+  log(`\nWWDC Years (${data.totalVideos} total videos):`, 'bright');
   log('='.repeat(40), 'dim');
 
-  data.years.forEach(year => {
-    log(`  ${year}`, 'cyan');
+  data.years.forEach(y => {
+    const year = y.year || y;
+    const count = y.count !== undefined ? ` (${y.count} videos)` : '';
+    log(`  ${year}${count}`, 'cyan');
   });
+}
+
+async function cmdWwdcTopic(topicSlug, options = {}) {
+  if (!topicSlug) {
+    logError('Topic slug required');
+    log('Usage: apple-docs wwdc-topic "swift"');
+    log('Run: apple-docs wwdc-topics  to see available topics');
+    process.exit(1);
+  }
+
+  log(`\nWWDC videos for topic: "${topicSlug}"`, 'bright');
+  const results = getWwdcByTopic(topicSlug, options.limit || 20);
+  outputResults(results, `Topic: ${topicSlug}`);
+}
+
+async function cmdWwdcYear(year) {
+  if (!year) {
+    logError('Year required');
+    log('Usage: apple-docs wwdc-year 2024');
+    process.exit(1);
+  }
+
+  log(`\nWWDC${year} Videos:`, 'bright');
+  const results = getWwdcByYear(parseInt(year));
+  outputResults(results, `WWDC${year}`);
 }
 
 // ============ HELP ============
@@ -663,10 +694,11 @@ async function cmdWwdcYears() {
 function showHelp() {
   log(`
 ${colors.bright}Apple Docs CLI${colors.reset} - Query Apple Developer Documentation and WWDC Videos
-${colors.dim}Direct integration with developer.apple.com${colors.reset}
+${colors.dim}Direct integration with developer.apple.com | 1,260+ WWDC sessions indexed${colors.reset}
 
 ${colors.bright}SETUP:${colors.reset}
   No setup required - works out of the box.
+  To rebuild WWDC index: node build-wwdc-index.js
 
 ${colors.bright}SEARCH COMMANDS:${colors.reset}
   apple-docs search "query"              Search Apple Developer Documentation
@@ -688,14 +720,17 @@ ${colors.bright}WWDC VIDEOS:${colors.reset}
   apple-docs wwdc-search "async"         Search WWDC sessions (2014-2025)
   apple-docs wwdc-video 2024-100         Get video details and transcript
   apple-docs wwdc-topics                 List WWDC topic categories
-  apple-docs wwdc-years                  List available WWDC years
+  apple-docs wwdc-topic "swift"          List videos by topic slug
+  apple-docs wwdc-years                  List available WWDC years with counts
+  apple-docs wwdc-year 2024              List all videos for a specific year
 
 ${colors.bright}OPTIONS:${colors.reset}
-  --limit <n>     Limit results (default varies)
-  --category      Filter by technology category
-  --framework     Filter by framework name
-  --year          Filter by WWDC year
-  --no-transcript Skip transcript for WWDC videos
+  --limit <n>       Limit results (default varies)
+  --category        Filter by technology category
+  --framework       Filter by framework name
+  --year            Filter WWDC by year
+  --topic           Filter WWDC by topic
+  --no-transcript   Skip transcript for WWDC videos
 
 ${colors.bright}EXAMPLES:${colors.reset}
   ${colors.dim}# Search for SwiftUI animations${colors.reset}
@@ -704,17 +739,17 @@ ${colors.bright}EXAMPLES:${colors.reset}
   ${colors.dim}# Find UITableView delegate methods${colors.reset}
   apple-docs symbols "UITableViewDelegate"
 
-  ${colors.dim}# Check iOS version support for Vision framework${colors.reset}
-  apple-docs platform "VNRecognizeTextRequest"
+  ${colors.dim}# Search WWDC for Swift concurrency${colors.reset}
+  apple-docs wwdc-search "swift concurrency"
 
-  ${colors.dim}# Find WWDC sessions about async/await${colors.reset}
-  apple-docs wwdc-search "async await"
+  ${colors.dim}# Get specific WWDC video${colors.reset}
+  apple-docs wwdc-video 2024-10169
 
-  ${colors.dim}# Get a specific WWDC video${colors.reset}
-  apple-docs wwdc-video 2024-100
+  ${colors.dim}# List all 2025 sessions${colors.reset}
+  apple-docs wwdc-year 2025
 
-  ${colors.dim}# List all available WWDC years${colors.reset}
-  apple-docs wwdc-years
+  ${colors.dim}# Browse SwiftUI topic${colors.reset}
+  apple-docs wwdc-topic "swiftui-ui-frameworks"
   `);
 }
 
@@ -739,7 +774,7 @@ async function main() {
 
     if (arg.startsWith('--')) {
       const key = arg.substring(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-      const valueOptions = ['limit', 'category', 'framework', 'year'];
+      const valueOptions = ['limit', 'category', 'framework', 'year', 'topic'];
       if (valueOptions.includes(key)) {
         options[key] = args[i + 1];
         i += 2;
@@ -753,14 +788,18 @@ async function main() {
     } else if (!arg.startsWith('-') && !['search', 'symbols', 'wwdc-search'].includes(command)) {
       if (command === 'doc') {
         options.path = arg;
-      } else if (command === 'apis' || command === 'platform' || command === 'similar') {
+      } else if (['apis', 'platform', 'similar'].includes(command)) {
         options.symbol = arg;
-      } else if (command === 'tech' || command === 'overview') {
+      } else if (['tech', 'overview'].includes(command)) {
         options.technology = arg;
       } else if (command === 'samples') {
         options.technology = arg;
       } else if (command === 'wwdc-video') {
         options.id = arg;
+      } else if (command === 'wwdc-topic') {
+        options.topicSlug = arg;
+      } else if (command === 'wwdc-year') {
+        options.yearArg = arg;
       }
       i++;
     } else {
@@ -769,7 +808,7 @@ async function main() {
   }
 
   // Handle positional query for search commands
-  if (command === 'search' || command === 'symbols' || command === 'wwdc-search') {
+  if (['search', 'symbols', 'wwdc-search'].includes(command)) {
     query = args.slice(1).find(a => !a.startsWith('-')) || '';
   }
 
@@ -788,7 +827,9 @@ async function main() {
       case 'wwdc-search': await cmdWwdcSearch(query, options); break;
       case 'wwdc-video': await cmdWwdcVideo(options.id, options); break;
       case 'wwdc-topics': await cmdWwdcTopics(); break;
+      case 'wwdc-topic': await cmdWwdcTopic(options.topicSlug, options); break;
       case 'wwdc-years': await cmdWwdcYears(); break;
+      case 'wwdc-year': await cmdWwdcYear(options.yearArg); break;
       default:
         logError(`Unknown command: ${command}`);
         log('Run: apple-docs --help');

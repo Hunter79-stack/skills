@@ -120,7 +120,9 @@ apple-docs samples "Vision"
 ## How It Works
 
 Direct integration with Apple's developer APIs. No external dependencies or third-party packages.
-All data is fetched live from developer.apple.com.
+Documentation is fetched live from developer.apple.com.
+WWDC data is indexed locally (1,260+ sessions from 2014-2025) for fast offline search.
+To rebuild the WWDC index: `node build-wwdc-index.js`
 
 ## Resources
 
