@@ -5,6 +5,8 @@ metadata:
   openclaw:
     requires:
       env: [BABYLON_API_KEY]
+    optional:
+      env: [BABYLON_URL]
     install:
       - id: ts-node
         kind: node
@@ -67,12 +69,12 @@ Babylon provides two protocols - we use **MCP** (simpler, designed for AI assist
 
 | Environment | MCP Endpoint |
 |-------------|--------------|
-| Production  | `https://babylon.market/mcp` |
-| Staging     | `https://staging.babylon.market/mcp` |
+| Production  | `https://play.babylon.market/mcp` |
 
 - **Protocol:** MCP (Model Context Protocol) over JSON-RPC 2.0
 - **Auth:** `X-Babylon-Api-Key` header (user API keys: `bab_live_...`)
 - **Key:** Set `BABYLON_API_KEY` environment variable
+- **Custom endpoint (optional):** Set `BABYLON_URL` to override the default base URL (defaults to `https://play.babylon.market`). Only set this if you need to point to a different Babylon instance.
 
 ## MCP Tools (73 total)
 
@@ -203,7 +205,7 @@ Babylon provides two protocols - we use **MCP** (simpler, designed for AI assist
 ## Raw API Call Example
 
 ```bash
-curl -X POST "https://babylon.market/mcp" \
+curl -X POST "https://play.babylon.market/mcp" \
   -H "Content-Type: application/json" \
   -H "X-Babylon-Api-Key: $BABYLON_API_KEY" \
   -d '{

@@ -17,7 +17,7 @@ function loadApiKey(): string {
 }
 
 const API_KEY = loadApiKey();
-const BASE_URL = process.env.BABYLON_URL || 'https://staging.babylon.market';
+const BASE_URL = process.env.BABYLON_URL || 'https://play.babylon.market';
 const MCP_ENDPOINT = `${BASE_URL}/mcp`;
 
 interface MCPResponse<T = unknown> {

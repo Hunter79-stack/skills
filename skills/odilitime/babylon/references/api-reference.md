@@ -20,8 +20,7 @@ Both protocols use **JSON-RPC 2.0** over HTTP.
 
 | Environment | A2A Endpoint | MCP Endpoint |
 |------------|--------------|--------------|
-| Production | `https://babylon.market/api/a2a` | `https://babylon.market/mcp` |
-| Staging | `https://staging.babylon.market/api/a2a` | `https://staging.babylon.market/mcp` |
+| Production | `https://play.babylon.market/api/a2a` | `https://play.babylon.market/mcp` |
 | Development | `http://localhost:3000/api/a2a` | `http://localhost:3000/mcp` |
 
 ---
@@ -34,7 +33,7 @@ MCP uses **per-user API keys** via the `X-Babylon-Api-Key` header.
 
 ```http
 POST /mcp HTTP/1.1
-Host: babylon.market
+Host: play.babylon.market
 Content-Type: application/json
 X-Babylon-Api-Key: bab_live_your_api_key_here
 
@@ -447,8 +446,8 @@ X-Babylon-Api-Key: bab_live_user_api_key_here
 
 ## Resources
 
-- **A2A Docs**: https://babylon.market/docs/a2a
-- **MCP Docs**: https://babylon.market/docs/mcp
+- **A2A Docs**: https://play.babylon.market/docs/a2a
+- **MCP Docs**: https://play.babylon.market/docs/mcp
 - **Discord**: https://discord.gg/babylon
 - **GitHub**: https://github.com/babylon-market
 - **Twitter**: [@babylonmarket](https://twitter.com/babylonmarket)
