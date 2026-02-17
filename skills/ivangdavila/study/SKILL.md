@@ -1,56 +1,100 @@
 ---
 name: Study
-description: Structure study sessions, manage materials, prepare for exams, and track progress for academic success.
-metadata: {"clawdbot":{"emoji":"📚","os":["linux","darwin"]}}
+slug: study
+version: 1.0.1
+description: Structure study sessions, manage materials, and prepare for exams with active recall techniques.
+changelog: Simplified structure, removed broken script references, explicit data storage
+metadata: {"clawdbot":{"emoji":"📚","requires":{"bins":[]},"os":["linux","darwin","win32"]}}
 ---
 
-## Setup
+## Data Storage
 
-On first use, create workspace:
-```bash
-./scripts/init-workspace.sh ~/study
+```
+~/study/
+├── subjects/           # One folder per subject
+│   └── {subject}/
+│       ├── materials/     # PDFs, notes, resources
+│       ├── flashcards.json
+│       ├── schedule.md
+│       └── progress.md
+├── calendar/           # Exam dates, deadlines
+│   └── deadlines.json
+└── config.json         # Preferences
 ```
 
-## Workflow
+Create on first use: `mkdir -p ~/study/{subjects,calendar}`
 
+## Scope
+
+This skill:
+- ✅ Creates study plans in ~/study/
+- ✅ Manages materials and flashcards
+- ✅ Tracks deadlines and exam dates
+- ✅ Guides study sessions with active recall
+- ❌ NEVER generates content student should create themselves
+- ❌ NEVER stores data outside ~/study/
+
+## Quick Reference
+
+| Topic | File |
+|-------|------|
+| Study techniques | `techniques.md` |
+| Subject strategies | `subjects.md` |
+| Exam preparation | `exams.md` |
+
+## Core Rules
+
+### 1. Workflow
 ```
 Plan Semester → Weekly Schedule → Daily Sessions → Review → Exam Prep
 ```
 
-**Rules:**
-- Session outputs (summaries, flashcards) must be created BY the student — AI scaffolds, not generates
-- Enforce active recall in every session (see `techniques.md`)
-- Adapt strategy to subject type (see `subjects.md`)
-- Track deadlines and exam dates (see `scripts/`)
+### 2. AI Scaffolds, Student Creates
+- AI asks questions → student writes summaries
+- AI structures sessions → student takes notes
+- AI generates quiz → student answers
+- NEVER generate the student's work
 
-## Configuration
+### 3. Adding a Subject
+1. Create ~/study/subjects/{subject}/
+2. Set exam date in deadlines.json
+3. Estimate weekly hours needed
+4. Generate initial schedule
 
-Set in `config.json`:
-- `level`: "high-school" | "undergraduate" | "graduate"
-- `subjects`: [{ name, type, exam_date, weekly_hours }]
-- `technique`: "pomodoro" | "timeblock" | "flexible"
+### 4. Study Session Flow
+1. **Start**: What topic? How long?
+2. **Active recall**: Questions first, answers second
+3. **Practice**: Problems, not just reading
+4. **Summary**: Student writes key points
+5. **Schedule**: Next session based on spaced repetition
 
-## Scripts (Enforced)
+### 5. Exam Preparation
+When exam approaches (≤2 weeks):
+1. Review all flashcards with SR
+2. Practice past exams if available
+3. Identify weak areas from progress.md
+4. Create focused review plan
 
-| Script | Purpose |
-|--------|---------|
-| `init-workspace.sh` | Create study workspace |
-| `add-subject.sh` | Add subject with exam date |
-| `session.sh` | Start timed study session |
-| `plan-week.sh` | Generate weekly schedule |
-| `exam-prep.sh` | Create exam preparation plan |
-| `progress.sh` | Show completion by subject |
-| `deadlines.sh` | List upcoming deadlines |
+### 6. Configuration
+In ~/study/config.json:
+```json
+{
+  "level": "undergraduate",
+  "technique": "pomodoro",
+  "session_minutes": 25,
+  "break_minutes": 5
+}
+```
 
-References: `techniques.md` for study methods, `materials.md` for content types, `exams.md` for exam prep, `planning.md` for time management, `subjects.md` for subject strategies, `assessments.md` for evaluation types. Scripts: `scripts/init-workspace.sh`, `scripts/add-subject.sh`, `scripts/session.sh`, `scripts/plan-week.sh`, `scripts/exam-prep.sh`, `scripts/progress.sh`, `scripts/deadlines.sh`.
+### 7. Progress Tracking
+In {subject}/progress.md:
+```
+## Topics
+- [x] Chapter 1: Intro (mastered)
+- [~] Chapter 2: Basics (in progress)
+- [ ] Chapter 3: Advanced (not started)
 
----
-
-### Subject Preferences
-<!-- Per-subject study styles -->
-
-### Exam History
-<!-- Past performance patterns -->
-
----
-*Empty sections = observe and fill.*
+## Weak Areas
+- Integration techniques
+- Proof by induction
+```
