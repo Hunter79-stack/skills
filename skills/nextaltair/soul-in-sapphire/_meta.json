@@ -3,11 +3,16 @@
   "slug": "soul-in-sapphire",
   "displayName": "Soul In Sapphire",
   "latest": {
-    "version": "1.0.6",
-    "publishedAt": 1771202901590,
-    "commit": "https://github.com/openclaw/skills/commit/2f99d0d86195312249dad44bcc5edbca8652ee87"
+    "version": "1.0.7",
+    "publishedAt": 1771224585272,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.6",
+      "publishedAt": 1771202901590,
+      "commit": "https://github.com/openclaw/skills/commit/2f99d0d86195312249dad44bcc5edbca8652ee87"
+    },
     {
       "version": "1.0.5",
       "publishedAt": 1771029976251,
