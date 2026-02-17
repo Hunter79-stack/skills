@@ -6,13 +6,19 @@ Speaks the MCP Streamable HTTP protocol to a remote server.
 Zero dependencies — uses only Python stdlib (3.8+).
 
 Usage:
-    rnoe-mail.py accounts
-    rnoe-mail.py list [--limit N] [--days N]
-    rnoe-mail.py read <uid>
-    rnoe-mail.py send --to ADDR --subject SUBJ --body BODY [--cc ADDR]
-    rnoe-mail.py folders
-    rnoe-mail.py move <uid> --to FOLDER
-    rnoe-mail.py delete <uid>
+    rnoe-mail.py [--server URL] [--account ID] [--folder F] <command> [args]
+    rnoe-mail.py <command> [--server URL] [--account ID] [--folder F] [args]
+
+Global options (--server, --account, --folder) can appear before or after the command.
+
+Commands:
+    accounts                            List configured accounts
+    list [--limit N] [--days N]         List emails
+    read <uid>                          Read an email
+    send --to ADDR --subject SUBJ --body BODY [--cc ADDR]  Send an email
+    folders                             List folders
+    move <uid> --to FOLDER              Move email to folder
+    delete <uid>                        Delete an email
 """
 
 import argparse
@@ -108,6 +114,20 @@ class McpClient:
 
     def call_tool(self, name, arguments=None):
         """Call an MCP tool. Returns (text, is_error)."""
+        result, is_error = self.call_tool_raw(name, arguments)
+        if isinstance(result, str):
+            return result, is_error
+
+        # Extract text from content array
+        texts = []
+        for item in result:
+            if item.get("type") == "text":
+                texts.append(item.get("text", ""))
+        text = "\n".join(texts) if texts else ""
+        return text, is_error
+
+    def call_tool_raw(self, name, arguments=None):
+        """Call an MCP tool. Returns (content_array, is_error) or (error_text, True)."""
         req = {
             "jsonrpc": "2.0",
             "id": self._next_id(),
@@ -122,15 +142,8 @@ class McpClient:
 
         result = resp.get("result", {})
         is_error = result.get("isError", False)
-
-        # Extract text from content array
         content = result.get("content", [])
-        texts = []
-        for item in content:
-            if item.get("type") == "text":
-                texts.append(item.get("text", ""))
-        text = "\n".join(texts) if texts else ""
-        return text, is_error
+        return content, is_error
 
     def close(self):
         """No persistent connection to close with HTTP transport."""
@@ -159,11 +172,41 @@ def cmd_list(client, args):
         arguments["limit"] = args.limit
     if args.days:
         arguments["days_back"] = args.days
-    text, is_error = client.call_tool("list_emails", arguments)
+    content, is_error = client.call_tool_raw("list_emails", arguments)
     if is_error:
-        print(text, file=sys.stderr)
+        error_text = content if isinstance(content, str) else str(content)
+        print(error_text, file=sys.stderr)
         sys.exit(1)
-    print(text)
+
+    # Try to parse structured JSON from text content items
+    emails = []
+    for item in content:
+        if item.get("type") == "text":
+            try:
+                parsed = json.loads(item["text"])
+                if isinstance(parsed, list):
+                    emails.extend(parsed)
+                elif isinstance(parsed, dict):
+                    emails.append(parsed)
+            except (json.JSONDecodeError, KeyError):
+                pass
+
+    if emails and all("uid" in e for e in emails):
+        for email in emails:
+            uid = email.get("uid", "")
+            date = email.get("date", "")[:16]
+            sender = email.get("from", email.get("sender", ""))
+            subject = email.get("subject", "")
+            is_seen = email.get("is_seen", True)
+            indicator = " " if is_seen else "\u25cf"
+            print(f"[{uid}] {indicator} {date} | {sender} | {subject}")
+    else:
+        # Fallback: print raw text if not structured JSON
+        texts = []
+        for item in content:
+            if item.get("type") == "text":
+                texts.append(item.get("text", ""))
+        print("\n".join(texts) if texts else "")
 
 
 def cmd_read(client, args):
@@ -184,12 +227,12 @@ def cmd_read(client, args):
 def cmd_send(client, args):
     arguments = {
         "account": args.account,
-        "to": args.to,
+        "to": [x.strip() for x in args.to.split(",")],
         "subject": args.subject,
         "body": args.body,
     }
     if args.cc:
-        arguments["cc"] = args.cc
+        arguments["cc"] = [x.strip() for x in args.cc.split(",")]
     text, is_error = client.call_tool("send_email", arguments)
     if is_error:
         print(text, file=sys.stderr)
@@ -240,13 +283,19 @@ def resolve_server_url(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Secure email access via MCP server with prompt injection protection"
-    )
-    parser.add_argument("--server", help="MCP server URL (default: http://localhost:8000)")
-    parser.add_argument("--account", "-a", default="default", help="Account ID (default: default)")
-    parser.add_argument("--folder", "-f", default="INBOX", help="Folder (default: INBOX)")
+    # First pass: extract global options, leaving the rest for subcommand parsing
+    global_parser = argparse.ArgumentParser(add_help=False)
+    global_parser.add_argument("--server", help="MCP server URL (default: http://localhost:8000)")
+    global_parser.add_argument("--account", "-a", default="default", help="Account ID (default: default)")
+    global_parser.add_argument("--folder", "-f", default="INBOX", help="Folder (default: INBOX)")
 
+    global_args, remaining = global_parser.parse_known_args()
+
+    # Second pass: parse subcommand and its specific args
+    parser = argparse.ArgumentParser(
+        description="Secure email access via MCP server with prompt injection protection",
+        parents=[global_parser],
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # accounts
@@ -280,7 +329,13 @@ def main():
     delete_parser = subparsers.add_parser("delete", help="Delete an email")
     delete_parser.add_argument("uid", type=int, help="Email UID")
 
-    args = parser.parse_args()
+    args = parser.parse_args(remaining)
+
+    # Merge back global options captured in the first pass (before the subcommand)
+    for attr in ("server", "account", "folder"):
+        first_pass_val = getattr(global_args, attr)
+        if first_pass_val != global_parser.get_default(attr):
+            setattr(args, attr, first_pass_val)
 
     server_url = resolve_server_url(args)
 
