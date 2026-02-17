@@ -13,7 +13,7 @@ X-API-Key: YOUR_API_KEY
 
 ### 1. Faucet (Devnet Only)
 
-Fund your devnet wallet with cmUSDC.
+Fund your devnet wallet with optnUSDC.
 
 ```http
 POST /api/faucet
@@ -430,7 +430,7 @@ ws.onmessage = (event) => {
 
 **Network:** Solana Devnet
 **Program ID:** `7kHCtJrAuHAg8aQPtkf2ijjWyEEZ2fUYWaCT7sXVwMSn`
-**Token:** cmUSDC (devnet USDC)
+**Token:** optnUSDC (devnet USDC)
 
 **Explorer URLs:**
 - Devnet: https://explorer.solana.com/?cluster=devnet

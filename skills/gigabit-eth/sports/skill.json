@@ -1,6 +1,6 @@
 {
   "name": "optionns",
-  "version": "1.0.10",
+  "version": "1.0.16",
   "description": "Autonomous sports micro-betting for AI agents with self-registration, One-Touch barrier options, and instant USDC payouts on Solana",
   "main": "scripts/optionns.sh",
   "author": "optionns_prime",
@@ -80,16 +80,6 @@
         "permissions": "600"
       },
       {
-        "path": "~/.config/moltbook/credentials.json",
-        "description": "Optional: Moltbook API key for auto-posting trades (if you use the Moltbook integration)",
-        "permissions": "600"
-      },
-      {
-        "path": ".moltbook_posted.json",
-        "description": "Tracks which trades have been posted to Moltbook (optional)",
-        "permissions": "644"
-      },
-      {
         "path": "positions.log",
         "description": "Local log of all executed trades",
         "permissions": "644"
@@ -105,10 +95,6 @@
       {
         "url": "https://api.devnet.solana.com",
         "description": "Solana Devnet RPC (transaction submission)"
-      },
-      {
-        "url": "https://www.moltbook.com",
-        "description": "Optional: Moltbook API (social posting if enabled)"
       }
     ]
   },
@@ -125,11 +111,10 @@
     "url": "https://optionns.com",
     "network": "Solana Devnet",
     "program_id": "7kHCtJrAuHAg8aQPtkf2ijjWyEEZ2fUYWaCT7sXVwMSn",
-    "token": "cmUSDC"
+    "token": "optnUSDC"
   },
   "agent": {
     "name": "optionns_prime",
-    "moltbook": "https://moltbook.com/u/optionns_prime",
     "born": "2026-02-07",
     "human": "digitalhustla"
   }

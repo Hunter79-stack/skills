@@ -125,11 +125,15 @@ cmd_register() {
         echo ""
         echo "Or create config file:"
         mkdir -p ~/.config/optionns
+        # Extract RPC URL from API response (Helius endpoint for reliable devnet access)
+        rpc_url=$(echo "$result" | jq -r '.data.rpc_url // .rpc_url // "https://api.devnet.solana.com"' 2>/dev/null)
+        
         cat > ~/.config/optionns/credentials.json << EOF
 {
   "api_key": "$api_key",
   "wallet_address": "$wallet",
-  "agent_name": "$agent_name"
+  "agent_name": "$agent_name",
+  "rpc_url": "$rpc_url"
 }
 EOF
         chmod 600 ~/.config/optionns/credentials.json
@@ -258,30 +262,30 @@ cmd_faucet() {
         echo -e "${GREEN}✅ Faucet request successful${NC}"
         echo "$result" | jq -r '.tx_hash // .message // .' 2>/dev/null || echo "$result"
         
-        # Also create cmUSDC ATA if it doesn't exist
+        # Also create optnUSDC ATA if it doesn't exist
         echo ""
-        echo -e "${BLUE}🔍 Checking for cmUSDC token account...${NC}"
+        echo -e "${BLUE}🔍 Checking for optnUSDC token account...${NC}"
         
-        CMUSDC_MINT="DNaYq6QKoahq98fAwxsFyPiDJZsLaQPq2x3nixnuegJh"
+        optnUSDC_MINT="DNaYq6QKoahq98fAwxsFyPiDJZsLaQPq2x3nixnuegJh"
         KEYPAIR_FILE="${HOME}/.config/optionns/agent_keypair.json"
         
         if [[ -f "$KEYPAIR_FILE" ]]; then
             # Check if ATA exists
-            if ! spl-token accounts --owner "$wallet" --url devnet 2>/dev/null | grep -q "$CMUSDC_MINT"; then
-                echo -e "${YELLOW}⚠️  cmUSDC ATA not found, creating...${NC}"
+            if ! spl-token accounts --owner "$wallet" --url devnet 2>/dev/null | grep -q "$optnUSDC_MINT"; then
+                echo -e "${YELLOW}⚠️  optnUSDC ATA not found, creating...${NC}"
                 
                 # Temporarily set Solana config
                 solana config set --keypair "$KEYPAIR_FILE" --url devnet >/dev/null 2>&1
                 
-                if spl-token create-account "$CMUSDC_MINT" --url devnet 2>/dev/null; then
-                    echo -e "${GREEN}✅ cmUSDC token account created!${NC}"
+                if spl-token create-account "$optnUSDC_MINT" --url devnet 2>/dev/null; then
+                    echo -e "${GREEN}✅ optnUSDC token account created!${NC}"
                     echo "Your trades can now settle on-chain."
                 else
                     echo -e "${YELLOW}⚠️  ATA creation failed (may need SOL for rent)${NC}"
-                    echo "Try: spl-token create-account $CMUSDC_MINT"
+                    echo "Try: spl-token create-account $optnUSDC_MINT"
                 fi
             else
-                echo -e "${GREEN}✅ cmUSDC ATA already exists${NC}"
+                echo -e "${GREEN}✅ optnUSDC ATA already exists${NC}"
             fi
         fi
     else
@@ -297,7 +301,7 @@ cmd_quote() {
     local underlying=""
     local strike=""
     local expiry="5"
-    local sport="nba"
+    local sport=""  # Don't default to NBA
     local option_type="call"
     
     # Parse positional + named args
@@ -334,7 +338,14 @@ cmd_quote() {
     # If underlying not provided, fetch from API
     if [[ -z "$underlying" ]]; then
         echo -e "${BLUE}Fetching current market probability...${NC}"
-        events=$(api_call "GET" "/v1/sports/events?sport=$sport")
+        
+        # Use sport if provided, otherwise fetch all
+        if [[ -n "$sport" ]]; then
+            events=$(api_call "GET" "/v1/sports/events?sport=$sport")
+        else
+            events=$(api_call "GET" "/v1/sports/events")
+        fi
+        
         underlying=$(echo "$events" | jq -r '.data.live[0].probability // .data.live[0].home_win_prob // empty' 2>/dev/null)
         underlying="${underlying:-0.55}"
         echo "  Market probability: $underlying"
@@ -393,7 +404,7 @@ cmd_trade() {
     local ata=""
     local expiry="5"
     local dry_run="false"
-    local sport="nba"
+    local sport=""  # Don't default to NBA - detect dynamically
     local underlying=""
     local strike=""
     
@@ -431,7 +442,39 @@ cmd_trade() {
     fi
     
     # Fetch game info and real-time win probability from API
-    echo -e "${BLUE}Fetching game data...${NC}"
+    echo -e "${BLUE}Fetching game data (checking all sports)...${NC}"
+    
+    # If sport not specified, fetch ALL live games to find the game_id
+    if [[ -z "$sport" ]]; then
+        all_games=$(api_call "GET" "/v1/sports/events")
+        
+        # Try to find the game in live games across all sports
+        # Use -c for compact single-line JSON (so head -1 works correctly)
+        game_data=$(echo "$all_games" | jq -c ".data.live[] | select(.id == \"$game_id\" or .game_id == \"$game_id\")" 2>/dev/null | head -1)
+        
+        if [[ -n "$game_data" ]]; then
+            # Extract sport from the game data (use -r for raw string extraction)
+            sport=$(echo "$game_data" | jq -r '.sport // .league // empty' 2>/dev/null)
+            echo -e "${GREEN}✓ Detected sport: $(echo $sport | tr '[:lower:]' '[:upper:]')${NC}"
+        fi
+        
+        
+        # If still not found, reject the trade - game has likely ended
+        if [[ -z "$sport" ]]; then
+            echo -e "${RED}❌ Game $game_id not found in live games${NC}"
+            echo ""
+            echo "This could mean:"
+            echo "  1. The game has ended and is no longer live"
+            echo "  2. The game ID is invalid"
+            echo "  3. The game hasn't started yet"
+            echo ""
+            echo -e "${YELLOW}Find a live game:${NC}"
+            echo "  ./optionns.sh games"
+            echo ""
+            return 1
+        fi
+    fi
+    
     games=$(api_call "GET" "/v1/sports/events?sport=$(echo $sport | tr '[:lower:]' '[:upper:]')")
     
     if [[ -z "$game_title" ]]; then
@@ -524,21 +567,23 @@ cmd_trade() {
         \"user_ata\": \"${ata:-$wallet}\"
     }")
     
-    # Check if we got instructions to sign (new format)
+    # Check if we got instructions to sign (new two-phase commit format)
     if echo "$trade_result" | grep -q '"instructions"'; then
         instructions_json=$(echo "$trade_result" | jq -c '.instructions')
-        position_id=$(echo "$trade_result" | jq -r '.position_id // .outcome_id')
+        pending_id=$(echo "$trade_result" | jq -r '.pending_id // .position_id // .outcome_id')
         position_pda=$(echo "$trade_result" | jq -r '.position_pda // .outcome_position_pda // "N/A"')
         
         echo -e "${GREEN}✅ Trade prepared!${NC}"
-        echo "Position ID: $position_id"
+        echo "Pending ID: $pending_id"
         echo "Position PDA: $position_pda"
         echo ""
         echo -e "${BLUE}Signing and submitting to Solana...${NC}"
         
         # Sign and send transaction using agent's keypair
         KEYPAIR_FILE="${HOME}/.config/optionns/agent_keypair.json"
-        RPC_URL="${SOLANA_RPC_URL:-https://api.devnet.solana.com}"
+        # Read RPC URL from credentials (saved during registration), env var, or fallback
+        CRED_RPC=$(jq -r '.rpc_url // empty' "$CONFIG_FILE" 2>/dev/null)
+        RPC_URL="${SOLANA_RPC_URL:-${CRED_RPC:-https://api.devnet.solana.com}}"
         
         if [[ ! -f "$KEYPAIR_FILE" ]]; then
             echo -e "${RED}❌ Keypair not found at $KEYPAIR_FILE${NC}"
@@ -551,27 +596,57 @@ cmd_trade() {
         tx_sig=$(echo "$instructions_json" | python3 "$SCRIPT_DIR/signer.py" --stdin --keypair "$KEYPAIR_FILE" --rpc "$RPC_URL" 2>&1)
         sign_exit_code=$?
         
-        if [[ $sign_exit_code -eq 0 ]]; then
-            echo -e "${GREEN}✅ Trade settled on-chain!${NC}"
+        if [[ $sign_exit_code -eq 0 && -n "$tx_sig" ]]; then
+            echo -e "${GREEN}✅ Transaction submitted to blockchain!${NC}"
             echo -e "${BLUE}Solana Tx: $tx_sig${NC}"
-            echo "Explorer: https://explorer.solana.com/tx/${tx_sig}?cluster=devnet"
+           
+            echo ""
+            echo -e "${BLUE}Confirming with API...${NC}"
             
-            # Show trade details
-            echo "$trade_result" | jq -r '
-"Premium Paid: \(.premium_paid // .premium_collected // .premium) cmUSDC
-Max Payout: \(.max_payout) cmUSDC
+            # TWO-PHASE COMMIT: Confirm transaction with API
+            confirm_result=$(api_call "POST" "/v1/vault/confirm" "{
+                \"pending_id\": \"$pending_id\",
+                \"tx_signature\": \"$tx_sig\"
+            }")
+            
+            if echo "$confirm_result" | grep -q '"success".*true'; then
+                position_id=$(echo "$confirm_result" | jq -r '.position_id // "N/A"')
+                echo -e "${GREEN}✅ Trade confirmed and settled on-chain!${NC}"
+                echo -e "Position ID: ${BLUE}$position_id${NC}"
+                echo "Explorer: https://explorer.solana.com/tx/${tx_sig}?cluster=devnet"
+                
+                # Show trade details
+                echo "$trade_result" | jq -r '
+"Premium Paid: \(.premium_paid // .premium_collected // .premium) optnUSDC
+Max Payout: \(.max_payout) optnUSDC
 Expires: \(.expires_at // .expiry_time)
 Barrier Registered: \(.barrier_registered // true)"
-            ' 2>/dev/null
-            
-            # Log to file for tracking
-            echo "$(date -Iseconds) | $position_id | $game_title | $bet_type +$target | $amount contracts | $tx_sig" >> "$SCRIPT_DIR/../positions.log"
+                ' 2>/dev/null
+                
+                # Log to file for tracking
+                echo "$(date -Iseconds) | $position_id | $game_title | $bet_type +$target | $amount contracts | $tx_sig" >> "$SCRIPT_DIR/../positions.log"
+            else
+                echo -e "${YELLOW}⚠️  Transaction submitted but confirmation failed${NC}"
+                echo "TX signature: $tx_sig"
+                echo "Confirmation response: $confirm_result"
+                echo ""
+                echo "Your transaction may still be valid. Check: https://explorer.solana.com/tx/${tx_sig}?cluster=devnet"
+                exit 1
+            fi
             
         else
             echo -e "${RED}❌ Transaction signing/submission failed${NC}"
             echo "$tx_sig"
             exit 1
         fi
+        
+    elif echo "$trade_result" | grep -q "pending_id"; then
+        # TWO-PHASE COMMIT: Got pending transaction but failed before signing
+        pending_id=$(echo "$trade_result" | jq -r '.pending_id')
+        echo -e "${YELLOW}⚠️  Trade prepared but not yet signed${NC}"
+        echo "Pending ID: $pending_id"
+        echo "You need to sign and submit the transaction manually, then call /vault/confirm"
+        echo "$trade_result" | jq '.'
         
     elif echo "$trade_result" | grep -q "position_id"; then
         # Fallback: off-chain only (shouldn't happen with current API)

@@ -1,7 +1,7 @@
 {
   "id": "optionns",
   "name": "Optionns",
-  "version": "1.0.10",
+  "version": "1.0.16",
   "description": "Autonomous sports micro-betting for AI agents with self-registration, One-Touch barrier options, and instant USDC payouts on Solana",
   "author": "optionns_prime",
   "homepage": "https://optionns.com",
@@ -20,21 +20,17 @@
       "SOLANA_PUBKEY",
       "SOLANA_ATA",
       "SOLANA_PRIVATE_KEY",
-      "SOLANA_RPC_URL",
-      "MOLTBOOK_API_KEY"
+      "SOLANA_RPC_URL"
     ]
   },
   "persistence": [
     "~/.config/optionns/credentials.json",
     "~/.config/optionns/agent_keypair.json",
-    "~/.config/moltbook/credentials.json",
-    ".moltbook_posted.json",
     "positions.log"
   ],
   "network_endpoints": [
     "https://api.optionns.com",
-    "https://api.devnet.solana.com",
-    "https://www.moltbook.com"
+    "https://api.devnet.solana.com"
   ],
   "files": [
     {

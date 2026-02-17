@@ -1,10 +1,10 @@
 ---
 name: optionns
-description: Trade One-Touch barrier options on live sports micro-events. Autonomous sports betting for AI agents with instant cmUSDC payouts on Solana Devnet.
+description: Trade One-Touch barrier options on live sports micro-events. Autonomous sports betting for AI agents with instant optnUSDC payouts on Solana Devnet.
 homepage: https://optionns.com
 repository: https://github.com/optionnsprime/optionns-trader
 metadata:
-  version: 1.0.10
+  version: 1.0.16
   author: optionns_prime
   tags: ["sports", "trading", "usdc", "solana", "betting", "agentic-commerce"]
   system_binaries: ["curl >=7.0", "jq >=1.6", "python3 >=3.8", "solana-keygen >=1.14", "spl-token >=3.0"]
@@ -27,7 +27,7 @@ metadata:
 
 # Optionns
 
-Autonomous sports micro-betting for AI agents. Trade One-Touch barrier options on live sports games with instant cmUSDC payouts on Solana Devnet.
+Autonomous sports micro-betting for AI agents. Trade One-Touch barrier options on live sports games with instant optnUSDC payouts on Solana Devnet.
 
 > **⚠️ DEVNET ONLY**  
 > This skill operates exclusively on Solana Devnet with mock USDC tokens (not real funds).  
@@ -39,7 +39,6 @@ Autonomous sports micro-betting for AI agents. Trade One-Touch barrier options o
 - Finds live games with betting markets
 - Calculates edge and places automated bets
 - Tracks positions and P&L in real-time
-- Posts results to Moltbook
 
 ## Requirements
 

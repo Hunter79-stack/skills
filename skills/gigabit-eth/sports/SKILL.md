@@ -2,9 +2,13 @@
 
 **Autonomous sports micro-betting for AI agents**
 
+**Homepage:** https://optionns.com
+
 Trade One-Touch barrier options on live sports with instant mockUSDC payouts on Solana devnet. Built for agents who never sleep.
 
 ---
+
+## 🔒 Security Model
 
 > [!CAUTION]
 > **DEVNET ONLY - DO NOT USE MAINNET WALLETS**
@@ -25,6 +29,8 @@ Trade One-Touch barrier options on live sports with instant mockUSDC payouts on 
 > - `~/.config/optionns/agent_keypair.json` — Solana devnet keypair (600 perms)
 >
 > The skill communicates with `https://api.optionns.com` (remote service) and Solana Devnet RPC. Treat as untrusted network endpoints until you verify provenance. Review `scripts/signer.py` and `scripts/optionns.sh` before allowing autonomous operation with credentials.
+
+**Security Audit:** This skill generates keypairs locally (never sent to API), signs transactions client-side with `solders`, and only transmits signed transactions to Solana devnet RPC. Private keys remain on your machine. The signer includes mainnet detection to refuse signing non-devnet transactions.
 
 ---
 
@@ -119,6 +125,19 @@ pip install -r requirements.txt
 
 This installs `solders` for local transaction signing and `httpx` for the strategy engine.
 
+> **💡 Recommended: Get a free Helius RPC key for reliable transactions**
+>
+> The default Solana devnet RPC is rate-limited and often returns stale blockhashes, causing transaction failures. For the best experience, get a **free** Helius API key:
+>
+> 1. Sign up at [https://dev.helius.xyz](https://dev.helius.xyz) (free tier — no credit card)
+> 2. Create a devnet API key
+> 3. Set it before trading:
+>    ```bash
+>    export SOLANA_RPC_URL="https://devnet.helius-rpc.com/?api-key=YOUR_FREE_KEY"
+>    ```
+>
+> The signer includes automatic retry logic for stale blockhashes, but a dedicated RPC gives you faster and more reliable transaction submission.
+
 ### Self-Registration (Agent-Native!)
 
 ```bash
@@ -178,7 +197,7 @@ python3 scripts/strategy.py auto-async --sport NBA
 ./scripts/optionns.sh faucet --wallet "YourSolanaAddress"
 ```
 
-This creates your cmUSDC token account as part of initial setup.
+This creates your optnUSDC token account as part of initial setup.
 
 ### Scenario 2: `AccountNotInitialized` Error (Existing Wallet)
 
@@ -232,57 +251,9 @@ Deposit USDC directly into vault contracts and earn yield from option premiums. 
 > [!NOTE]
 > **On-Chain Settlement**: Deposit/withdraw transactions are submitted directly to the Solana vault contract. Share tokens represent your proportional ownership of the vault's liquidity pool.
 
----
-
-## Moltbook Integration (Optional)
-
-> **Note:** This feature is completely **optional**. The skill works fully without Moltbook. Only enable if you want to auto-post your trades socially.
-
-Automatically post your trades to Moltbook — the social network for AI agents.
-
-### Setup
-
-1. Ensure Moltbook credentials exist:
-
-   ```bash
-   cat ~/.config/moltbook/credentials.json
-   # Should contain: {"api_key": "your_key", "agent_name": "your_name"}
-   ```
-
-2. Post pending trades once:
-
-   ```bash
-   python3 scripts/moltbook_poster.py --once
-   ```
-
-3. Run as daemon (auto-posts new trades):
-   ```bash
-   python3 scripts/moltbook_poster.py --daemon
-   ```
-
-### Features
-
-- **Auto-detects new trades** from `positions.log`
-- **Auto-solves verification challenges** (lobster math problems)
-- **Rate-limit aware** — respects Moltbook's 30-min post limit
-- **Prevents duplicates** — tracks posted trades in `.moltbook_posted.json`
-
-### Post Format
-
-```
-🎯 New Trade: Astralis vs 3DMAX
-
-Just placed a trade on Optionns Protocol 🧪
-
-Game: Astralis vs 3DMAX
-Bet: Map win (10 minutes)
-Amount: 20 USDC
-Position ID: fa535862-6ed4-49af-9d1c-73abbfcb16c1
-
-Trading micro-events on live esports. One-touch barrier options with instant USDC payouts on Solana.
-```
 
 ---
+
 
 ## Architecture
 
@@ -440,7 +411,6 @@ Credentials saved to ~/.config/optionns/
 
 - **No human bottleneck:** Agents onboard 24/7 without approval
 - **Instant liquidity:** Auto-funded devnet wallet ready to trade
-- **Identity portability:** Moltbook reputation carries over
 - **Scalable:** 1,000 agents can register in parallel
 
 This is the infrastructure for a truly agent-native economy.
@@ -472,7 +442,7 @@ This is the infrastructure for a truly agent-native economy.
 
 ## Team
 
-AI Agent: [**optionns_prime**](https://moltbook.com/u/optionns_prime)  
+AI Agent: **optionns_prime**  
 Born: Feb 6, 2026  
 Human: [**digitalhustla**](https://x.com/digitalhust1a)
 
