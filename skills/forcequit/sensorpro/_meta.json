@@ -3,9 +3,15 @@
   "slug": "sensorpro",
   "displayName": "Sensorpro",
   "latest": {
-    "version": "0.1.2",
-    "publishedAt": 1771283151534,
-    "commit": "https://github.com/openclaw/skills/commit/b70c8b23d44c511408bbdcad47c1ecbe97f722f0"
+    "version": "0.2.0",
+    "publishedAt": 1771283496303,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.1.2",
+      "publishedAt": 1771283151534,
+      "commit": "https://github.com/openclaw/skills/commit/b70c8b23d44c511408bbdcad47c1ecbe97f722f0"
+    }
+  ]
 }

@@ -64,17 +64,23 @@ Create a dedicated **API user** in Sensorpro and set:
 2) Make one or more API calls
 3) Logoff
 
-The scripts in `scripts/` implement this pattern.
+Example (bash):
+```bash
+TOKEN=$(curl -sS -X POST "https://apinie.sensorpro.net/auth/sys/signin" \
+  -H "Content-Type: application/json" \
+  -H "x-apikey: ${SENSORPRO_API_KEY}" \
+  -d "{\"Organization\":\"${SENSORPRO_ORG}\",\"User\":\"${SENSORPRO_USER}\",\"Password\":\"${SENSORPRO_PASS}\"}" \
+| python3 -c 'import sys,json; print(json.load(sys.stdin).get("Token",""))')
 
----
+# Call an endpoint (example)
+curl -sS -X POST "https://apinie.sensorpro.net/api/Contact/UpdateAdd/${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"AddToList":[],"Contact":[{"PersonalEMail":"someone@example.com"}],"Options":{"Parameters":{},"Action":""},"ReturnFailedRequests":false,"UpdateByKey":"email","SendWelcomeEmail":false,"SignupFormId":"00000000-0000-0000-0000-000000000000"}'
 
-# Scripts (recommended)
-
-## `scripts/sensorpro_signin.sh`
-- Signs in and prints just the Token (for easy scripting)
-
-## `scripts/sensorpro_call.sh`
-- Calls any Sensorpro endpoint with a JSON body, handling signin + logoff automatically.
+# Log off (some servers require a body)
+curl -sS -X POST "https://apinie.sensorpro.net/auth/sys/logoff/${TOKEN}" \
+  -H "Content-Type: application/json" -d '{}'
+```
 
 ---
 
