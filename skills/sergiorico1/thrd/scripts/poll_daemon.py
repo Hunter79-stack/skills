@@ -2,7 +2,6 @@
 import argparse
 import json
 import os
-import shlex
 import subprocess
 import sys
 import time
@@ -26,18 +25,6 @@ def save_cursor(path: Path, cursor: str) -> None:
     path.write_text(cursor, encoding="utf-8")
 
 
-def parse_on_events_command(raw: str | None) -> list[str] | None:
-    if not raw:
-        return None
-    try:
-        parts = shlex.split(raw, posix=True)
-    except ValueError:
-        return None
-    if not parts:
-        return None
-    return parts
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Fallback long-poll daemon for runtimes that cannot receive wake webhooks."
@@ -48,24 +35,9 @@ def main() -> int:
     parser.add_argument("--limit", type=int, default=50)
     parser.add_argument(
         "--on-events",
-        help=(
-            "Optional command to run whenever one or more events are received. "
-            "Executed safely without a shell (example: --on-events \"echo inbound-ready\")."
-        ),
+        help="Optional shell command to run whenever one or more events are received.",
     )
     args = parser.parse_args()
-    on_events_cmd = parse_on_events_command(args.on_events)
-
-    if args.on_events and not on_events_cmd:
-        print(
-            json.dumps(
-                {
-                    "ok": False,
-                    "error": "Invalid --on-events value. Provide a command string such as \"echo inbound-ready\".",
-                }
-            )
-        )
-        return 1
 
     api_key = os.environ.get("THRD_API_KEY")
     if not api_key:
@@ -104,8 +76,8 @@ def main() -> int:
                 }
                 print(json.dumps(summary))
 
-                if on_events_cmd:
-                    subprocess.run(on_events_cmd, shell=False, check=False)
+                if args.on_events:
+                    subprocess.run(args.on_events, shell=True, check=False)
 
                 ack = requests.post(
                     f"{base_url}/v1/events/ack",

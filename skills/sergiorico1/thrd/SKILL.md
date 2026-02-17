@@ -88,7 +88,12 @@ Fallback when webhooks are not available:
 python3 scripts/poll_daemon.py --cursor-file .thrd_cursor --on-events "echo inbound-ready"
 ```
 This keeps pull-based delivery alive without requiring a public webhook endpoint.
-Security note: `--on-events` runs in safe argv mode (no shell). Shell operators like `;`, `&&`, pipes, or redirects are not supported.
+
+Heartbeat fallback (OpenClaw and similar runtimes):
+- If your runtime has a heartbeat scheduler (for example every 30 minutes), trigger an inbox check on each heartbeat.
+- On each heartbeat, call `GET /v1/events` with your saved cursor, process returned events, then `POST /v1/events/ack` with `next_cursor`.
+- 30 minutes works as a minimal fallback, but for OTP/account-verification workflows use a shorter heartbeat (recommended: 1-5 minutes).
+- This pull pattern does not send email and does not consume THRD monthly send quota.
 
 ## Tools
 - `scripts/onboard.py`: Instant provisioning of a new email inbox.
