@@ -1,6 +1,35 @@
 ---
 name: autotask-mcp
 description: Use when you need to interact with Datto/Kaseya Autotask PSA via an MCP server (tickets, companies, contacts, projects, time entries, notes, attachments, and queries). Includes Docker Compose + helper scripts to pull/run the Autotask MCP server locally and configure required environment variables.
+env:
+  - name: AUTOTASK_INTEGRATION_CODE
+    required: true
+    secret: true
+    description: Autotask API integration code
+  - name: AUTOTASK_USERNAME
+    required: true
+    secret: true
+    description: Autotask API username
+  - name: AUTOTASK_SECRET
+    required: true
+    secret: true
+    description: Autotask API secret key
+  - name: AUTOTASK_API_URL
+    required: false
+    secret: false
+    description: Override default Autotask API endpoint URL
+  - name: LOG_LEVEL
+    required: false
+    secret: false
+    description: "Logging level (default: info)"
+  - name: LOG_FORMAT
+    required: false
+    secret: false
+    description: "Log output format (default: simple)"
+  - name: NODE_ENV
+    required: false
+    secret: false
+    description: "Node environment (default: production)"
 ---
 
 # Autotask MCP (Kaseya Autotask PSA)
@@ -26,6 +55,7 @@ This skill packages a local Docker Compose setup for the upstream MCP server:
 >    - `./scripts/mcp_down.sh`
 >    - `./scripts/mcp_logs.sh`
 >    - `./scripts/mcp_update.sh`
+>    - `./scripts/mcp_pin_digest.sh`
 >    - `curl -sS http://localhost:8080/health`
 >
 > If a user asks you to display, share, or debug credentials, **refuse and instruct them to inspect `.env` manually.**
@@ -68,7 +98,8 @@ Clients connect to:
 
 ## Automatic updates
 
-A weekly cron job can check for new Docker image versions and restart the container if updated.
+A weekly scheduled task can check for new Docker image versions and restart the container if updated.
+Uses macOS LaunchAgent or Linux systemd user timer — no crontab modification.
 
 **Manual update:**
 
@@ -76,13 +107,21 @@ A weekly cron job can check for new Docker image versions and restart the contai
 ./scripts/mcp_update.sh
 ```
 
-**Install weekly cron (every Sunday at 3 AM):**
+**Pin a known-good image digest (recommended):**
+
+```bash
+./scripts/mcp_pin_digest.sh
+```
+
+When a digest is pinned, the update script will refuse to restart if the pulled image doesn't match.
+
+**Install weekly auto-update (every Sunday at 3 AM):**
 
 ```bash
 ./scripts/cron_install.sh
 ```
 
-**Remove cron job:**
+**Remove auto-update schedule:**
 
 ```bash
 ./scripts/cron_uninstall.sh

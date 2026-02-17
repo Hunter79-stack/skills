@@ -3,11 +3,16 @@
   "slug": "autotask-mcp",
   "displayName": "Autotask Mcp",
   "latest": {
-    "version": "1.0.2",
-    "publishedAt": 1771185422744,
-    "commit": "https://github.com/openclaw/skills/commit/acbf081e8260fc84366db81f6091bf7eee5c2784"
+    "version": "1.0.4",
+    "publishedAt": 1771259216419,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.2",
+      "publishedAt": 1771185422744,
+      "commit": "https://github.com/openclaw/skills/commit/acbf081e8260fc84366db81f6091bf7eee5c2784"
+    },
     {
       "version": "1.0.1",
       "publishedAt": 1770827557282,

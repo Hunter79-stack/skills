@@ -17,11 +17,32 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+
     # Security hardening
     read_only: true
     tmpfs:
-      - /tmp
+      - /tmp:size=64m,noexec,nosuid
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1.0"
+        reservations:
+          memory: 128m
+    pids_limit: 64
+
+    # Network hardening — no DNS needed for outbound API calls via IP
+    dns: []
+
+    # Logging limits — prevent disk exhaustion from runaway logs
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
