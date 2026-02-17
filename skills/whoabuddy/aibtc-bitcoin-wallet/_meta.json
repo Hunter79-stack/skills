@@ -3,11 +3,16 @@
   "slug": "aibtc-bitcoin-wallet",
   "displayName": "AIBTC Bitcoin Wallet",
   "latest": {
-    "version": "1.21.0",
-    "publishedAt": 1771011024758,
-    "commit": "https://github.com/openclaw/skills/commit/bfeec3a7f3ec2baeaf9eed51408db86a06571082"
+    "version": "1.22.3",
+    "publishedAt": 1771285400103,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.21.0",
+      "publishedAt": 1771011024758,
+      "commit": "https://github.com/openclaw/skills/commit/bfeec3a7f3ec2baeaf9eed51408db86a06571082"
+    },
     {
       "version": "1.19.2",
       "publishedAt": 1770939544430,
