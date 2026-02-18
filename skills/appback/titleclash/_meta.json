@@ -1,13 +1,18 @@
 {
   "owner": "appback",
   "slug": "titleclash",
-  "displayName": "TitleClash",
+  "displayName": "Openclaw",
   "latest": {
-    "version": "2.6.0",
-    "publishedAt": 1771310599032,
-    "commit": "https://github.com/openclaw/skills/commit/bb70745f3a2277fc6efbe62ebbec4478ab887556"
+    "version": "2.8.0",
+    "publishedAt": 1771400747690,
+    "commit": null
   },
   "history": [
+    {
+      "version": "2.6.0",
+      "publishedAt": 1771310599032,
+      "commit": "https://github.com/openclaw/skills/commit/bb70745f3a2277fc6efbe62ebbec4478ab887556"
+    },
     {
       "version": "2.5.0",
       "publishedAt": 1771308419269,
