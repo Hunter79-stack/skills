@@ -1,6 +1,6 @@
 ---
 name: memoclaw
-version: 1.11.1
+version: 1.13.0
 description: |
   Memory-as-a-Service for AI agents. Store and recall memories with semantic
   vector search. 100 free calls per wallet, then x402 micropayments.
@@ -294,10 +294,22 @@ memoclaw suggested --category stale --limit 10
 # Migrate .md files to MemoClaw
 memoclaw migrate ./memory/
 
+# Batch update multiple memories
+memoclaw batch-update '[{"id":"uuid1","importance":0.9},{"id":"uuid2","pinned":true}]'
+
+# Bulk delete memories by ID
+memoclaw bulk-delete uuid1 uuid2 uuid3
+
+# Delete all memories in a namespace
+memoclaw purge --namespace old-project
+
 # Manage relations
 memoclaw relations list <memory-id>
 memoclaw relations create <memory-id> <target-id> related_to
 memoclaw relations delete <memory-id> <relation-id>
+
+# Traverse the memory graph
+memoclaw graph <memory-id> --depth 2 --limit 50
 
 # Assemble context block for LLM prompts
 memoclaw context "user preferences and recent decisions" --max-memories 10
@@ -316,6 +328,24 @@ memoclaw stats
 
 # View memory change history
 memoclaw history <uuid>
+
+# Quick memory count
+memoclaw count
+memoclaw count --namespace project-alpha
+
+# Interactive memory browser (REPL)
+memoclaw browse
+
+# Import memories from JSON export
+memoclaw import memories.json
+
+# Show/validate config
+memoclaw config show
+memoclaw config check
+
+# Shell completions
+memoclaw completions bash >> ~/.bashrc
+memoclaw completions zsh >> ~/.zshrc
 ```
 
 **Setup:**
@@ -393,7 +423,8 @@ Request:
   "importance": 0.8,
   "namespace": "project-alpha",
   "memory_type": "preference",
-  "expires_at": "2026-06-01T00:00:00Z"
+  "expires_at": "2026-06-01T00:00:00Z",
+  "immutable": false
 }
 ```
 
@@ -416,6 +447,7 @@ Fields:
 - `agent_id`: Agent identifier for multi-agent scoping
 - `expires_at`: ISO 8601 date string — memory auto-expires after this time (must be in the future)
 - `pinned`: Boolean — pinned memories are exempt from decay (default: false)
+- `immutable`: Boolean — immutable memories cannot be updated or deleted (default: false)
 
 ### Store batch
 
@@ -547,6 +579,7 @@ Fields (all optional, at least one required):
 - `namespace`: Move to a different namespace
 - `expires_at`: ISO 8601 date (must be future) or `null` to clear expiration
 - `pinned`: Boolean — pinned memories are exempt from decay
+- `immutable`: Boolean — lock memory from further updates or deletion
 
 ### Get single memory
 
@@ -936,6 +969,34 @@ Response:
 ```
 
 CLI: `memoclaw namespaces`
+
+### Core memories
+
+```
+GET /v1/core-memories?limit=10&namespace=default
+```
+
+Returns the most important, frequently accessed, and pinned memories — the "core" of your memory store. Free endpoint.
+
+Response:
+```json
+{
+  "memories": [
+    {
+      "id": "uuid",
+      "content": "User's name is Ana",
+      "importance": 0.95,
+      "pinned": true,
+      "access_count": 42,
+      "memory_type": "preference",
+      "namespace": "default"
+    }
+  ],
+  "total": 5
+}
+```
+
+CLI: `memoclaw list --sort importance --limit 10` (approximate equivalent)
 
 ### Usage stats
 
