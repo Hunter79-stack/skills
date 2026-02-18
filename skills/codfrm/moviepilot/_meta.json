@@ -1,0 +1,11 @@
+{
+  "owner": "codfrm",
+  "slug": "moviepilot",
+  "displayName": "Moviepilot",
+  "latest": {
+    "version": "0.1.0",
+    "publishedAt": 1771323073860,
+    "commit": null
+  },
+  "history": []
+}
