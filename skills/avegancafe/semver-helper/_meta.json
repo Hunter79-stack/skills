@@ -1,0 +1,11 @@
+{
+  "owner": "avegancafe",
+  "slug": "semver-helper",
+  "displayName": "Semver Helper",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1771447772872,
+    "commit": null
+  },
+  "history": []
+}
