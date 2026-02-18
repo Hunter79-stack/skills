@@ -1,0 +1,11 @@
+{
+  "owner": "hogar23",
+  "slug": "home-assistant-control",
+  "displayName": "Home Assistant Control",
+  "latest": {
+    "version": "1.0.3",
+    "publishedAt": 1771451392881,
+    "commit": null
+  },
+  "history": []
+}
