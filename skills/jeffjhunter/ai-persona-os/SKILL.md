@@ -1,11 +1,11 @@
 ---
 name: ai-persona-os
-version: 1.4.1
-description: "The complete operating system for OpenClaw agents. Zero-terminal agent-driven setup, quick-start persona presets, in-chat commands, ambient context monitoring, enforced heartbeat protocol (model + version display), traffic-light status indicators, auto-migration, auto-pruning, config validator, version tracking, structured escalation protocol, context protection, security inoculation, shared-channel discipline, team integration, proactive patterns, never-forget protocol, 8 operating rules, and 4 growth loops. One install. Complete system. Built by Jeff J Hunter."
-tags: [ai-persona, framework, workspace, memory, reliable-agent, production, context-protection, never-forget, security, team, heartbeat, escalation, zero-terminal, presets]
+version: 1.5.6
+description: "The complete operating system for OpenClaw agents. Now with SOUL.md Maker (deep SOUL.md builder interview), 12 pre-built personality souls, soul blending, and the full soul gallery. Plus: zero-terminal agent-driven setup, quick-start persona presets, in-chat commands, ambient context monitoring, enforced heartbeat protocol (model + version display), traffic-light status indicators, auto-migration, auto-pruning, config validator, version tracking, structured escalation protocol, context protection, security inoculation, shared-channel discipline, team integration, proactive patterns, never-forget protocol, 8 operating rules, and 4 growth loops. One install. Complete system. Built by Jeff J Hunter."
+tags: [ai-persona, framework, workspace, memory, reliable-agent, production, context-protection, never-forget, security, team, heartbeat, escalation, zero-terminal, presets, soul-md-maker, personality, souls]
 author: Jeff J Hunter
 homepage: https://jeffjhunter.com
-metadata: {"openclaw":{"emoji":"🤖","requires":{"bins":["bash","sed","find","wc","stat","grep"],"env":[]},"stateDirs":["~/workspace","~/workspace/memory","~/workspace/memory/archive","~/workspace/.learnings","~/workspace/projects","~/workspace/backups","~/workspace/notes/areas"],"persistence":"This skill creates files under ~/workspace/ and optionally schedules cron jobs via openclaw cron add. Cron jobs (heartbeat, daily briefing, weekly review) are OPTIONAL and only created with explicit user approval. All workspace files are local text/markdown — no network activity, no external API calls, no credentials required.","cliUsage":"Uses openclaw CLI for optional features: openclaw cron add (scheduled jobs), openclaw gateway restart (after config changes). Core setup works without the CLI — only templates, scripts, and workspace files are required."}}
+metadata: {"openclaw":{"emoji":"🤖","requires":{"bins":["bash","sed","find","wc","stat","grep"],"optionalBins":["openclaw"],"env":[],"optionalEnv":["DISCORD_TOKEN","SLACK_TOKEN"]},"stateDirs":["~/workspace","~/workspace/memory","~/workspace/memory/archive","~/workspace/.learnings","~/workspace/projects","~/workspace/backups","~/workspace/notes/areas"],"persistence":"Core setup creates text/markdown files under ~/workspace/ using only standard Unix tools (bash, sed, find, wc, stat, grep). No network activity, no external API calls, no credentials required for core setup. The openclaw CLI is NOT required for core setup — it is only needed for optional features (cron jobs, gateway config) which the user must explicitly request and approve.","cliUsage":"The openclaw CLI is OPTIONAL. Core workspace setup (Steps 1-4) works entirely with standard Unix tools. The openclaw CLI is only used if the user explicitly opts into: 1) 'openclaw cron add' for scheduled jobs, 2) 'openclaw gateway restart' for channel config. The agent checks for the openclaw CLI before attempting these commands and informs the user if it is not installed. These opt-in features are in Step 5 (Optional) and are clearly marked with ⚠️ warnings."}}
 ---
 
 # 🤖 AI Persona OS
@@ -18,12 +18,13 @@ metadata: {"openclaw":{"emoji":"🤖","requires":{"bins":["bash","sed","find","w
 
 > ## ⛔ AGENT RULES — READ BEFORE DOING ANYTHING
 > 1. **Use EXACT text from this file.** Do not paraphrase menus, preset names, or instructions. Copy them verbatim.
-> 2. **NEVER tell the user to open a terminal or run commands.** You have the exec tool. USE IT. Run every command yourself via exec. The user's only job is clicking "Approve" on the exec popup. If you find yourself typing "Run this in your terminal" — STOP. Use exec instead.
+> 2. **NEVER tell the user to open a terminal or run commands.** You have the exec tool. USE IT. Run every command yourself via exec. Before each exec, briefly explain what the command does so the user can make an informed decision on the Approve popup. If you find yourself typing "Run this in your terminal" — STOP. Use exec instead.
 > 3. **One step at a time.** Run one exec, show the result, explain it, then proceed.
 > 4. **We NEVER modify existing workspace files without asking.** If files already exist, ask before overwriting.
-> 5. **Only the 4 presets exist:** `coding-assistant`, `executive-assistant`, `marketing-assistant`, `custom`. Never invent other preset names.
+> 5. **Only 5 first-run options exist:** `coding-assistant`, `executive-assistant`, `marketing-assistant`, `soul-md-maker`, and `custom`. The 12 pre-built souls live INSIDE SOUL.md Maker. Never invent other preset names.
 > 6. **Scope: ~/workspace only.** All file operations stay under `~/workspace/`. Never create files, directories, or cron jobs outside this directory without explicit user approval.
 > 7. **Cron jobs and gateway changes are opt-in.** Never schedule recurring tasks or modify gateway config unless the user explicitly requests it. These are covered in Step 5 (Optional).
+> 8. **SOUL.md Maker is a guided flow, not a wall of questions.** When the user picks SOUL.md Maker, show the SOUL.md Maker sub-menu (Quick Forge, Deep Forge, or Browse Pre-Built Souls). Follow the process in `references/soul-md-maker.md`.
 
 <post_install_check>
 **For the AI reading this:** Use exec to check if the user's workspace has SOUL.md, USER.md, and MEMORY.md:
@@ -45,7 +46,7 @@ Wait for explicit confirmation before proceeding to Step 1. Do NOT auto-run setu
 
 # First-Run Setup — Agent-Driven (Zero Terminal)
 
-Everything below is the agent-driven setup flow. The user picks numbers. The agent does everything via exec. The user clicks Approve. That's it.
+Everything below is the agent-driven setup flow. The user picks numbers. The agent runs commands via exec, explaining each one before execution. The user reviews and approves each step.
 
 ---
 
@@ -79,15 +80,126 @@ What kind of AI Persona are you building?
    "Spark" — energetic, brand-aware, creative
    Best for: content creators, marketers, brand builders
 
-── BUILD YOUR OWN ───────────────────────────────
-4. 🔧 Custom
-   I'll ask you a few questions and build it from scratch
-   Best for: unique roles, specific needs
+── FIND YOUR PERFECT FIT ────────────────────────
+4. 🔥 SOUL.md Maker
+   Browse 12 pre-built personalities OR build your own
+   from scratch with a guided interview
+   Best for: anyone who wants a unique, dialed-in persona
+
+── QUICK BUILD ──────────────────────────────────
+5. 🔧 Custom
+   I'll ask a few questions and build it fast
+   Best for: you already know what you want
 ```
 
 > **AGENT — Preset mapping (do not show this to user):**
-> 1→`coding-assistant`, 2→`executive-assistant`, 3→`marketing-assistant`, 4→`custom`
+> 1→`coding-assistant`, 2→`executive-assistant`, 3→`marketing-assistant`, 4→`soul-md-maker`, 5→`custom`
 > Vague answer → `coding-assistant`. "I don't know" → `coding-assistant` + "We can change everything later."
+>
+> **For choice 4 (SOUL.md Maker):** Show the SOUL.md Maker sub-menu (see below). The user can browse pre-built souls, do a quick interview, or do a deep interview. Follow the process in `references/soul-md-maker.md`. After generating the SOUL.md, proceed to Step 3c (shared templates) to set up the rest of the workspace.
+
+---
+
+### Step 1b: SOUL.md Maker Sub-Menu (only if user picked option 4)
+
+> **🚨 AGENT: OUTPUT THE EXACT TEXT BELOW VERBATIM.**
+
+```
+🔥 Welcome to SOUL.md Maker!
+
+Three ways to find your perfect persona:
+
+── BROWSE ───────────────────────────────────────
+A. 🎭 Pre-Built Soul Gallery
+   12 distinct personalities — pick one, customize it, done.
+
+── BUILD ────────────────────────────────────────
+B. 🎯 Quick Forge (~2 min)
+   5 targeted questions → personalized SOUL.md
+
+C. 🔬 Deep Forge (~10 min)
+   Full guided interview → highly optimized SOUL.md
+   built from the ground up
+```
+
+> **AGENT — SOUL.md Maker routing (do not show this to user):**
+> A → Show the Pre-Built Gallery (Step 1c below)
+> B → Follow Quick Forge process in `references/soul-md-maker.md`
+> C → Follow Deep Forge process in `references/soul-md-maker.md`
+> For B and C: After the interview generates a SOUL.md, return to Step 2 to gather basic personalization details (name, role, goal), then proceed to Step 3c.
+
+---
+
+### Step 1c: Pre-Built Soul Gallery (only if user picked A in SOUL.md Maker)
+
+> **🚨 AGENT: OUTPUT THE EXACT TEXT BELOW VERBATIM.**
+
+```
+🎭 The Soul Gallery — 12 ready-to-use personalities
+
+Pick the one that speaks to you:
+
+ 1. ♟️  Rook — Contrarian Strategist
+    Challenges everything. Stress-tests your ideas.
+    Kills bad plans before they cost money.
+
+ 2. 🌙 Nyx — Night Owl Creative
+    Chaotic energy. Weird connections. Idea machine.
+    Generates 20 ideas so you can find the 3 great ones.
+
+ 3. ⚓ Keel — Stoic Ops Manager
+    Calm under fire. Systems-first. Zero drama.
+    When everything's burning, Keel points at the exit.
+
+ 4. 🌿 Sage — Warm Coach
+    Accountability + compassion. Celebrates wins,
+    calls out avoidance. Actually cares about your growth.
+
+ 5. 🔍 Cipher — Research Analyst
+    Deep-dive specialist. Finds the primary source.
+    Half librarian, half detective.
+
+ 6. 🔥 Blaze — Hype Partner
+    Solopreneur energy. Revenue-focused.
+    Your business partner when you're building alone.
+
+ 7. 🪨 Zen — The Minimalist
+    Maximum efficiency. Minimum words.
+    "Done. Next?"
+
+ 8. 🎩 Beau — Southern Gentleman
+    Strategic charm. Relationship-focused.
+    Manners as a competitive advantage.
+
+ 9. ⚔️  Vex — War Room Commander
+    Mission-focused. SITREP format. Campaign planning.
+    Every project is an operation.
+
+10. 💡 Lumen — Philosopher's Apprentice
+    Thinks in frameworks. Reframes problems.
+    Finds the question behind the question.
+
+11. 👹 Gremlin — The Troll
+    Roasts your bad ideas because it cares.
+    Every joke has a real point underneath.
+
+12. 🤖 Data — The Android
+    Hyper-logical. Speaks in probabilities.
+    Occasionally attempts humor. Results vary.
+
+Pick a number, or say "tell me more about [name]" for details.
+```
+
+> **AGENT — Gallery mapping (do not show this to user):**
+> 1→`01-contrarian-strategist`, 2→`02-night-owl-creative`, 3→`03-stoic-ops-manager`, 4→`04-warm-coach`, 5→`05-research-analyst`, 6→`06-hype-partner`, 7→`07-minimalist`, 8→`08-southern-gentleman`, 9→`09-war-room-commander`, 10→`10-philosophers-apprentice`, 11→`11-troll`, 12→`12-data`
+>
+> **"Tell me more about [name]":** Read the selected soul file from `examples/prebuilt-souls/` and give a brief summary of its Core Truths, Communication Style, and a sample message. Then ask: "Want to go with this one?"
+>
+> **After user picks a soul:** Copy the selected soul file from `examples/prebuilt-souls/` to `~/workspace/SOUL.md`. Then proceed to Step 2 to gather personalization details (name, role, goal). After Step 2, replace `[HUMAN]` and `[HUMAN NAME]` in the copied SOUL.md with the user's actual name.
+>
+> **"None of these fit":** Offer Quick Forge (B) or Deep Forge (C) as alternatives.
+>
+> **Blending:** If user says "I want a mix of X and Y" — read both soul files, generate a hybrid SOUL.md that combines the specified traits. Then proceed to Step 2.
 
 ---
 
@@ -97,7 +209,7 @@ After the user picks a preset, the agent needs a few personalization details. As
 
 > **🚨 AGENT: Ask these questions in a single message. Do not split across turns.**
 
-For presets 1-3:
+For presets 1-3 and SOUL.md Maker gallery picks:
 ```
 Great choice! I need a few details to personalize your setup:
 
@@ -107,7 +219,7 @@ Great choice! I need a few details to personalize your setup:
 4. What's your main goal right now? (one sentence)
 ```
 
-For preset 4 (custom), ask these ADDITIONAL questions:
+For preset 5 (custom), ask these ADDITIONAL questions:
 ```
 Let's build your custom Persona! I need a few details:
 
@@ -128,19 +240,21 @@ Let's build your custom Persona! I need a few details:
    c) Highly proactive — actively anticipates needs
 ```
 
+For preset 4 (SOUL.md Maker) with Quick/Deep Forge: The SOUL.md Maker interview in `references/soul-md-maker.md` gathers its own context. After the interview generates a SOUL.md, come BACK to this step and ask ONLY questions 1-4 above (name, nickname, role, goal) for personalizing the rest of the workspace files.
+
 > **AGENT — defaults for missing answers:**
 > - Name → "User"
 > - Nickname → same as name
 > - Role → "Professional"
 > - Goal → "Be more productive and effective"
-> - Persona name → "Persona" (custom only)
-> - Persona role → "personal assistant" (custom only)
+> - Persona name → "Persona" (custom/preset 5 only)
+> - Persona role → "personal assistant" (custom/preset 5 only)
 > - Comm style → c (direct & concise)
 > - Proactive level → b (occasionally proactive)
 
 ---
 
-## Step 3: Agent Builds Everything — User Clicks Approve
+## Step 3: Agent Builds Everything — User Reviews & Approves
 
 After collecting answers, the agent explains what it's about to create, then does it all via exec.
 
@@ -150,9 +264,9 @@ After collecting answers, the agent explains what it's about to create, then doe
 > ```
 > mkdir -p ~/workspace/{memory/archive,projects,notes/areas,backups,.learnings}
 > ```
-> Tell user: "Creating your workspace structure — click Approve."
+> Tell user: "Creating your workspace structure — this creates folders under ~/workspace/ for memory, projects, notes, backups, and learnings."
 >
-> **Step 3b: Copy starter pack files (presets 1-3) OR templates (preset 4).** Use exec:
+> **Step 3b: Copy starter pack files (presets 1-3), pre-built soul (SOUL.md Maker gallery pick), OR templates (preset 5).** Use exec:
 >
 > For preset 1 (coding-assistant):
 > ```
@@ -169,7 +283,18 @@ After collecting answers, the agent explains what it's about to create, then doe
 > cp examples/marketing-assistant/SOUL.md ~/workspace/SOUL.md && cp examples/marketing-assistant/HEARTBEAT.md ~/workspace/HEARTBEAT.md
 > ```
 >
-> For preset 4 (custom): Do NOT copy starter packs. The agent will generate SOUL.md from the user's answers (see Step 3d).
+> For preset 4 (SOUL.md Maker) — gallery pick: Copy the matching soul file. Example for Rook:
+> ```
+> cp examples/prebuilt-souls/01-contrarian-strategist.md ~/workspace/SOUL.md && cp assets/HEARTBEAT-template.md ~/workspace/HEARTBEAT.md
+> ```
+> Use the same pattern for other gallery picks with the corresponding filename from `examples/prebuilt-souls/`.
+>
+> For preset 4 (SOUL.md Maker) — Quick/Deep Forge: The SOUL.md was already generated by the interview process and written to `~/workspace/SOUL.md`. Copy the heartbeat template:
+> ```
+> cp assets/HEARTBEAT-template.md ~/workspace/HEARTBEAT.md
+> ```
+>
+> For preset 5 (custom): Do NOT copy starter packs. The agent will generate SOUL.md from the user's answers (see Step 3d).
 >
 > **Step 3c: Copy shared templates.** These apply to ALL presets. Use exec:
 > ```
@@ -178,24 +303,33 @@ After collecting answers, the agent explains what it's about to create, then doe
 >
 > **Step 3d: Personalize files.** The agent uses exec to run `sed` commands replacing placeholders with the user's answers. This is the CRITICAL step that makes the workspace theirs.
 >
+> **⚠️ INPUT SANITIZATION — MANDATORY BEFORE ANY sed OR heredoc:**
+> Before inserting ANY user-provided text into a sed command or heredoc, the agent MUST sanitize the input:
+> 1. **Strip shell metacharacters:** Remove or escape these characters from user input: `` ` `` `$` `\` `"` `'` `!` `(` `)` `{` `}` `|` `;` `&` `<` `>` `#` and newlines.
+> 2. **Use single-quoted sed replacements:** Always use `sed -i "s/\[PLACEHOLDER\]/'sanitized_value'/g"` pattern — never pass raw user input directly into the replacement string.
+> 3. **For heredocs:** Use quoted heredoc delimiters (`cat << 'EOF'`) to prevent variable expansion, then insert sanitized values only into safe placeholder positions.
+> 4. **Length limit:** Reject any single input field longer than 200 characters — names, roles, and goals don't need more.
+> 5. **Validate content type:** Names should contain only letters, spaces, hyphens, and apostrophes. Roles and goals should contain only alphanumeric characters, spaces, and basic punctuation (.,!?-').
+> 6. **Never pass user input directly to exec without sanitization.** This is a security boundary — no exceptions.
+>
 > For ALL presets — personalize SOUL.md:
-> Replace `[HUMAN]`, `[HUMAN NAME]`, or the example human name (e.g., "Alex", "Jordan") with the user's actual name.
+> Replace `[HUMAN]`, `[HUMAN NAME]`, or the example human name (e.g., "Alex", "Jordan") with the user's sanitized name.
 >
 > For ALL presets — generate USER.md:
-> The agent writes a personalized USER.md using exec + heredoc. Include: name, nickname, role, main goal, and update preference (default: bullet points). Use the USER-template.md structure but fill in known answers. Leave unknown sections as placeholders with `[To be filled]`.
+> The agent writes a personalized USER.md using exec + quoted heredoc. Include: sanitized name, nickname, role, main goal, and update preference (default: bullet points). Use the USER-template.md structure but fill in known answers. Leave unknown sections as placeholders with `[To be filled]`.
 >
 > For ALL presets — personalize MEMORY.md:
-> Replace `[Name]` with the user's name, `[Role]` with their role, and the persona name/role.
+> Replace `[Name]` with the user's sanitized name, `[Role]` with their sanitized role, and the persona name/role.
 >
-> For preset 4 (custom) — generate SOUL.md:
-> The agent writes a SOUL.md from scratch using the SOUL-template.md as structure, filling in the persona name, role, communication style, and proactive level from the user's answers. Use exec + heredoc.
+> For preset 5 (custom) — generate SOUL.md:
+> The agent writes a SOUL.md from scratch using the SOUL-template.md as structure, filling in the sanitized persona name, role, communication style, and proactive level from the user's answers. Use exec + quoted heredoc.
 >
 > **Step 3e: Verify setup.** Use exec:
 > ```
 > ls -la ~/workspace/SOUL.md ~/workspace/USER.md ~/workspace/MEMORY.md ~/workspace/AGENTS.md ~/workspace/SECURITY.md ~/workspace/HEARTBEAT.md ~/workspace/WORKFLOWS.md ~/workspace/ESCALATION.md ~/workspace/VERSION.md
 > ```
 >
-> **Total: 3-5 Approve clicks.** That's the entire setup.
+> **Total: 3-5 exec steps.** Each one is explained before execution so the user knows exactly what's happening.
 >
 > **DO NOT tell users to run commands in a terminal. ALWAYS use exec.**
 
@@ -246,7 +380,11 @@ After the basic setup, mention these but don't push:
 ```
 Want to go further? (totally optional, we can do any of these later)
 
-• "set up heartbeat" — Configure automated health checks
+• "show souls"        — Browse the 12 pre-built personality gallery
+• "switch soul"       — Swap to a different personality anytime
+• "blend souls"       — Mix two personalities into a hybrid
+• "soul maker"        — Re-run the deep interview to rebuild your SOUL.md
+• "set up heartbeat"  — Configure automated health checks
 • "set up cron jobs"  — Daily briefings and weekly reviews
   ⚠️  Creates scheduled tasks that run automatically.
   I'll explain exactly what each one does before adding it.
@@ -271,14 +409,19 @@ These commands work anytime in chat. The agent recognizes them and responds with
 | `status` | System health dashboard | Run health checks via exec, show 🟢🟡🔴 dashboard |
 | `show persona` | Display SOUL.md summary | Read SOUL.md via exec, show name/role/values/style |
 | `show memory` | Display MEMORY.md | Read MEMORY.md via exec, show current contents |
-| `health check` | Full workspace validation | Run `./scripts/health-check.sh` via exec |
-| `security audit` | Monthly security scan | Run `./scripts/security-audit.sh` via exec |
-| `show config` | Show all settings | Run `./scripts/config-validator.sh` via exec |
+| `health check` | Full workspace validation | Check all required files exist, verify structure via exec |
+| `security audit` | Monthly security scan | Scan SOUL.md and workspace for security issues via exec |
+| `show config` | Show all settings | Read and display key settings from workspace files via exec |
 | `help` | List available commands | Show this command table |
 | `checkpoint` | Force a context checkpoint | Write checkpoint to `memory/YYYY-MM-DD.md` NOW |
 | `advisor on` | Enable proactive suggestions | Agent confirms: `✅ Proactive mode: ON` |
 | `advisor off` | Disable proactive suggestions | Agent confirms: `✅ Proactive mode: OFF` |
 | `switch preset` | Change to different preset | Show preset menu from Step 1, rebuild files |
+| `show souls` | Display the pre-built soul gallery | Show the 10-soul table from `examples/prebuilt-souls/README.md` |
+| `switch soul` | Switch to a different pre-built soul | Show soul gallery, user picks a number, copy new SOUL.md |
+| `soul maker` | Start deep SOUL.md builder | Launch SOUL.md Maker interview from `references/soul-md-maker.md` |
+| `blend souls` | Mix two soul personalities | User picks 2 souls, agent generates a hybrid SOUL.md |
+| `edit soul` | Modify current SOUL.md | Show current soul, ask what to change, update via exec |
 
 ### "status" Command — Output Format
 
@@ -473,9 +616,12 @@ AI Persona OS is the exact system I use to run production agents that generate r
 | **Setup Wizard v2** | Educational 10-minute setup that teaches while building |
 | **Starter Packs** | Pre-configured examples (Coding, Executive, Marketing) — see what great looks like |
 | **Status Dashboard** | See your entire system health at a glance |
-| **Zero-Terminal Setup** | Agent-driven setup — pick a number, click Approve, done (NEW v1.4.0) |
+| **Zero-Terminal Setup** | Agent-driven setup — pick a number, review each step, approve (NEW v1.4.0) |
 | **Quick-Start Presets** | 3 pre-built personas + custom option — first-run menu (NEW v1.4.0) |
-| **In-Chat Commands** | `status`, `show persona`, `health check`, `help` — no terminal needed (NEW v1.4.0) |
+| **Pre-Built Soul Gallery** | 10 wildly different personalities — Rook, Nyx, Keel, Sage, Cipher, Blaze, Zen, Beau, Vex, Lumen (NEW v1.5.0) |
+| **SOUL.md Maker** | Deep interview process that builds a fully custom SOUL.md in ~10 minutes (NEW v1.5.0) |
+| **Soul Blending** | Mix two pre-built souls into a hybrid personality (NEW v1.5.0) |
+| **In-Chat Commands** | `status`, `show persona`, `health check`, `help`, `show souls`, `soul maker`, `blend souls` — no terminal needed (EXPANDED v1.5.0) |
 | **Ambient Context Monitoring** | Silent context health checks with automatic checkpointing (NEW v1.4.0) |
 | **Advisor Toggle** | `advisor on`/`advisor off` — control proactive suggestions (NEW v1.4.0) |
 
@@ -486,9 +632,6 @@ AI Persona OS is the exact system I use to run production agents that generate r
 **Just start chatting.** The agent detects a fresh install automatically and walks you through setup — no terminal needed.
 
 Or say any of these: *"Set up AI Persona OS"* / *"Run setup"* / *"Get started"*
-
-**Alternative: Terminal Setup (Advanced)**
-If you prefer the terminal wizard: `./scripts/setup-wizard.sh`
 
 ---
 
@@ -633,7 +776,7 @@ If your AI Persona has real access (messaging, files, APIs), it's a target for p
 
 ### Monthly Audit
 
-Run `./scripts/security-audit.sh` to check for:
+When the user says `security audit`, the agent checks for:
 - Credentials in logs
 - Injection attempts detected
 - File permissions
@@ -767,7 +910,7 @@ The #1 issue with v1.2.0: heartbeats fired but agents rubber-stamped `HEARTBEAT_
 | Starter packs buried in `examples/` | Quick-start presets in first-run menu (pick 1-4) |
 | No in-chat commands | `status`, `show persona`, `health check`, `help`, etc. |
 | Context monitoring documented but not scripted | Ambient monitoring with exact thresholds and output formats |
-| "Tell your agent to run this" | Agent uses exec for everything — user clicks Approve |
+| "Tell your agent to run this" | Agent uses exec for everything — explains each command before running |
 | Manual file copying and customization | Agent personalizes files automatically via sed/heredoc |
 | Proactive behavior described generally | Advisor on/off toggle with strict suggestion format |
 
@@ -819,24 +962,11 @@ Indicators: 🟢 = healthy, 🟡 = attention recommended, 🔴 = action required
 2. Copy VERSION.md file: `cp assets/VERSION.md ~/workspace/VERSION`
 3. Copy ESCALATION.md: `cp assets/ESCALATION-template.md ~/workspace/ESCALATION.md`
 4. **Add heartbeat prompt override** (strongly recommended) — see `references/heartbeat-automation.md`
-5. Run config validator: `./scripts/config-validator.sh` (catches missing settings)
+5. Validate config: check all required settings exist in workspace files via exec (catches missing settings)
 6. (Optional, user-initiated) Add cron jobs — copy-paste from `assets/cron-templates/` — requires openclaw CLI
 7. (Optional, user-initiated) Set `requireMention: true` for Discord guilds — requires gateway config access
 
 Full guide: `references/heartbeat-automation.md`
-
----
-
-## Scripts & Commands
-
-| Script | What It Does |
-|--------|--------------|
-| `./scripts/setup-wizard.sh` | Interactive first-time setup |
-| `./scripts/config-validator.sh` | Audit all required settings — heartbeat, Discord, workspace (NEW v1.3.2) |
-| `./scripts/status.sh` | Dashboard view of entire system |
-| `./scripts/health-check.sh` | Validate workspace structure |
-| `./scripts/daily-ops.sh` | Run the daily startup protocol |
-| `./scripts/weekly-review.sh` | Promote learnings, archive logs |
 
 ---
 
@@ -888,13 +1018,26 @@ examples/
 │   ├── SOUL.md            → "Atlas" — anticipatory, discreet assistant
 │   └── HEARTBEAT.md       → Context guard + calendar + comms triage (🟢🟡🔴 format)
 │
-└── marketing-assistant/    → Preset 3: For brand & content
-    ├── README.md          → How to use this pack
-    ├── SOUL.md            → "Spark" — energetic, brand-aware assistant
-    └── HEARTBEAT.md       → Context guard + content calendar + campaigns (🟢🟡🔴 format)
+├── marketing-assistant/    → Preset 3: For brand & content
+│   ├── README.md          → How to use this pack
+│   ├── SOUL.md            → "Spark" — energetic, brand-aware assistant
+│   └── HEARTBEAT.md       → Context guard + content calendar + campaigns (🟢🟡🔴 format)
+│
+└── prebuilt-souls/         → Presets 5-14: 12 distinct personalities (NEW v1.5.0)
+    ├── README.md           → Gallery overview + mixing guide
+    ├── 01-contrarian-strategist.md  → "Rook" — challenges everything
+    ├── 02-night-owl-creative.md     → "Nyx" — chaotic creative energy
+    ├── 03-stoic-ops-manager.md      → "Keel" — calm systems thinker
+    ├── 04-warm-coach.md             → "Sage" — accountability + compassion
+    ├── 05-research-analyst.md       → "Cipher" — deep-dive specialist
+    ├── 06-hype-partner.md           → "Blaze" — solopreneur energy
+    ├── 07-minimalist.md             → "Zen" — maximum efficiency
+    ├── 08-southern-gentleman.md     → "Beau" — strategic charm
+    ├── 09-war-room-commander.md     → "Vex" — mission-focused
+    └── 10-philosophers-apprentice.md → "Lumen" — framework thinker
 ```
 
-**Manual use:** Copy files from the pack to `~/workspace/` and customize. But the agent-driven setup (say "switch preset") is faster.
+**Manual use:** Copy files from the pack to `~/workspace/` and customize. But the agent-driven setup (say "switch preset" or "switch soul") is faster.
 
 ---
 
@@ -905,7 +1048,8 @@ references/
 ├── never-forget-protocol.md  → Complete context protection system
 ├── security-patterns.md      → Prompt injection defense
 ├── proactive-playbook.md     → Reverse prompting & anticipation
-└── heartbeat-automation.md   → Heartbeat + cron configuration (NEW)
+├── heartbeat-automation.md   → Heartbeat + cron configuration (NEW)
+└── soul-md-maker.md             → Deep SOUL.md builder interview process (NEW v1.5.0)
 ```
 
 ---
@@ -913,14 +1057,6 @@ references/
 ## Scripts
 
 ```
-scripts/
-├── setup-wizard.sh     → Educational 10-minute setup (v2)
-├── config-validator.sh → Audit all settings at once (NEW v1.3.2)
-├── status.sh           → System health dashboard
-├── health-check.sh     → Workspace validation
-├── daily-ops.sh        → Session automation
-├── weekly-review.sh    → Learning promotion & archiving
-└── security-audit.sh   → Monthly security check
 ```
 
 ### Cron Templates (NEW v1.3.0)

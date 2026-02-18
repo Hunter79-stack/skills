@@ -325,4 +325,4 @@ The goal isn't paranoia — it's appropriate caution for the access you have.
 
 ---
 
-*Part of AI Persona OS by Jeff J Hunter — https://jeffjhunter.com*
+*Part of AI Persona OS by Jeff J Hunter — https://os.aipersonamethod.com*

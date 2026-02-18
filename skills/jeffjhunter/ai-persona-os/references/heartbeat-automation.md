@@ -373,4 +373,4 @@ Your existing memory files, SOUL.md, USER.md, AGENTS.md, WORKFLOWS.md, and all w
 
 ---
 
-*Part of AI Persona OS by Jeff J Hunter — https://jeffjhunter.com*
+*Part of AI Persona OS by Jeff J Hunter — https://os.aipersonamethod.com*

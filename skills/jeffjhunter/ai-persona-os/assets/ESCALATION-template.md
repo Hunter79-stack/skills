@@ -146,4 +146,4 @@ Low — their email isn't urgent, but responding within 48h is professional.
 
 ---
 
-*Part of AI Persona OS by Jeff J Hunter — https://jeffjhunter.com*
+*Part of AI Persona OS by Jeff J Hunter — https://os.aipersonamethod.com*

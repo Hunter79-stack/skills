@@ -133,4 +133,4 @@ workspace/
 
 ---
 
-*Part of AI Persona OS by Jeff J Hunter — https://jeffjhunter.com*
+*Part of AI Persona OS by Jeff J Hunter — https://os.aipersonamethod.com*
