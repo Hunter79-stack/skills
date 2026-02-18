@@ -1,7 +1,7 @@
 {
   "name": "surrealdb-memory",
-  "version": "1.3.0",
-  "description": "Knowledge graph memory system with SurrealDB, MCP tools, confidence scoring, and LLM-powered extraction",
+  "version": "2.0.0",
+  "description": "Knowledge graph memory system with SurrealDB, working memory, episodic memory, outcome calibration, context-aware search, MCP tools, confidence scoring, and LLM-powered extraction",
   "keywords": [
     "memory",
     "knowledge-graph",
@@ -9,7 +9,10 @@
     "vector-search",
     "embeddings",
     "mcp",
-    "llm"
+    "llm",
+    "episodic-memory",
+    "working-memory",
+    "outcome-learning"
   ],
   "author": "Clawdbot",
   "license": "MIT",
@@ -72,13 +75,19 @@
       "Knowledge extraction sends content to OpenAI API - review what files will be processed"
     ],
     "mcp": {
-      "server": "scripts/mcp-server.py",
+      "server": "scripts/mcp-server-v2.py",
       "name": "surrealdb-memory",
       "tools": [
         "knowledge_search",
         "knowledge_recall",
         "knowledge_store",
-        "knowledge_stats"
+        "knowledge_stats",
+        "knowledge_store_sync",
+        "episode_search",
+        "episode_learnings",
+        "episode_store",
+        "working_memory_status",
+        "context_aware_search"
       ]
     },
     "gateway": {
@@ -88,10 +97,13 @@
   "scripts": {
     "install": "./scripts/install.sh",
     "init": "./scripts/init-db.sh",
+    "migrate:v2": "python3 scripts/migrate-v2.py",
     "extract": "python3 scripts/extract-knowledge.py extract",
     "extract:full": "python3 scripts/extract-knowledge.py extract --full",
     "status": "python3 scripts/extract-knowledge.py status",
     "reconcile": "python3 scripts/extract-knowledge.py reconcile",
-    "discover": "python3 scripts/extract-knowledge.py discover-relations"
+    "discover": "python3 scripts/extract-knowledge.py discover-relations",
+    "wm:status": "python3 scripts/working_memory.py status",
+    "episodes:stats": "python3 scripts/episodes.py stats"
   }
 }

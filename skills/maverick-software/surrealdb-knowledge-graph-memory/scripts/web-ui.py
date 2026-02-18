@@ -345,9 +345,9 @@ def start_surrealdb() -> dict:
 def init_schema() -> dict:
     """Initialize database schema."""
     try:
-        schema_file = SCRIPT_DIR / "schema.surql"
+        schema_file = SCRIPT_DIR / "schema.sql"
         if not schema_file.exists():
-            return {"success": False, "error": "schema.surql not found"}
+            return {"success": False, "error": "schema.sql not found"}
         
         result = subprocess.run(
             [

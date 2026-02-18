@@ -1,6 +1,6 @@
-# SurrealDB Knowledge Graph Memory
+# SurrealDB Knowledge Graph Memory v2.0
 
-A knowledge graph memory system using SurrealDB with vectorized semantic search, confidence scoring, graph-aware fact relationships, MCP tools, and LLM-powered knowledge extraction.
+A knowledge graph memory system using SurrealDB with vectorized semantic search, confidence scoring, graph-aware fact relationships, **episodic memory**, **working memory**, and **outcome-based learning**.
 
 ## Description
 
@@ -10,9 +10,13 @@ Use this skill for:
 - Managing fact relationships (supports, contradicts, updates)
 - LLM-powered knowledge extraction from memory files
 - AI-driven relationship discovery between facts
-- Memory maintenance: decay, pruning, consolidation
+- **NEW v2:** Episodic memory for task histories and learnings
+- **NEW v2:** Working memory for crash-resilient task tracking
+- **NEW v2:** Outcome-based confidence calibration (facts that help succeed gain confidence)
+- **NEW v2:** Context-aware retrieval (task-boosted search)
+- **NEW v2:** Synchronous writes for important facts
 
-**Triggers:** "remember this", "store fact", "what do you know about", "memory search", "memory maintenance", "prune memory", "knowledge graph", "find relations"
+**Triggers:** "remember this", "store fact", "what do you know about", "memory search", "similar tasks", "past episodes", "working memory", "knowledge graph"
 
 ## ⚠️ Security & Installation Notes
 
@@ -20,65 +24,92 @@ This skill performs system-level operations. Review before installing:
 
 | Behavior | Location | Description |
 |----------|----------|-------------|
-| **Network installer** | `install.sh`, `memory.ts` | Runs `curl https://install.surrealdb.com \| sh` |
+| **Network installer** | `install.sh` | Runs `curl https://install.surrealdb.com \| sh` |
 | **Source patching** | `integrate-clawdbot.sh` | Uses `sed -i` to patch Clawdbot source files |
 | **Service management** | `memory.ts` | Can start SurrealDB server, run schema imports |
-| **Python packages** | `install.sh`, `memory.ts` | Installs surrealdb, openai, pyyaml via pip |
+| **Python packages** | `install.sh` | Installs surrealdb, openai, pyyaml via pip |
 | **File access** | `extract-knowledge.py` | Reads `MEMORY.md` and `memory/*.md` for extraction |
 
 **Default credentials:** Examples use `root/root` — change for production and bind to localhost only.
 
-**API key:** `OPENAI_API_KEY` is required for embeddings (text-embedding-3-small) and LLM extraction (GPT-4o-mini). Use a scoped key.
+**API key:** `OPENAI_API_KEY` is required for embeddings (text-embedding-3-small) and LLM extraction (GPT-4o-mini).
 
-**Safe install path:**
-1. Install SurrealDB manually from [surrealdb.com/install](https://surrealdb.com/install)
-2. Use a Python venv: `python3 -m venv .venv && source .venv/bin/activate`
-3. Review and run `pip install -r scripts/requirements.txt`
-4. Set `OPENAI_API_KEY` with minimal permissions
-5. Skip `integrate-clawdbot.sh` or review the diffs it will apply
+## v2.0 Features
 
-## Features
+### 1. Episodic Memory
+Learn from past task attempts:
 
-### MCP Tools
-The skill provides an MCP server with 4 tools for knowledge graph operations:
+```bash
+# Find similar past tasks
+mcporter call surrealdb-memory.episode_search query="deploy API" limit:5
+
+# Get actionable learnings
+mcporter call surrealdb-memory.episode_learnings task_goal="Build REST API"
+# Returns: ["Always validate OAuth tokens first", "⚠️ Past failure: Token expired mid-deploy"]
+```
+
+### 2. Working Memory
+Track current task state that survives crashes:
+
+```bash
+# Check active task status
+mcporter call surrealdb-memory.working_memory_status
+```
+
+Working memory is managed via Python:
+```python
+from working_memory import WorkingMemory
+
+wm = WorkingMemory()
+wm.start_task("Deploy marketing pipeline", plan=[...])
+wm.update_step(1, status="complete", result_summary="Audited 12 templates")
+episode = wm.complete_task(outcome="success")
+```
+
+### 3. Synchronous Writes
+Important facts get stored immediately (not batched):
+
+```bash
+mcporter call surrealdb-memory.knowledge_store_sync \
+    content="Client X uses OAuth2 not API keys" \
+    importance:0.85
+```
+
+### 4. Context-Aware Search
+Search with awareness of current task:
+
+```bash
+mcporter call surrealdb-memory.context_aware_search \
+    query="API authentication" \
+    task_context="Deploy marketing automation for ClientX"
+```
+
+### 5. Outcome Calibration
+Facts that lead to success gain confidence; facts that correlate with failure lose confidence. This is automatic based on episode outcomes.
+
+## MCP Tools (v2)
 
 | Tool | Description |
 |------|-------------|
 | `knowledge_search` | Semantic search for facts by query |
 | `knowledge_recall` | Recall a fact with full context (relations, entities) |
 | `knowledge_store` | Store a new fact with confidence and tags |
-| `knowledge_stats` | Get knowledge graph statistics |
-
-### Knowledge Extraction
-- Extracts structured facts from MEMORY.md and memory/*.md files
-- Uses LLM (GPT-4o-mini) to identify entities and relationships
-- Tracks file changes for incremental extraction
-- Supports full re-extraction when needed
-
-### Confidence Scoring
-Each fact has an **effective confidence** calculated from:
-- Base confidence (0.0–1.0)
-- **+ Inherited boost**: from high-confidence supporting facts
-- **+ Entity boost**: from well-established entities mentioned
-- **- Contradiction drain**: from high-confidence contradicting facts
-- **- Time decay**: 5% per month of staleness
-
-### Relationship Discovery
-- AI finds semantic connections between isolated facts
-- Creates `supports`, `contradicts`, `updates`, `elaborates` edges
-- Can run manually or via daily cron job
+| `knowledge_stats` | Get knowledge graph statistics (now includes episodes) |
+| `knowledge_store_sync` | **v2** Importance-based routing (>0.7 = immediate write) |
+| `episode_search` | **v2** Find similar past tasks/episodes |
+| `episode_learnings` | **v2** Get actionable insights from history |
+| `episode_store` | **v2** Store completed task episode |
+| `working_memory_status` | **v2** Get current task progress |
+| `context_aware_search` | **v2** Task-context boosted retrieval |
 
 ## Prerequisites
 
 1. **SurrealDB** installed and running:
    ```bash
-   # Option A: Use the installer (runs curl | sh - review first!)
+   # Install (one-time)
    ./scripts/install.sh
    
-   # Option B: Manual install (recommended)
-   # See https://surrealdb.com/install
-   
-   # Start server (change credentials in production!)
+   # Start server
    surreal start --bind 127.0.0.1:8000 --user root --pass root file:~/.clawdbot/memory/knowledge.db
    ```
 
@@ -90,53 +121,35 @@ Each fact has an **effective confidence** calculated from:
    pip install -r scripts/requirements.txt
    ```
 
-3. **OpenAI API key** (**required**) for embeddings and extraction:
+3. **OpenAI API key** for embeddings and extraction:
    ```bash
-   # Used for: text-embedding-3-small (embeddings), GPT-4o-mini (extraction)
-   # Recommendation: Use a scoped key with minimal permissions
    export OPENAI_API_KEY="sk-..."
    ```
 
 ## Quick Start
 
 ```bash
-# Initialize the database schema
+# Initialize the database schema (includes v2 tables)
 ./scripts/init-db.sh
+
+# OR apply v2 schema to existing database
+python3 scripts/migrate-v2.py
 
 # Run initial knowledge extraction
 source .venv/bin/activate
 python3 scripts/extract-knowledge.py extract --full
 
 # Check status
-python3 scripts/extract-knowledge.py status
-```
-
-## MCP Server Usage
-
-### Via mcporter (recommended)
-```bash
-# Stats
 mcporter call surrealdb-memory.knowledge_stats
-
-# Search for facts
-mcporter call surrealdb-memory.knowledge_search query="topic" limit:10
-
-# Recall a fact with context
-mcporter call surrealdb-memory.knowledge_recall query="topic"
-mcporter call surrealdb-memory.knowledge_recall fact_id="fact:abc123"
-
-# Store a new fact
-mcporter call surrealdb-memory.knowledge_store content="New fact" confidence:0.9
 ```
 
-### MCP Server Config
-Add to your MCP client config:
+## MCP Server Configuration
+
+Add to your mcporter config:
 ```json
 {
   "surrealdb-memory": {
-    "command": "python3",
-    "args": ["scripts/mcp-server.py"],
-    "cwd": "/path/to/surrealdb-memory"
+    "command": "/path/to/.venv/bin/python3 /path/to/scripts/mcp-server-v2.py"
   }
 }
 ```
@@ -146,17 +159,9 @@ Add to your MCP client config:
 ### knowledge-tool.py (simple CLI)
 
 ```bash
-# Search for facts
 python3 scripts/knowledge-tool.py search "query" --limit 10
-
-# Recall a fact
 python3 scripts/knowledge-tool.py recall "query"
-python3 scripts/knowledge-tool.py recall "fact:abc123"
-
-# Store a fact
 python3 scripts/knowledge-tool.py store "Fact content" --confidence 0.9
-
-# Get stats
 python3 scripts/knowledge-tool.py stats
 ```
 
@@ -170,112 +175,84 @@ python3 scripts/knowledge-tool.py stats
 | `reconcile` | Deep reconciliation (prune, decay, clean orphans) |
 | `discover-relations` | AI finds relationships between facts |
 | `dedupe` | Find and remove duplicate facts |
-| `rebuild-links` | Rebuild entity links for existing facts |
-| `check` | Check if extraction needed (for heartbeat) |
 
-### memory-cli.py
+### migrate-v2.py
 
-| Command | Description |
-|---------|-------------|
-| `store <content>` | Store a new fact with optional `--source`, `--confidence`, `--tags` |
-| `search <query>` | Semantic search, returns facts weighted by similarity × confidence |
-| `get <fact_id>` | Get a fact with full context (related facts, entities) |
-| `relate <fact1> <rel> <fact2>` | Create relationship: `supports`, `contradicts`, `updates`, `elaborates` |
-| `decay` | Apply time decay to stale facts |
-| `prune` | Remove low-confidence stale facts |
-| `consolidate` | Merge near-duplicate facts |
-| `maintain` | Run full maintenance cycle (decay + prune + consolidate) |
-| `stats` | Show database statistics |
-
-## Gateway Integration
-
-This skill includes gateway handlers for the Clawdbot control UI:
-
-| Method | Description |
-|--------|-------------|
-| `memory.health` | Check SurrealDB status, schema, dependencies |
-| `memory.stats` | Get fact/entity/relationship counts |
-| `memory.repair` | Auto-repair: install binary, start server, init schema |
-| `memory.runExtraction` | Run extraction, reconciliation, or relation discovery |
-| `memory.extractionProgress` | Poll extraction progress |
-| `memory.activity` | Get recent activity (queries, extractions) |
-| `memory.maintenance` | Run decay/prune operations |
-
-### Installing Gateway Integration
-
-Copy the gateway handler to Clawdbot source:
 ```bash
-cp clawdbot-integration/gateway/memory.ts /path/to/clawdbot/src/gateway/server-methods/
+# Apply v2 schema (safe to run multiple times)
+python3 scripts/migrate-v2.py
 
-# Add to server-methods.ts:
-import { memoryHandlers } from "./server-methods/memory.js";
-// Add ...memoryHandlers to coreGatewayHandlers
-
-# Rebuild Clawdbot
-cd /path/to/clawdbot && npm run build
+# Force recreate v2 tables
+python3 scripts/migrate-v2.py --force
 ```
 
-## Configuration
+## Architecture (v2)
 
-Create `~/.clawdbot/surrealdb-memory.yaml`:
-
-```yaml
-connection: "http://localhost:8000"
-namespace: clawdbot
-database: memory
-user: root
-password: root
-
-embedding:
-  provider: openai
-  model: text-embedding-3-small
-  dimensions: 1536
-
-confidence:
-  decay_rate: 0.05  # per month
-  support_threshold: 0.7
-  contradict_drain: 0.20
-
-maintenance:
-  prune_after_days: 30
-  min_confidence: 0.2
 ```
+Tier 1: Context Window (conversation)
+    ↕ (continuous read/write during loop iterations)
+Tier 1.5: Working Memory (~/.working-memory/current-task.yaml)  ← NEW
+    ↕ (persisted every N iterations)
+Tier 2: File-Based Memory (daily logs, MEMORY.md)
+    ↕ (cron extraction + sync writes for important facts)
+Tier 3: Knowledge Graph (facts, entities, relations, episodes)  ← ENHANCED
+```
+
+## Confidence Scoring
+
+Each fact has an **effective confidence** calculated from:
+- Base confidence (0.0–1.0)
+- **+ Inherited boost**: from high-confidence supporting facts
+- **+ Entity boost**: from well-established entities mentioned
+- **+ Outcome adjustment**: success/failure history from episodes *(v2)*
+- **- Contradiction drain**: from high-confidence contradicting facts
+- **- Time decay**: 5% per month of staleness
+
+## Control UI Integration
+
+The skill includes a **Memory** tab for the Clawdbot Dashboard:
+
+**Features:**
+- View statistics (facts, entities, relations, episodes)
+- Health status monitoring
+- One-click auto-repair
+- Run maintenance operations
+- View extraction progress
 
 ## Files
 
 ```
 surrealdb-memory/
-├── SKILL.md                 # This file
+├── SKILL.md                      # This file
+├── INSTRUCTIONS.md               # Setup and usage guide
+├── UPGRADE-V2.md                 # V2 upgrade guide
+├── CHANGELOG.md                  # Version history
+├── package.json                  # Skill metadata
 ├── scripts/
-│   ├── mcp-server.py        # MCP server with 4 tools
-│   ├── knowledge-tool.py    # Simple CLI wrapper
-│   ├── extract-knowledge.py # LLM extraction from memory files
-│   ├── memory-cli.py        # Full CLI for CRUD operations
-│   ├── knowledge-tools.py   # Higher-level extraction tools
-│   ├── schema.sql         # Database schema with graph functions
-│   ├── init-db.sh           # Initialize database with schema
-│   ├── install.sh           # Install SurrealDB binary
-│   ├── migrate-sqlite.py    # Import from existing SQLite memory
-│   ├── web-ui.py            # Optional web interface
-│   └── requirements.txt     # Python dependencies
+│   ├── mcp-server-v2.py          # MCP server with 10 tools (v2)
+│   ├── mcp-server.py             # Legacy MCP server (v1)
+│   ├── working_memory.py         # Working memory module (v2)
+│   ├── episodes.py               # Episodic memory module (v2)
+│   ├── migrate-v2.py             # V2 schema migration
+│   ├── schema-v2.sql             # V2 database schema
+│   ├── schema-v2-additive.sql    # Additive v2 schema
+│   ├── knowledge-tool.py         # Simple CLI wrapper
+│   ├── extract-knowledge.py      # LLM extraction from memory files
+│   ├── memory-cli.py             # Full CLI for CRUD operations
+│   ├── schema.sql                # Original schema
+│   ├── init-db.sh                # Initialize database
+│   ├── install.sh                # Install SurrealDB binary
+│   └── requirements.txt          # Python dependencies
 ├── clawdbot-integration/
-│   └── gateway/
-│       └── memory.ts        # Gateway RPC handlers
+│   ├── gateway/
+│   │   └── memory.ts             # Gateway RPC handlers
+│   └── ui/
+│       ├── memory-view.ts        # Memory tab view (Lit)
+│       └── memory-controller.ts  # Memory tab controller
 └── references/
-    ├── surql-examples.md    # SurrealQL query patterns
-    └── conflict-patterns.md # Contradiction detection rules
+    ├── surql-examples.md         # SurrealQL query patterns
+    └── conflict-patterns.md      # Contradiction detection rules
 ```
-
-## Maintenance Schedule
-
-Add to `HEARTBEAT.md` or create a cron job:
-```markdown
-## Memory Maintenance (weekly)
-- Run `surrealdb-memory` knowledge extraction check
-- Run reconciliation if facts are stale
-```
-
-Or use the Control UI's "Daily auto-discovery" checkbox to enable automatic relation discovery.
 
 ## Troubleshooting
 
@@ -290,17 +267,19 @@ source .venv/bin/activate
 pip install -r scripts/requirements.txt
 ```
 
+**"Episode table not found"** — Run v2 migration:
+```bash
+python3 scripts/migrate-v2.py
+```
+
 **"OPENAI_API_KEY not set"** — Export the key:
 ```bash
 export OPENAI_API_KEY="sk-..."
 ```
 
-**Slow searches** — Ensure vector index exists (check schema.sql was applied)
-
-**Control UI shows "Starting..." stuck** — Hard refresh browser (Ctrl+Shift+R)
-
 ## Version History
 
-- **v1.2.0** (2026-02-09): Added MCP server with 4 tools, fixed query bugs
-- **v1.1.0** (2026-02-09): Added gateway integration, relation discovery, control UI support
+- **v2.0.0** (2026-02-17): Episodes, working memory, outcome calibration, context-aware search
+- **v1.2.0** (2026-02-09): Added MCP server with 4 tools
+- **v1.1.0** (2026-02-09): Gateway integration, relation discovery, control UI
 - **v1.0.0** (2026-01-31): Initial release with extraction and CLI

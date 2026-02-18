@@ -69,6 +69,12 @@ mcporter call surrealdb-memory.knowledge_recall query="topic"
 mcporter call surrealdb-memory.knowledge_store content="New fact"
 ```
 
+## Support
+
+- **ClawHub**: [clawhub.ai/skills/surrealdb-memory](https://clawhub.ai/skills/surrealdb-memory)
+- **SurrealDB Docs**: [surrealdb.com/docs](https://surrealdb.com/docs)
+- **OpenClaw Discord**: [discord.com/invite/clawd](https://discord.com/invite/clawd)
+
 ## License
 
 MIT

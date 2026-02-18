@@ -29,6 +29,7 @@ export type MemoryStats = {
   facts: number;
   entities: number;
   relationships: number;
+  episodes: number;
   archived: number;
   avg_confidence: number;
   by_source: Array<{ source: string; count: number }>;
@@ -101,7 +102,7 @@ function renderStats(props: MemoryProps) {
   const hasData = stats && !stats.error;
 
   // Use real stats if available, otherwise show zeros
-  const displayStats = hasData ? stats : { facts: 0, entities: 0, relationships: 0, archived: 0, avg_confidence: 0, by_source: [] };
+  const displayStats = hasData ? stats : { facts: 0, entities: 0, relationships: 0, episodes: 0, archived: 0, avg_confidence: 0, by_source: [] };
 
   return html`
     <section class="card" style="${!isActive ? 'opacity: 0.6;' : ''}">
@@ -126,7 +127,7 @@ function renderStats(props: MemoryProps) {
         ${renderStatBox("Facts", displayStats.facts, isActive ? "var(--primary-color, #58a6ff)" : "var(--text-muted, #8b949e)")}
         ${renderStatBox("Entities", displayStats.entities, isActive ? "var(--success-color, #3fb950)" : "var(--text-muted, #8b949e)")}
         ${renderStatBox("Relations", displayStats.relationships, isActive ? "var(--warning-color, #d29922)" : "var(--text-muted, #8b949e)")}
-        ${renderStatBox("Archived", displayStats.archived, "var(--text-muted, #8b949e)")}
+        ${renderStatBox("Episodes", displayStats.episodes || 0, isActive ? "var(--accent-color, #a371f7)" : "var(--text-muted, #8b949e)")}
       </div>
       <div style="margin-top: 16px; padding: 12px; background: var(--bg-tertiary, #0d1117); border-radius: 6px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">

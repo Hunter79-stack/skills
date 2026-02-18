@@ -179,6 +179,7 @@ async function getStats() {
       "SELECT count() FROM fact WHERE archived = false GROUP ALL;",
       "SELECT count() FROM entity GROUP ALL;",
       "SELECT count() FROM relates_to GROUP ALL;",
+      "SELECT count() FROM episode GROUP ALL;",
       "SELECT count() FROM fact WHERE archived = true GROUP ALL;",
       "SELECT math::mean(confidence) AS avg FROM fact WHERE archived = false GROUP ALL;",
     ].join("\n");
@@ -195,6 +196,7 @@ async function getStats() {
     let facts = 0,
       entities = 0,
       relationships = 0,
+      episodes = 0,
       archived = 0,
       avg_confidence = 0;
 
@@ -207,6 +209,7 @@ async function getStats() {
         if (facts === 0) facts = val;
         else if (entities === 0) entities = val;
         else if (relationships === 0) relationships = val;
+        else if (episodes === 0) episodes = val;
         else if (archived === 0) archived = val;
       }
       if (avgMatch) {
@@ -218,6 +221,7 @@ async function getStats() {
       facts,
       entities,
       relationships,
+      episodes,
       archived,
       avg_confidence,
       by_source: [],
@@ -330,9 +334,13 @@ async function initSchema(): Promise<{
       return { success: false, error: "surrealdb-memory skill not found" };
     }
 
-    const schemaFile = path.join(skillDir, "scripts", "schema.sql");
+    // Try v2 schema first, fall back to v1
+    let schemaFile = path.join(skillDir, "scripts", "schema-v2.sql");
     if (!fs.existsSync(schemaFile)) {
-      return { success: false, error: "schema.sql not found" };
+      schemaFile = path.join(skillDir, "scripts", "schema.sql");
+    }
+    if (!fs.existsSync(schemaFile)) {
+      return { success: false, error: "schema file not found" };
     }
 
     const surrealPath = which("surreal") || path.join(os.homedir(), ".surrealdb", "surreal");
@@ -344,7 +352,20 @@ async function initSchema(): Promise<{
       );
       return { success: true, stdout, stderr };
     } catch (importError) {
-      // If import fails due to existing tables, check if schema is actually there
+      // If import fails due to existing tables, try the Python migration for v2
+      const migrateScript = path.join(skillDir, "scripts", "migrate-v2.py");
+      if (fs.existsSync(migrateScript)) {
+        const venvPython = path.join(skillDir, ".venv", "bin", "python3");
+        const pythonCmd = fs.existsSync(venvPython) ? venvPython : "python3";
+        try {
+          const { stdout: migrateOut } = await execAsync(`"${pythonCmd}" "${migrateScript}"`, { timeout: 60000 });
+          return { success: true, stdout: migrateOut };
+        } catch {
+          // Fall through to schema check
+        }
+      }
+      
+      // Check if schema is actually there
       const checkResult = await checkSchemaInitialized();
       if (checkResult.initialized) {
         return { success: true, stdout: "Schema already initialized" };
