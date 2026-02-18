@@ -3,9 +3,15 @@
   "slug": "secure-api-calls",
   "displayName": "Secure API Calls",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1771442631391,
-    "commit": "https://github.com/openclaw/skills/commit/0e31c29d9a899bce3356c069b7a1babec7579597"
+    "version": "1.0.2",
+    "publishedAt": 1771444006710,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1771442631391,
+      "commit": "https://github.com/openclaw/skills/commit/0e31c29d9a899bce3356c069b7a1babec7579597"
+    }
+  ]
 }

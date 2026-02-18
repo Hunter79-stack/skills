@@ -3,18 +3,45 @@ slug: secure-api-calls
 name: Secure API Calls
 description: Call any API without leaking credentials. Keychains proxies your requests and injects real tokens server-side — your agent never sees them.
 tags: [security, credentials, api, oauth, keychains, zero-trust]
+homepage: https://keychains.dev
+source: https://github.com/nicoseverin/keychains
+security_whitepaper: https://keychains.dev/api/whitepaper
+privacy_policy: https://keychains.dev/privacy
+terms_of_service: https://keychains.dev/terms
+installs:
+  - npm install -g keychains@0.0.13 (CLI — installed once globally)
+  - pip install keychains (Python SDK — optional)
+  - npm install @keychains/machine-sdk (TypeScript Machine SDK — optional)
+  - npm install @keychains/client-sdk (TypeScript Client SDK — optional)
+env:
+  - KEYCHAINS_TOKEN: Short-lived JWT minted by `keychains token`. Required by the Python SDK and Client SDK. Not needed for the CLI or Machine SDK.
+config_paths:
+  - ~/.keychains/credentials.json: Machine ID and server URL (created on first CLI or Machine SDK run)
+  - ~/.keychains/id_ed25519: Ed25519 private key for machine authentication
+  - ~/.keychains/id_ed25519.pub: Ed25519 public key
+  - ~/.keychains/history.json: CLI curl command history
+permissions:
+  - filesystem: Writes to ~/.keychains/ on first run (machine registration creates an SSH keypair and stores machine credentials)
+  - network: All proxied API requests are routed through https://keychains.dev — the proxy injects credentials server-side and forwards to the upstream API
+  - user_approval: Requires explicit user approval via a browser link (FaceID/TouchID/Passkey) before any credential is used
 ---
 
 # Keychains: Call Any API Without Touching Credentials
 
 [keychains.dev](https://keychains.dev) is a credential proxy. Instead of putting real API keys and OAuth tokens in your requests, you put **placeholders** like `{{OAUTH2_ACCESS_TOKEN}}`. Keychains injects the real credentials server-side. Your agent never sees them, so they can't be stolen via prompt injection.
 
-## How It Works (4 steps)
-
-**Step 1.** Use `npx -y keychains@latest curl` instead of `curl`. Put `{{PLACEHOLDER}}` where the credential goes.
+## Install
 
 ```bash
-npx -y keychains@latest curl https://api.github.com/user/repos \
+npm install -g keychains@0.0.13
+```
+
+## How It Works (4 steps)
+
+**Step 1.** Use `keychains curl` instead of `curl`. Put `{{PLACEHOLDER}}` where the credential goes.
+
+```bash
+keychains curl https://api.github.com/user/repos \
   -H "Authorization: Bearer {{OAUTH2_ACCESS_TOKEN}}"
 ```
 
@@ -56,28 +83,28 @@ Keychains auto-detects the provider from the URL.
 
 ## CLI Usage
 
-No install needed. Just use `npx -y keychains@latest curl` as a drop-in replacement for `curl`. Everything (machine registration, permissions, SSH keys) is handled automatically on first run.
+`keychains curl` is a drop-in replacement for `curl`. Everything (machine registration, permissions, SSH keys) is handled automatically on first run.
 
 ### Examples
 
 ```bash
 # GitHub — list repos
-npx -y keychains@latest curl https://api.github.com/user/repos \
+keychains curl https://api.github.com/user/repos \
   -H "Authorization: Bearer {{OAUTH2_ACCESS_TOKEN}}"
 
 # Slack — send a message
-npx -y keychains@latest curl https://slack.com/api/chat.postMessage \
+keychains curl https://slack.com/api/chat.postMessage \
   -X POST \
   -H "Authorization: Bearer {{OAUTH2_ACCESS_TOKEN}}" \
   -H "Content-Type: application/json" \
   -d '{"channel": "#general", "text": "Hello from the agent!"}'
 
 # Stripe — list customers
-npx -y keychains@latest curl https://api.stripe.com/v1/customers?limit=5 \
+keychains curl https://api.stripe.com/v1/customers?limit=5 \
   -H "Authorization: Bearer {{STRIPE_SECRET_KEY}}"
 
 # Gmail — list recent messages
-npx -y keychains@latest curl \
+keychains curl \
   'https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=10' \
   -H "Authorization: Bearer {{OAUTH2_ACCESS_TOKEN}}"
 ```
@@ -88,16 +115,16 @@ When keychains returns an approval link, you can poll for user approval then ret
 
 ```bash
 # 1. Make the request — get the approval link
-npx -y keychains@latest curl https://api.github.com/user/repos \
+keychains curl https://api.github.com/user/repos \
   -H "Authorization: Bearer {{OAUTH2_ACCESS_TOKEN}}"
 # → stderr: "Authorize at: https://keychains.dev/approve/abc123xyz"
 
 # 2. Show the link to the user, then wait for them to approve
-npx -y keychains@latest wait https://keychains.dev/approve/abc123xyz --timeout 800
+keychains wait https://keychains.dev/approve/abc123xyz --timeout 800
 # → Polls until approved, then exits 0
 
 # 3. Retry — works now
-npx -y keychains@latest curl https://api.github.com/user/repos \
+keychains curl https://api.github.com/user/repos \
   -H "Authorization: Bearer {{OAUTH2_ACCESS_TOKEN}}"
 ```
 
@@ -150,7 +177,7 @@ npm install @keychains/client-sdk
 ```
 
 ```bash
-KEYCHAINS_TOKEN=$(npx -y keychains@latest token) node your_script.js
+KEYCHAINS_TOKEN=$(keychains token) node your_script.js
 ```
 
 ```typescript
@@ -175,7 +202,7 @@ pip install keychains
 ```
 
 ```bash
-KEYCHAINS_TOKEN=$(npx -y keychains@latest token) python your_script.py
+KEYCHAINS_TOKEN=$(keychains token) python your_script.py
 ```
 
 ```python
@@ -217,11 +244,69 @@ with keychains.Session() as s:
 
 ---
 
+## Security & Data Flow
+
+Full details in the [security whitepaper](https://keychains.dev/api/whitepaper) and [privacy policy](https://keychains.dev/privacy).
+
+### What passes through keychains.dev
+
+When you use `keychains curl` or `keychainsFetch()`, the request (URL, headers, body) is routed through the keychains.dev proxy. The proxy:
+
+1. Replaces `{{PLACEHOLDER}}` template variables with real credentials from the user's vault
+2. Forwards the complete request to the upstream API (e.g. api.github.com)
+3. Returns the upstream response as-is to the agent
+
+The proxy sees the request URL, headers, and body in transit (same as any reverse proxy). It does **not** see or modify the response body.
+
+### Credential encryption & retention
+
+- All stored credentials are encrypted at rest with **AES-256-GCM** — only decrypted in memory at the moment of proxying
+- Credentials are automatically deleted **90 days after last use** (users can also delete them anytime from the dashboard)
+- Credentials are never sold or shared with any third party
+
+### What is logged
+
+- **Audit log:** URL, method, provider, timestamp, status code, and permission ID for each proxied request. Visible to the user at [keychains.dev/dashboard](https://keychains.dev/dashboard).
+- **Audit immutability:** Logs are archived to AWS S3 with Object Lock (compliance mode) — append-only, tamper-proof even from internal systems.
+- **Retention:** Configurable from 30 days to 3 years. Default is 90 days.
+- **Not logged:** Request bodies, response bodies, and resolved credential values are not stored.
+
+### Machine registration & local keys
+
+On first run, the CLI (or Machine SDK) generates an **Ed25519 SSH keypair** in `~/.keychains/`:
+
+- `id_ed25519` — private key (unencrypted, standard OpenSSH format, file permissions 0600)
+- `id_ed25519.pub` — public key, registered with the keychains.dev server
+
+The private key is used to authenticate the machine via SSH challenge-response when minting short-lived permission tokens. It never leaves the local filesystem. The user can rotate keys anytime via `keychains machine rotate-keys`.
+
+### Credential isolation
+
+Real credentials (OAuth tokens, API keys) are stored **only** on keychains.dev servers, in the user's vault. They are:
+
+- Never sent to the agent or written to the local filesystem
+- Only injected into requests at proxy time, to the correct upstream API
+- Bound to the provider they belong to (a GitHub token can only be sent to github.com)
+
+### Infrastructure
+
+Hosted on Vercel (app), Upstash Redis (ephemeral state with auto-expiration), MongoDB Atlas (persistent storage, encrypted at rest and in transit), AWS S3 (audit archival). All providers operate under data processing agreements.
+
+### User control
+
+- Every credential use requires explicit user approval via FaceID/TouchID/Passkey
+- Permissions can be revoked instantly from [keychains.dev/dashboard](https://keychains.dev/dashboard)
+- Users can revoke access per machine, per provider, or per agent/task
+- Full data export (JSON) and account deletion available from the dashboard
+- GDPR and CCPA compliant — no third-party tracking, no ad pixels, no data sales
+
+---
+
 ## Troubleshooting
 
 **Got an approval link / ApprovalRequired / InsufficientScopeError?** That's normal. Show the link to the user, wait for them to approve, retry.
 
-**MissingTokenError?** The Python and Client SDKs need `KEYCHAINS_TOKEN`. Run: `KEYCHAINS_TOKEN=$(npx -y keychains@latest token) python your_script.py`
+**MissingTokenError?** The Python and Client SDKs need `KEYCHAINS_TOKEN`. Run: `KEYCHAINS_TOKEN=$(keychains token) python your_script.py`
 
 **Template variable not replaced?** You're using regular `curl`/`fetch` instead of keychains.
 
