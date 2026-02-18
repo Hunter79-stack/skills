@@ -73,16 +73,16 @@ class AutonomousMoltRPGAgent:
         self.raids_completed = 0
         self.pvp_battles = 0
         
-        print(f"🎮 {agent_name} initialized (OFFLINE MODE)")
+        print(f"[OFFLINE MODE] {agent_name} initialized")
     
     def run(self):
         """Main agent loop - plays the game"""
-        print(f"\n🚀 {self.agent_name} starting autonomous play (OFFLINE)...")
+        print(f"\n {self.agent_name} starting autonomous play (OFFLINE)...")
         
         cycle = 0
         while True:
             cycle += 1
-            print(f"\n🔄 Cycle {cycle} | State: {self.state.value}")
+            print(f"\n Cycle {cycle} | State: {self.state.value}")
             
             try:
                 # Main decision tree
@@ -93,10 +93,10 @@ class AutonomousMoltRPGAgent:
                 elif self.state == AgentState.IN_PVP:
                     self.pvp_loop()
                 elif self.state == AgentState.LEARNING:
-_loop()
+                    self.learning_loop()
                     
             except Exception as e:
-                print(f"❌ Error                    self.learning: {e}")
+                print(f"? Error: {e}")
             
             # Learning phase
             if self.learning_enabled:
@@ -107,7 +107,7 @@ _loop()
     
     def idle_loop(self):
         """What to do when idle - look for things to do"""
-        print("📡 Looking for things to do...")
+        print(" Looking for things to do...")
         
         # Check for PVP challenges (simulated)
         if self.pvp_enabled and random.random() < 0.2:
@@ -126,20 +126,20 @@ _loop()
         
         if raids:
             raid = raids[0]
-            print(f"⚔️ Starting raid: {raid['name']}")
+            print(f"?? Starting raid: {raid['name']}")
             
             success = self.rpg.fight(raid)
             
             if success:
-                print(f"🎉 Victory! +{raid['reward_usdc']} credits")
+                print(f" Victory! +{raid['reward_usdc']} credits")
                 award_raid_reward(self.agent_name, raid['reward_usdc'], raid['name'])
                 self.raids_completed += 1
             else:
-                print(f"💀 Defeat...")
+                print(f" Defeat...")
     
     def simulate_pvp(self):
         """Simulate a PVP battle (offline)"""
-        print(f"⚔️ PVP Battle!")
+        print(f"?? PVP Battle!")
         
         # Simulate opponent
         opp_level = random.randint(max(1, self.rpg.stats['level'] - 2), self.rpg.stats['level'] + 2)
@@ -154,11 +154,11 @@ _loop()
         result = pvp_system.battle(self.rpg.stats, opp_stats)
         
         if result['winner'] == self.agent_name:
-            print(f"🏆 PVP Victory!")
+            print(f" PVP Victory!")
             self.rpg.stats['wins'] += 1
             award_pvp_reward(self.agent_name, 10, opp_stats['name'])
         else:
-            print(f"💀 PVP Defeat...")
+            print(f" PVP Defeat...")
             self.rpg.stats['losses'] += 1
         
         self.pvp_battles += 1
@@ -178,7 +178,7 @@ _loop()
     
     def learning_loop(self):
         """Analyze and improve"""
-        print("🧠 Learning...")
+        print(" Learning...")
         self.adjust_strategy()
         self.state = AgentState.IDLE
     
@@ -241,7 +241,7 @@ if __name__ == "__main__":
         if agent.learning_enabled:
             agent.analyze_recent_performance()
     
-    print(f"\n📊 Final Stats:")
+    print(f"\n Final Stats:")
     print(f"   Level: {agent.rpg.stats.get('level', 1)}")
     print(f"   Wins: {agent.rpg.stats.get('wins', 0)}")
     print(f"   Losses: {agent.rpg.stats.get('losses', 0)}")

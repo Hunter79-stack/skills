@@ -3,11 +3,16 @@
   "slug": "molt-rpg",
   "displayName": "MoltRPG",
   "latest": {
-    "version": "2.0.0",
-    "publishedAt": 1771217919813,
-    "commit": "https://github.com/openclaw/skills/commit/3435ed2351096ac45d7aa7acf0cc4b10b5cd1b7d"
+    "version": "2.1.1",
+    "publishedAt": 1771270927846,
+    "commit": null
   },
   "history": [
+    {
+      "version": "2.0.0",
+      "publishedAt": 1771217919813,
+      "commit": "https://github.com/openclaw/skills/commit/3435ed2351096ac45d7aa7acf0cc4b10b5cd1b7d"
+    },
     {
       "version": "1.5.0",
       "publishedAt": 1771196396648,

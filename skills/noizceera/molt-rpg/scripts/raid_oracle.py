@@ -64,6 +64,11 @@ class RaidOracle:
         level = max(1, monster["base_level"] + level_variance)
         reward = int(monster["reward"] * random.uniform(0.8, 1.5))
         
+        # Calculate battle stats
+        hp = int(100 * (1.2 ** (level - 1)))
+        atk = int(10 * (1.15 ** (level - 1)))
+        defense = int(5 * (1.1 ** (level - 1)))
+        
         raid = {
             "id": f"offline_{self.state['offline_raid_count'] + 1}",
             "name": monster["name"],
@@ -71,7 +76,11 @@ class RaidOracle:
             "reward_usdc": reward,
             "title": f"Defeat the {monster['name']}",
             "description": f"A wild {monster['name']} appears!",
-            "source": "offline"
+            "source": "offline",
+            # Battle stats
+            "hp": hp,
+            "atk": atk,
+            "def": defense
         }
         
         self.state['offline_raid_count'] += 1
