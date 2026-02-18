@@ -1,0 +1,11 @@
+{
+  "owner": "bensabic",
+  "slug": "memberstack-cli",
+  "displayName": "Memberstack CLI",
+  "latest": {
+    "version": "1.1.0",
+    "publishedAt": 1771380322307,
+    "commit": null
+  },
+  "history": []
+}
