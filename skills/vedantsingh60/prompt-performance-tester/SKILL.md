@@ -329,7 +329,7 @@ A: No. Prompts are processed in-memory and immediately discarded unless you expl
 
 ## 🗺️ Roadmap
 
-### ✅ Current Release (v1.2.0)
+### ✅ Current Release (v1.1.5)
 - Multi-provider support (Claude 4.5, GPT-5.2, Gemini 2.5/3.0)
 - 10 models across 3 providers
 - Cross-provider cost comparison
@@ -418,7 +418,7 @@ This skill is **proprietary software** licensed under a commercial agreement.
 
 ## 📝 Changelog
 
-### [1.2.0] - 2026-02-01
+### [1.1.5] - 2026-02-01
 
 #### 🚀 Latest Models Update
 - **GPT-5.2 Series** - Added Instant, Thinking, and Pro variants
@@ -495,7 +495,7 @@ This skill is **proprietary software** licensed under a commercial agreement.
 ---
 
 **Last Updated**: February 2026
-**Current Version**: 1.2.0
+**Current Version**: 1.1.5
 **Status**: Active & Maintained
 
 © 2026 UniAI. All rights reserved.

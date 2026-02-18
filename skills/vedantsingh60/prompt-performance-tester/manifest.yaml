@@ -1,6 +1,6 @@
 name: "Prompt Performance Tester"
 id: "prompt-performance-tester"
-version: "1.2.0"
+version: "1.1.5"
 description: "Test and compare prompts across Claude 4.5, GPT-5.2, and Gemini 2.5/3.0. Multi-provider benchmarking with 10 latest models. Measure latency, cost, quality, and consistency."
 
 # IP Protection
@@ -181,7 +181,7 @@ restrictions:
   - "Commercial use requires license agreement"
 
 changelog:
-  "1.2.0":
+  "1.1.5":
     - "🚀 Updated to latest 2026 models"
     - "✨ GPT-5.2 series (Instant, Thinking, Pro)"
     - "✨ Gemini 3 Pro and 2.5 series"
