@@ -154,7 +154,7 @@ xint watch "solana" --interval 5m
 xint watch "@vitalikbuterin" -i 1m
 
 # Webhook to Slack
-xint watch "breaking" -i 30s --webhook https://hooks.slack.com/...
+xint watch "breaking" -i 30s --webhook https://example.com/webhook
 ```
 
 Press `Ctrl+C` — shows session stats.
@@ -352,6 +352,45 @@ See [SECURITY.md](docs/security.md) for full details.
 ## Contributing
 
 Open source! See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Release Automation
+
+`xint` is the source of truth for release automation across `xint` and `xint-rs`.
+
+```bash
+# from xint/
+./scripts/release.sh --dry-run --allow-dirty
+./scripts/release.sh 2026.2.18.4 --allow-dirty
+# disable default ClawdHub publish for one run
+./scripts/release.sh 2026.2.18.4 --no-clawdhub
+# enable skills.sh as well
+./scripts/release.sh 2026.2.18.4 --skillsh
+# disable GitHub auto-generated notes if you want manual sections only
+./scripts/release.sh 2026.2.18.4 --no-auto-notes
+# write release report to a custom location
+./scripts/release.sh 2026.2.18.4 --report-dir /tmp/xint-release-reports
+```
+
+Optional path overrides:
+
+- `REPO_PATH_XINT` (defaults to current repo when running inside `xint`)
+- `REPO_PATH_XINT_RS` (defaults to sibling `../xint-rs` when present)
+- `RELEASE_REPORT_DIR` (defaults to `xint/reports/releases`)
+
+Notes behavior:
+
+- Default: uses `gh release create --generate-notes`
+- Manual override: set any of `CHANGELOG_ADDED`, `CHANGELOG_CHANGED`, `CHANGELOG_FIXED`, `CHANGELOG_SECURITY`
+- Default: publishes to ClawdHub when `clawdhub` CLI is available (disable with `--no-clawdhub`)
+- Optional: publish to skills.sh with `--skillsh` (or `--ai-skill` for both)
+
+Release report:
+
+- Default: writes `reports/releases/<version>.md`
+- Contains per-repo commit list, commit range, file changes, SHAs, compare links, and release URLs
+- Uploaded automatically to both GitHub releases as an asset (can disable with `--no-report-asset`)
+- Embedded automatically in both GitHub release bodies (can disable with `--no-report-body`)
+- Disable with `--no-report`
 
 ## License
 

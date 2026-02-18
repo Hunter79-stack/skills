@@ -26,6 +26,20 @@ credentials:
   - name: X_CLIENT_ID
     description: X OAuth 2.0 client ID for user-context operations (bookmarks, likes, following, diff)
     required: false
+required_env_vars:
+  - X_BEARER_TOKEN
+requiredEnvVars:
+  - X_BEARER_TOKEN
+primary_credential: X_BEARER_TOKEN
+primaryCredential: X_BEARER_TOKEN
+security:
+  always: false
+  autonomous: false
+  local_data_dir: data/
+  network_endpoints:
+    - https://api.x.com
+    - https://x.com
+    - https://api.x.ai
 ---
 
 # xint — X Intelligence CLI
@@ -54,18 +68,24 @@ This skill requires sensitive credentials. Follow these guidelines:
 - Only use webhooks you control (your own servers, Slack/Discord you own)
 - Don't pass sensitive URLs as webhook targets
 
-### Agent Autonomy
-- This skill is designed to be added to agent skills directories
-- The instructions to "clone into skills directory" are intentional for skill functionality
-- Agents should ask before installing new skills if not explicitly requested
+### Agent Execution Boundaries
+- This file documents commands and safety limits only
+- Require explicit user approval before install/clone actions
+- Use only documented commands and flags
+- Require explicit user approval before network-facing modes (`mcp --sse`, `watch --webhook`)
 
 ### Installation
 - For Bun: prefer OS package managers over `curl | bash` when possible
 - Verify any installer scripts before running
 
+### MCP Server (Optional)
+- `bun run xint.ts mcp` starts a local MCP server exposing xint commands as tools
+- Default mode is stdio/local integration; no inbound web server unless `--sse` is explicitly enabled
+- Respect `--policy read_only|engagement|moderation` and budget guardrails
+
 ## CLI Tool
 
-All commands run from this skill directory:
+All commands run from the project directory:
 
 ```bash
 # Set your environment variables
@@ -136,7 +156,7 @@ bun run xint.ts tweet <tweet_id> [--json]
 ### Article (Full Content Fetcher)
 
 ```bash
-bun run xint.ts article <url> [--json] [--full] [--ai <prompt>]
+bun run xint.ts article <url> [--json] [--full] [--ai <text>]
 ```
 
 Fetches and extracts full article content from any URL using xAI's web_search tool (Grok reads the page). Returns clean text with title, author, date, and word count. Requires `XAI_API_KEY`.
@@ -147,7 +167,7 @@ Also supports X tweet URLs — automatically extracts the linked article from th
 - `--json` — structured JSON output (title, content, author, published, wordCount, ttr)
 - `--full` — return full article text without truncation (default truncates to ~5000 chars)
 - `--model <name>` — Grok model (default: grok-4)
-- `--ai <prompt>` — analyze article with Grok AI (passes content to analyze command)
+- `--ai <text>` — analyze article with Grok AI (passes content to analyze command)
 
 **Examples:**
 ```bash
@@ -245,7 +265,6 @@ Uses xAI's Grok API (OpenAI-compatible). Requires `XAI_API_KEY` in env or `.env`
 
 **Options:**
 - `--model <name>` — grok-3, grok-3-mini (default), grok-2
-- `--system <prompt>` — custom system prompt
 - `--tweets <file>` — path to JSON file containing tweets
 - `--pipe` — read tweet JSON from stdin
 
@@ -263,10 +282,8 @@ For “recent sentiment / what X is saying” without using cookies/GraphQL, use
 Script:
 
 ```bash
-python3 /home/openclaw/.openclaw/skills/xint/scripts/xai_x_search_scan.py --help
+python3 scripts/xai_x_search_scan.py --help
 ```
-
-Jarv cron uses it with query packs in `workspace-jarv/x-signals/x-search-queries.json`.
 
 ## xAI Collections Knowledge Base (Files + Collections)
 
@@ -275,7 +292,7 @@ Store first-party artifacts (reports, logs) in xAI Collections and semantic-sear
 Script:
 
 ```bash
-python3 /home/openclaw/.openclaw/skills/xint/scripts/xai_collections.py --help
+python3 scripts/xai_collections.py --help
 ```
 
 Env:
@@ -308,7 +325,7 @@ Press `Ctrl+C` to stop — prints session stats (duration, total polls, new twee
 ```bash
 bun run xint.ts watch "solana memecoins" --interval 5m
 bun run xint.ts watch "@vitalikbuterin" --interval 1m
-bun run xint.ts watch "AI agents" -i 30s --webhook https://hooks.slack.com/...
+bun run xint.ts watch "AI agents" -i 30s --webhook https://example.com/webhook
 bun run xint.ts watch "breaking news" --jsonl | tee -a feed.jsonl
 ```
 
