@@ -1,6 +1,6 @@
-# AetherLang Ω — AI Workflow Orchestration Skill
+# AetherLang Ω V3 — AI Workflow Orchestration Skill
 
-> Production-grade DSL for building AI workflows with 39 node types and enterprise security.
+> The world's most advanced AI workflow orchestration platform. 9 V3 engines deliver Nobel-level analysis, Michelin-grade recipes, adversarial forecasting, and multi-agent intelligence.
 
 **Source Code**: [github.com/contrario/aetherlang](https://github.com/contrario/aetherlang)
 **Homepage**: [neurodoc.app/aether-nexus-omega-dsl](https://neurodoc.app/aether-nexus-omega-dsl)
@@ -21,26 +21,23 @@ Users should avoid including sensitive personal information, passwords, or confi
 
 ## Overview
 
-AetherLang Ω is a domain-specific language for AI that orchestrates multi-model workflows with built-in safety, debugging, and real-time collaboration.
+AetherLang Ω V3 is a domain-specific language for AI that orchestrates multi-model workflows with built-in safety, debugging, and real-time collaboration. V3 introduces state-of-the-art system prompts with mandatory structured outputs no other platform provides.
 
 All user inputs are validated and sanitized server-side before processing. The security middleware source code is publicly available in the [GitHub repository](https://github.com/contrario/aetherlang/blob/main/aetherlang/middleware/security.py).
 
-## Supported Engines
+## V3 Engines — State-of-the-Art
 
-| Engine | Trigger Keywords | Description |
-|--------|-----------------|-------------|
-| `chef` | recipe, cook, food | Michelin-grade recipes with HACCP, costs, MacYuFBI |
-| `molecular` | molecular, spherification | Molecular gastronomy techniques |
-| `apex` | strategy, business, analysis | Nobel-level analysis (McKinsey/HBR quality) |
-| `assembly` | debate, perspectives, council | 26 AI archetypes with Gandalf Veto |
-| `consulting` | consulting, SWOT, roadmap | Strategic consulting with KPIs |
-| `lab` | science, research, experiment | Scientific analysis across 50 domains |
-| `marketing` | campaign, viral, social media | Campaign generation with content calendars |
-| `oracle` | lottery, OPAP, lucky numbers | Greek lottery statistics and analysis |
-| `cyber` | security, threat, vulnerability | Threat assessment with defense strategies |
-| `academic` | paper, arXiv, PubMed | Multi-source research synthesis |
-| `vision` | image, analyze, detect | Computer vision analysis |
-| `brain` | think, analyze, comprehensive | General AI analysis |
+| Engine | Node Type | V3 Highlights |
+|--------|-----------|---------------|
+| 🧑‍🍳 Chef Omega | `chef` | 17 mandatory sections: food cost%, HACCP, thermal curves, MacYuFBI matrix, texture architecture, allergen matrix (14 EU), dietary transformer, wine pairing, plating blueprint, zero waste, kitchen timeline |
+| ⚗️ APEIRON Molecular | `molecular` | Rheology dashboard, phase diagrams, hydrocolloid specs (Agar/Alginate/Gellan/Xanthan), FMEA failure analysis, equipment calibration, sensory science metrics |
+| 📈 APEX Strategy | `apex` | Game theory + Nash equilibrium, Monte Carlo (10K simulations), behavioral economics, decision trees, competitive war gaming, unit economics (CAC/LTV), Blue Ocean canvas, OKR generator |
+| 🧠 GAIA Brain | `assembly` | 12 neurons voting system (supermajority 8/12), disagreement protocol, Gandalf VETO power, devil's advocate, confidence heatmap, 7 archetypes |
+| 🔮 Oracle | `oracle` | Bayesian updating (prior→evidence→posterior), signal vs noise scoring, temporal resolution (7d/30d/180d), black swan scanner, adversarial red team, Kelly criterion bet sizing |
+| 💼 NEXUS-7 Consult | `consulting` | Causal loop diagrams, theory of constraints, Wardley maps, ADKAR change management, anti-pattern library, system dynamics modeling |
+| 📊 Market Intel | `marketing` | TAM/SAM/SOM, category design, Porter's 5 Forces, pricing elasticity, network effects, viral coefficient (K-factor), customer segmentation AI |
+| 🔬 Research Lab | `lab` | Evidence grading (A-D levels), contradiction detector, knowledge graph, reproducibility score (X/10), cross-disciplinary bridges, research gap map |
+| 📉 Data Analyst | `analyst` | Auto-detective (outliers/missing/duplicates), statistical test selector, anomaly detection, predictive modeling (R²/RMSE), cohort/funnel analysis, causal inference |
 
 ## API Endpoint
 ```
@@ -66,7 +63,9 @@ flow <FlowName> {
 }
 ```
 
-#### Chef Flow
+### Example Flows
+
+#### Chef Omega V3 — Full Restaurant Consulting
 ```
 flow Chef {
   using target "neuroaether" version ">=0.2";
@@ -75,8 +74,9 @@ flow Chef {
   output text recipe from Chef;
 }
 ```
+Returns: 17 sections including food cost analysis, HACCP compliance, thermal curves, wine pairing, plating blueprint, zero waste protocol, and kitchen timeline.
 
-#### APEX Strategy Flow
+#### APEX Strategy V3 — Nobel-Level Business Analysis
 ```
 flow Strategy {
   using target "neuroaether" version ">=0.2";
@@ -86,6 +86,21 @@ flow Strategy {
   node LLM: apex model="gpt-4o", temp=0.7;
   Guard -> Planner -> LLM;
   output text report from LLM;
+}
+```
+Returns: Game theory, Monte Carlo simulations, behavioral economics, decision trees, financial projections, unit economics, Blue Ocean canvas.
+
+#### Multi-Engine Pipeline
+```
+flow FullAnalysis {
+  using target "neuroaether" version ">=0.2";
+  input text query;
+  node Guard: guard mode="STRICT";
+  node Research: lab domain="business";
+  node Market: marketing analysis="competitive";
+  node Strategy: apex analysis="strategic";
+  Guard -> Research -> Market -> Strategy;
+  output text report from Strategy;
 }
 ```
 
@@ -115,13 +130,8 @@ Blocks: code execution (`eval`, `exec`), SQL injection, XSS, template injection,
   "status": "success",
   "flow_name": "Chef",
   "result": {
-    "outputs": {
-      "recipe": {
-        "response": "{ structured JSON }",
-        "engine": "chef",
-        "model": "gpt-4o"
-      }
-    },
+    "outputs": { ... },
+    "final_output": "Full structured response text",
     "duration_seconds": 58.9
   }
 }
@@ -139,7 +149,7 @@ Blocks: code execution (`eval`, `exec`), SQL injection, XSS, template injection,
 ## Languages
 
 - **English** (default)
-- **Greek** (Ελληνικά) — add `language="el"` to any node
+- **Greek** (Ελληνικά) — V3 outputs in proper Greek with markdown formatting
 
 ## Technology
 
@@ -147,6 +157,7 @@ Blocks: code execution (`eval`, `exec`), SQL injection, XSS, template injection,
 - **AI Models**: GPT-4o via OpenAI
 - **Parser**: 39 node types with validation
 - **Hosting**: Hetzner EU (GDPR compliant)
+- **Version**: 3.0.0 Omega
 
 ---
 *Built by NeuroAether — From Kitchen to Code* 🧠
