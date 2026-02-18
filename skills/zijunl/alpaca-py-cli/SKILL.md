@@ -1,9 +1,57 @@
 ---
 name: alpaca-py-cli
-description: Trade stocks and crypto via Alpaca API using Python CLI. Use for market data (quotes, bars, news), placing orders (market, limit, stop), checking positions, portfolio management, and account info. Supports both paper and live trading. Use when user asks about stock prices, wants to buy/sell securities, check portfolio, or manage trades.
-metadata: {"clawdbot":{"emoji":"📈","requires":{"bins":["python3"],"packages":["alpaca-py","pytz"]},"install":[{"id":"pip-alpaca","kind":"pip","package":"alpaca-py","label":"Install alpaca-py (pip3 install alpaca-py)"},{"id":"pip-pytz","kind":"pip","package":"pytz","label":"Install pytz (pip3 install pytz)"}],"setup":{"instructions":["Get API keys from https://alpaca.markets","Run: alpaca auth (interactive setup)","Test: alpaca clock"]}}}
+description: AI agent skill for Alpaca Markets trading. Intelligent setup wizard (alpaca init) guides users through registration. Trade stocks/crypto, manage portfolios, execute orders via natural language. Token-efficient design with runtime guidance. Paper trading by default ($100k virtual money). IMPORTANT - Setup requires user interaction to configure API keys in shell environment.
+metadata: {"clawdbot":{"emoji":"📈","requires":{"bins":["python3"],"packages":["alpaca-py","pytz"],"env":["ALPACA_API_KEY","ALPACA_SECRET_KEY","ALPACA_PAPER"]},"install":[{"id":"pip-alpaca","kind":"pip","package":"alpaca-py","label":"Install alpaca-py (pip3 install alpaca-py)"},{"id":"pip-pytz","kind":"pip","package":"pytz","label":"Install pytz (pip3 install pytz)"}],"setup":{"instructions":["USER must run: alpaca init (interactive setup - requires user input)","USER will be prompted to enter API keys manually","Keys are saved to shell config by the CLI (user consent required)","Test: alpaca clock"],"warnings":["Setup modifies shell startup files (~/.zshrc, ~/.bashrc, ~/.profile)","API keys will be stored as environment variables","User must provide explicit consent before running setup","Do not run setup autonomously - requires user interaction"]}}}
 homepage: https://github.com/zijunl/alpaca-py-cli
 ---
+
+# Alpaca Trading (Python CLI) - OpenClaw Agent Skill
+
+[![ClawHub](https://img.shields.io/badge/ClawHub-alpaca--py--cli-blue)](https://clawhub.ai/skills/alpaca-py-cli)
+[![GitHub](https://img.shields.io/badge/GitHub-zijunl%2Falpaca--py--cli-green)](https://github.com/zijunl/alpaca-py-cli)
+
+Trade stocks and crypto programmatically via Alpaca's API using a Python-based CLI tool.
+
+## ⚠️ Security & Setup Requirements
+
+**IMPORTANT - READ BEFORE USE:**
+
+This skill requires **user interaction** for setup. Do NOT run setup commands autonomously.
+
+**What happens during setup:**
+- `alpaca init` prompts user to enter API keys interactively
+- Keys are saved to shell startup files (~/.zshrc, ~/.bashrc, or ~/.profile)
+- This creates persistent environment variables accessible to all shell sessions
+- User must provide explicit consent before the CLI writes to shell config
+
+**Security considerations:**
+- ✅ API keys are stored as environment variables (standard practice)
+- ✅ Secret key input is hidden during entry
+- ✅ Paper trading by default (virtual money, no risk)
+- ⚠️ Keys in shell config are accessible to any process in that shell
+- ⚠️ Agent can read environment variables if it has shell access
+- ⚠️ Setup modifies user's shell configuration files
+
+**Recommended practices:**
+1. **Run setup manually** - Do not let agents run `alpaca init` autonomously
+2. **Use paper trading keys** - Test with virtual money first
+3. **Review before consent** - Understand what files will be modified
+4. **Least privilege** - Use API keys with minimal required permissions
+5. **Monitor activity** - Check your Alpaca account regularly
+
+**For agents:**
+- Do NOT run `alpaca init` or `alpaca auth` without explicit user permission
+- Inform user that setup will modify shell configuration files
+- Explain that API keys will be stored as environment variables
+- Get user consent before proceeding with setup
+
+**Links:**
+- ClawHub: https://clawhub.ai/skills/alpaca-py-cli
+- GitHub: https://github.com/zijunl/alpaca-py-cli
+- Alpaca Markets: https://alpaca.markets
+
+
+
 
 # Alpaca Trading (Python CLI)
 
@@ -415,47 +463,37 @@ export PATH="$HOME/.openclaw/workspace/skills/alpaca-py-cli/scripts:$PATH"
 - Trading API: https://docs.alpaca.markets/docs/trading-api
 - Market Data API: https://docs.alpaca.markets/docs/market-data
 
-## Setup Wizard (For Agents)
+## Initialization (For Agents)
 
-### Intelligent Setup
+### Quick Setup with `alpaca init`
+
+When a user needs to set up Alpaca trading, simply run:
 
 ```bash
-alpaca setup-wizard
+alpaca init
 ```
 
-This interactive wizard helps agents set up Alpaca automatically:
+**The CLI will:**
+- Check if already configured
+- Detect agent capabilities (email access, browser automation)
+- Choose automatic or manual setup mode
+- Guide the user through registration step-by-step
+- Collect and save API keys
+- Verify the setup
 
-**Features:**
-- Detects if already configured
-- Offers automatic or manual setup
-- Automatic mode (for agents with email access):
-  - Opens browser to Alpaca registration
-  - Fills registration form
-  - Verifies email automatically
-  - Retrieves API keys
-  - Configures environment
-- Manual mode (fallback):
-  - Opens browser to Alpaca docs
-  - Guides user through registration
-  - Prompts for API keys
-  - Saves configuration
+**Agent's Role:**
+- Run `alpaca init` when user wants to start trading
+- Let the CLI handle all the guidance and prompts
+- The wizard is designed to be self-explanatory
+- After completion, verify with `alpaca clock`
 
-**Agent Usage:**
-When a user asks to set up Alpaca trading, run:
-```bash
-alpaca setup-wizard
+**Example:**
+```
+User: "I want to start trading stocks"
+Agent: "I'll help you set up Alpaca paper trading (virtual money, no risk)."
+       *runs: alpaca init*
+       *follows the wizard's prompts*
+Agent: "✓ Setup complete! You have $100,000 in paper money to practice with."
 ```
 
-The wizard will:
-1. Check for email/browser skills
-2. Choose automatic or manual setup
-3. Default to paper trading (safe)
-4. Configure environment variables
-5. Verify setup with `alpaca clock`
-
-**Note:** Automatic registration requires:
-- Browser skill (for web automation)
-- Email skill (for verification)
-- User information (name, address, etc.)
-
-Currently, automatic mode falls back to manual setup. Full automation coming soon.
+The `init` wizard handles all the complexity - agents just need to run it and follow along.
