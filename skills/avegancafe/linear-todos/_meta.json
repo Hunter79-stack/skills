@@ -3,11 +3,16 @@
   "slug": "linear-todos",
   "displayName": "Linear Todos",
   "latest": {
-    "version": "1.0.3",
-    "publishedAt": 1771334542664,
-    "commit": "https://github.com/openclaw/skills/commit/bfa5f9bfdeaa1928d3d8a754d6b9f535502396b0"
+    "version": "1.0.4",
+    "publishedAt": 1771343174042,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.3",
+      "publishedAt": 1771334542664,
+      "commit": "https://github.com/openclaw/skills/commit/bfa5f9bfdeaa1928d3d8a754d6b9f535502396b0"
+    },
     {
       "version": "0.0.2",
       "publishedAt": 1771274476866,

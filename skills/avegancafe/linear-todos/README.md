@@ -14,112 +14,75 @@ A complete todo management system built on Linear with smart date parsing, prior
 
 ## Installation
 
-### Prerequisites
-
-- [uv](https://docs.astral.sh/uv/) - Fast Python package manager
-- A Linear account with [API access](https://linear.app/settings/api)
-
-### Option 1: Install from ClawHub (Recommended for OpenClaw users)
-
 ```bash
 clawhub install linear-todos
 ```
 
-### Option 2: Clone and install manually
+## Setup
+
+### 1. Install Prerequisites
+
+You need [uv](https://docs.astral.sh/uv/) installed:
 
 ```bash
-# Clone the repository
-git clone <repo-url>
-cd linear-todos
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install dependencies
-uv sync
-
-# Run setup wizard
-uv run python main.py setup
+# Or with Homebrew
+brew install uv
 ```
 
-### Option 3: Using pip
+### 2. Install Dependencies
 
 ```bash
-git clone <repo-url>
-cd linear-todos
-pip install -e .
-linear-todo --help
-```
-
-### Option 4: Copy to OpenClaw workspace
-
-```bash
-cp -r linear-todos ~/.openclaw/skills/
-cd ~/.openclaw/skills/linear-todos
 uv sync
 ```
 
-## Setup (After Install)
-
-### 1. Get a Linear API Key
+### 3. Get a Linear API Key
 
 1. Go to [linear.app/settings/api](https://linear.app/settings/api)
 2. Create a new API key (name it "Linear Todos" or whatever you prefer)
 3. Copy the key — you'll need it for the next step
 
-### 2. Configure the CLI
-
-**Interactive setup (recommended):**
+### 4. Run Setup Wizard
 
 ```bash
 uv run python main.py setup
 ```
 
-This wizard will:
+This will:
 - Verify your API key
 - Show your Linear teams
 - Let you pick which team to use for todos
 - Save settings to `~/.config/linear-todos/config.json`
 
-**Or use environment variables:**
+**Or use environment variables instead of the wizard:**
 
 ```bash
 export LINEAR_API_KEY="lin_api_xxxxxxxx"
 export LINEAR_TEAM_ID="your-team-id"  # optional
 ```
 
-### 3. Create Your First Todo
+## Usage
 
 ```bash
-uv run python main.py create "My first todo" --when day
-uv run python main.py list
-```
-
-## Quick Start
-
-```bash
-# Create todos with natural language dates
+# Create todos
 uv run python main.py create "Call mom" --when day
 uv run python main.py create "Pay taxes" --date 2025-04-15
 uv run python main.py create "Review PR" --date "next Monday" --priority high
 
-# Manage todos
+# List todos
 uv run python main.py list
+
+# Mark done
 uv run python main.py done TODO-123
+
+# Snooze to later
 uv run python main.py snooze TODO-123 "next week"
 
 # Daily review
 uv run python main.py review
 ```
-
-## Commands
-
-| Command | Purpose |
-|---------|---------|
-| `create` | Create new todos |
-| `list` | List all todos |
-| `done` | Mark todos as completed |
-| `snooze` | Reschedule todos |
-| `review` | Full daily review |
-| `digest` | Morning digest (today only) |
-| `setup` | Interactive configuration |
 
 **See [SKILL.md](SKILL.md) for complete documentation.**
 
