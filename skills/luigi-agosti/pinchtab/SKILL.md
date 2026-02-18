@@ -13,6 +13,56 @@ metadata:
     emoji: "🦀"
     requires:
       bins: ["pinchtab"]
+      env:
+        - name: BRIDGE_TOKEN
+          secret: true
+          optional: true
+          description: "Bearer auth token for Pinchtab API"
+        - name: BRIDGE_PORT
+          optional: true
+          description: "HTTP port (default: 9867)"
+        - name: BRIDGE_HEADLESS
+          optional: true
+          description: "Run Chrome headless (true/false)"
+        - name: BRIDGE_PROFILE
+          optional: true
+          description: "Chrome profile directory (default: ~/.pinchtab/chrome-profile)"
+        - name: BRIDGE_STATE_DIR
+          optional: true
+          description: "State/session storage directory (default: ~/.pinchtab)"
+        - name: BRIDGE_NO_RESTORE
+          optional: true
+          description: "Skip restoring tabs from previous session (true/false)"
+        - name: BRIDGE_STEALTH
+          optional: true
+          description: "Stealth level: light (default, basic) or full (canvas/WebGL/font spoofing)"
+        - name: BRIDGE_BLOCK_IMAGES
+          optional: true
+          description: "Block image loading for faster, lower-bandwidth browsing (true/false)"
+        - name: BRIDGE_BLOCK_MEDIA
+          optional: true
+          description: "Block all media: images + fonts + CSS + video (true/false)"
+        - name: BRIDGE_NO_ANIMATIONS
+          optional: true
+          description: "Disable CSS animations/transitions globally (true/false)"
+        - name: CHROME_BINARY
+          optional: true
+          description: "Path to Chrome/Chromium binary (auto-detected if not set)"
+        - name: CHROME_FLAGS
+          optional: true
+          description: "Extra Chrome flags, space-separated"
+        - name: BRIDGE_CONFIG
+          optional: true
+          description: "Path to config JSON file (default: ~/.pinchtab/config.json)"
+        - name: BRIDGE_TIMEOUT
+          optional: true
+          description: "Action timeout in seconds (default: 15)"
+        - name: BRIDGE_NAV_TIMEOUT
+          optional: true
+          description: "Navigation timeout in seconds (default: 30)"
+        - name: CDP_URL
+          optional: true
+          description: "Connect to existing Chrome DevTools instead of launching"
 ---
 
 # Pinchtab
@@ -55,6 +105,11 @@ Refs (e.g. `e0`, `e5`, `e12`) are cached per tab after each snapshot — no need
 curl -X POST http://localhost:9867/navigate \
   -H 'Content-Type: application/json' \
   -d '{"url": "https://example.com"}'
+
+# With options: custom timeout, block images, open in new tab
+curl -X POST http://localhost:9867/navigate \
+  -H 'Content-Type: application/json' \
+  -d '{"url": "https://example.com", "timeout": 60, "blockImages": true, "newTab": true}'
 ```
 
 ### Snapshot (accessibility tree)
@@ -74,11 +129,32 @@ curl "http://localhost:9867/snapshot?diff=true"
 
 # Text format — indented tree, ~40-60% fewer tokens than JSON
 curl "http://localhost:9867/snapshot?format=text"
+
+# Compact format — one-line-per-node, 56-64% fewer tokens than JSON (recommended)
+curl "http://localhost:9867/snapshot?format=compact"
+
+# YAML format
+curl "http://localhost:9867/snapshot?format=yaml"
+
+# Scope to CSS selector (e.g. main content only)
+curl "http://localhost:9867/snapshot?selector=main"
+
+# Truncate to ~N tokens
+curl "http://localhost:9867/snapshot?maxTokens=2000"
+
+# Combine for maximum efficiency
+curl "http://localhost:9867/snapshot?format=compact&selector=main&maxTokens=2000&filter=interactive"
+
+# Disable animations before capture
+curl "http://localhost:9867/snapshot?noAnimations=true"
+
+# Write to file
+curl "http://localhost:9867/snapshot?output=file&path=/tmp/snapshot.json"
 ```
 
 Returns flat JSON array of nodes with `ref`, `role`, `name`, `depth`, `value`, `nodeId`.
 
-**Token optimization**: Use `?filter=interactive` for action-oriented tasks (~75% fewer tokens). Use `?diff=true` on multi-step workflows to see only what changed. Use `?format=text` for cheapest structured output. Use full snapshot only when you need complete page understanding.
+**Token optimization**: Use `?format=compact` for best token efficiency. Add `?filter=interactive` for action-oriented tasks (~75% fewer nodes). Use `?selector=main` to scope to relevant content. Use `?maxTokens=2000` to cap output. Use `?diff=true` on multi-step workflows to see only changes. Combine all params freely.
 
 ### Act on elements
 
@@ -186,6 +262,56 @@ curl -X POST http://localhost:9867/tab \
 
 Multi-tab: pass `?tabId=TARGET_ID` to snapshot/screenshot/text, or `"tabId"` in POST body.
 
+### Tab locking (multi-agent)
+
+```bash
+# Lock a tab (default 30s timeout, max 5min)
+curl -X POST http://localhost:9867/tab/lock \
+  -H 'Content-Type: application/json' \
+  -d '{"tabId": "TARGET_ID", "owner": "agent-1", "timeoutSec": 60}'
+
+# Unlock
+curl -X POST http://localhost:9867/tab/unlock \
+  -H 'Content-Type: application/json' \
+  -d '{"tabId": "TARGET_ID", "owner": "agent-1"}'
+```
+
+Locked tabs show `owner` and `lockedUntil` in `/tabs`. Returns 409 on conflict.
+
+### Batch actions
+
+```bash
+# Execute multiple actions in sequence
+curl -X POST http://localhost:9867/actions \
+  -H 'Content-Type: application/json' \
+  -d '[{"kind":"click","ref":"e3"},{"kind":"type","ref":"e3","text":"hello"},{"kind":"press","key":"Enter"}]'
+```
+
+### Cookies
+
+```bash
+# Get cookies for current page
+curl http://localhost:9867/cookies
+
+# Set cookies
+curl -X POST http://localhost:9867/cookies \
+  -H 'Content-Type: application/json' \
+  -d '{"url":"https://example.com","cookies":[{"name":"session","value":"abc123"}]}'
+```
+
+### Stealth
+
+```bash
+# Check stealth status and score
+curl http://localhost:9867/stealth/status
+
+# Rotate browser fingerprint
+curl -X POST http://localhost:9867/fingerprint/rotate \
+  -H 'Content-Type: application/json' \
+  -d '{"os":"windows"}'
+# os: "windows", "mac", or omit for random
+```
+
 ### Health check
 
 ```bash
@@ -199,7 +325,8 @@ curl http://localhost:9867/health
 | `/text` | ~800 | Reading page content |
 | `/snapshot?filter=interactive` | ~3,600 | Finding buttons/links to click |
 | `/snapshot?diff=true` | varies | Multi-step workflows (only changes) |
-| `/snapshot?format=text` | ~40-60% less | Structured tree, cheaper than JSON |
+| `/snapshot?format=compact` | ~56-64% less | One-line-per-node, best token efficiency |
+| `/snapshot?format=text` | ~40-60% less | Indented tree, cheaper than JSON |
 | `/snapshot` | ~10,500 | Full page understanding |
 | `/screenshot` | ~2K (vision) | Visual verification |
 
@@ -215,12 +342,24 @@ curl http://localhost:9867/health
 | `BRIDGE_PROFILE` | `~/.pinchtab/chrome-profile` | Chrome profile dir |
 | `BRIDGE_STATE_DIR` | `~/.pinchtab` | State/session storage |
 | `BRIDGE_NO_RESTORE` | `false` | Skip tab restore on startup |
+| `BRIDGE_STEALTH` | `light` | Stealth level: `light` or `full` |
+| `BRIDGE_BLOCK_IMAGES` | `false` | Block image loading |
+| `BRIDGE_BLOCK_MEDIA` | `false` | Block all media (images + fonts + CSS + video) |
+| `BRIDGE_NO_ANIMATIONS` | `false` | Disable CSS animations/transitions |
+| `CHROME_BINARY` | (auto) | Path to Chrome/Chromium binary |
+| `CHROME_FLAGS` | (none) | Extra Chrome flags (space-separated) |
+| `BRIDGE_CONFIG` | `~/.pinchtab/config.json` | Path to config JSON file |
+| `BRIDGE_TIMEOUT` | `15` | Action timeout (seconds) |
+| `BRIDGE_NAV_TIMEOUT` | `30` | Navigation timeout (seconds) |
 | `CDP_URL` | (none) | Connect to existing Chrome DevTools |
 
 ## Tips
 
+- **Always pass `tabId` explicitly** when working with multiple tabs — active tab tracking can be unreliable
 - Refs are stable between snapshot and actions — no need to re-snapshot before clicking
 - After navigation or major page changes, take a new snapshot to get fresh refs
 - Use `filter=interactive` by default, fall back to full snapshot when needed
 - Pinchtab persists sessions — tabs survive restarts (disable with `BRIDGE_NO_RESTORE=true`)
 - Chrome profile is persistent — cookies/logins carry over between runs
+- Chrome uses its native User-Agent by default — `BRIDGE_CHROME_VERSION` only affects fingerprint rotation
+- Use `BRIDGE_BLOCK_IMAGES=true` or `"blockImages": true` on navigate for read-heavy tasks — reduces bandwidth and memory
