@@ -1,0 +1,11 @@
+{
+  "owner": "tracsystems",
+  "slug": "intercom-lightning",
+  "displayName": "IntercomLightning",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1771328396144,
+    "commit": null
+  },
+  "history": []
+}
