@@ -34,9 +34,7 @@ The skill explicitly prohibits string concatenation of raw user input into JSON 
 
 The skill prefers the agent's built-in HTTP tools (e.g. `WebFetch`) over `curl`, avoiding shell command construction entirely. When `curl` is used, all URL and proxy URI arguments must be double-quoted.
 
-**Dual-scheme approach:** The skill uses two SOCKS5 schemes depending on context. For agent-side fetching (Step 5), it uses `socks5://` — DNS resolves locally, so the IP validated by checks 5–6 is the IP the proxy connects to. This eliminates the DNS rebinding vector entirely. For user-facing credentials (Step 4), it uses `socks5h://` to preserve user DNS privacy.
-
-**SOCKS5 DNS (eliminated for agent-side fetching):** Because the agent uses `socks5://`, local DNS resolution is authoritative — there is no proxy-side DNS gap to exploit. The resolved IP is the connected IP. User-facing credentials continue using `socks5h://` for DNS privacy, where the proxy-side DNS trade-off is acceptable (the user controls the target URL).
+**Dual-scheme approach:** Agent-side fetching (Step 5) uses `socks5://` so DNS resolves locally — the validated IP is the connected IP. User-facing credentials (Step 4) use `socks5h://` for DNS privacy.
 
 ---
 
@@ -96,29 +94,13 @@ Displaying them is intentional and necessary for the skill's purpose.
 
 ---
 
-## 7. Runtime-Dependent Protections
-
-**Concern:** The SSRF allowlist (DNS resolution, IP-range checks) and input validation are procedural requirements that the agent must implement at runtime. Because this is a declarative skill (markdown instructions, not executable code), the protections are not enforced by code — they depend on the agent following the instructions correctly.
-
-**Mitigation:** This is an inherent architectural property of declarative skills. The following measures reduce the risk of agent non-compliance:
-
-- **Validation rules are explicit and enumerated** — not vague guidelines but specific regex patterns, enum values, and CIDR ranges that leave no room for interpretation
-- **The dual-scheme approach (`socks5://` vs `socks5h://`) is structurally enforced** — the skill uses different schemes in different contexts (Step 4 vs Step 5), making it harder for the agent to accidentally use the wrong one
-- **The allowlist model is fail-closed** — the instructions say "every check must pass; reject the URL if any check fails," so an agent that skips a check will still block on the remaining checks
-- **Reference examples model correct behavior** — all code examples in the skill and its reference files demonstrate the validated patterns, giving the agent concrete templates to follow rather than abstract rules
-
-**Residual risk:** An agent that ignores or misinterprets the instructions could bypass SSRF protections. This risk is shared by all declarative agent skills and is best addressed at the agent framework level (e.g. runtime URL validation middleware). The skill's layered checks (scheme, hostname pattern, DNS resolution, IP range) provide defense-in-depth even if one layer is imperfectly implemented.
-
----
-
 ## Summary
 
 | Concern | Risk Level | Status |
 |---------|-----------|--------|
 | Shell injection via user input | Mitigated | Mandatory input validation, no raw interpolation |
-| SSRF via arbitrary URL fetching | Eliminated | Allowlist model + dual-scheme: `socks5://` for agent fetching makes local DNS authoritative, eliminating proxy-side DNS rebinding; `socks5h://` for user-facing DNS privacy |
+| SSRF via arbitrary URL fetching | Eliminated | Allowlist model + dual-scheme: `socks5://` for agent fetching (local DNS), `socks5h://` for user-facing DNS privacy |
 | Unsafe JSON parsing fallbacks | Eliminated | Removed; jq or format=text only — all reference examples also comply |
 | Cryptographic material (x402) | Not applicable | Skill provides endpoint URLs only; signing handled by external libraries |
 | API key handling | Standard practice | Environment variable, existence-checked only (never echoed), HTTPS header |
 | Proxy credential exposure | By design | Short-lived, single-purpose, non-reusable |
-| Runtime-dependent protections | Acknowledged | Explicit validation rules, fail-closed allowlist, defense-in-depth; residual risk shared by all declarative skills |

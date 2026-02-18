@@ -124,24 +124,20 @@ Show the **full proxy credentials** so the user can immediately connect. These a
 
 ### Step 5: If the user asked you to fetch a URL
 
-After generating the proxy, make the request yourself. When the agent fetches a URL, use `socks5://` (not `socks5h://`) so DNS resolves locally. This makes checks 5–6 authoritative — the validated public IP is the IP the proxy connects to, eliminating the proxy-side DNS rebinding vector. User-facing credentials (Step 4) continue using `socks5h://` for DNS privacy.
+After generating the proxy, make the request yourself. Use `socks5://` (not `socks5h://`) so DNS resolves locally — the validated IP is the connected IP.
 
-**Before fetching, validate the target URL using the allowlist model below.** Every check must pass — reject the URL if any check fails.
+**Use the agent's built-in HTTP tools** (e.g. `WebFetch`) to fetch the URL through the proxy. This is the preferred method — it avoids shell command construction entirely.
 
-1. **Scheme:** Must start with `http://` or `https://`. Reject all other schemes.
-2. **Shell safety:** Reject any URL containing shell metacharacters: `` ` `` `$` `(` `)` `;` `&` `|` `<` `>` newlines
-3. **No raw IPs:** Reject URLs with raw IP addresses as the hostname (IPv4 or IPv6). Domain names only.
-4. **No internal hostnames:** Reject hostnames matching internal infrastructure patterns:
-   - `*.internal`, `*.local`, `*.localhost`, `*.localdomain`
-   - `*.corp`, `*.lan`
-   - `metadata.*` (cloud metadata endpoints)
-   - Single-label hostnames (no dots — e.g. `localhost`, `redis`, `db`)
-5. **Local DNS resolution required:** Resolve the hostname locally before proxying. If the hostname **fails to resolve** via local DNS, reject it — it may only exist in the proxy's internal DNS. Because the agent uses `socks5://`, local DNS resolution is authoritative — the proxy connects to the same IP the agent validated.
-6. **Public IP required:** The resolved IP must be publicly routable. Reject if it resolves to any private/internal range: `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`, `::1`, `fd00::/8`, or known cloud metadata addresses (e.g. `169.254.169.254`).
+**URL validation — every check must pass before fetching:**
 
-**Preferred method** — use the agent's built-in HTTP tools (e.g. `WebFetch`) with the proxy, which avoids shell command construction entirely.
+1. Scheme must be `http://` or `https://`
+2. No shell metacharacters: `` ` `` `$` `(` `)` `;` `&` `|` `<` `>` newlines
+3. Domain names only — reject raw IP addresses (IPv4 or IPv6)
+4. Reject internal hostnames: `*.internal`, `*.local`, `*.localhost`, `*.localdomain`, `*.corp`, `*.lan`, `metadata.*`, single-label hostnames
+5. Hostname must resolve via local DNS — reject unresolvable hostnames
+6. Resolved IP must be publicly routable — reject `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`, `::1`, `fd00::/8`, `169.254.169.254`
 
-**If you must use curl**, always double-quote the URL and proxy URI:
+**Fallback — curl** (only if WebFetch is unavailable). Always double-quote the URL and proxy URI:
 
 ```bash
 curl --proxy "socks5://username:password@ip:port" \
