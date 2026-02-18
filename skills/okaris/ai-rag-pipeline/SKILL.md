@@ -1,19 +1,14 @@
 ---
 name: ai-rag-pipeline
-description: |
-  Build RAG (Retrieval Augmented Generation) pipelines with web search and LLMs.
-  Tools: Tavily Search, Exa Search, Exa Answer, Claude, GPT-4, Gemini via OpenRouter.
-  Capabilities: research, fact-checking, grounded responses, knowledge retrieval.
-  Use for: AI agents, research assistants, fact-checkers, knowledge bases.
-  Triggers: rag, retrieval augmented generation, grounded ai, search and answer,
-  research agent, fact checking, knowledge retrieval, ai research, search + llm,
-  web grounded, perplexity alternative, ai with sources, citation, research pipeline
+description: "Build RAG (Retrieval Augmented Generation) pipelines with web search and LLMs. Tools: Tavily Search, Exa Search, Exa Answer, Claude, GPT-4, Gemini via OpenRouter. Capabilities: research, fact-checking, grounded responses, knowledge retrieval. Use for: AI agents, research assistants, fact-checkers, knowledge bases. Triggers: rag, retrieval augmented generation, grounded ai, search and answer, research agent, fact checking, knowledge retrieval, ai research, search + llm, web grounded, perplexity alternative, ai with sources, citation, research pipeline"
 allowed-tools: Bash(infsh *)
 ---
 
 # AI RAG Pipeline
 
 Build RAG (Retrieval Augmented Generation) pipelines via [inference.sh](https://inference.sh) CLI.
+
+![AI RAG Pipeline](https://cloud.inference.sh/app/files/u/4mg21r6ta37mpaz6ktzwtt8krr/01kgndqjxd780zm2j3rmada6y8.jpeg)
 
 ## Quick Start
 
@@ -26,6 +21,8 @@ infsh app run openrouter/claude-sonnet-45 --input "{
   \"prompt\": \"Based on this research, summarize the key trends: $SEARCH\"
 }"
 ```
+
+> **Install note:** The [install script](https://cli.inference.sh) only detects your OS/architecture, downloads the matching binary from `dist.inference.sh`, and verifies its SHA-256 checksum. No elevated permissions or background processes. [Manual install & verification](https://dist.inference.sh/cli/checksums.txt) available.
 
 ## What is RAG?
 
@@ -293,16 +290,16 @@ research "your query here"
 
 ```bash
 # Web search tools
-npx skills add inference-sh/agent-skills@web-search
+npx skills add inference-sh/skills@web-search
 
 # LLM models
-npx skills add inference-sh/agent-skills@llm-models
+npx skills add inference-sh/skills@llm-models
 
 # Content pipelines
-npx skills add inference-sh/agent-skills@ai-content-pipeline
+npx skills add inference-sh/skills@ai-content-pipeline
 
 # Full platform skill
-npx skills add inference-sh/agent-skills@inference-sh
+npx skills add inference-sh/skills@inference-sh
 ```
 
 Browse all apps: `infsh app list`
