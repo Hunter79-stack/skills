@@ -181,6 +181,35 @@ function extractPhoneNumbersFromSipHeaders(sipHeaders) {
     };
 }
 
+// Allowlisted fields for SUMMARY_JSON extraction.
+// Only these keys are kept from transcript-embedded JSON to prevent
+// exfiltration of unexpected structured data.
+const SUMMARY_JSON_ALLOWED_KEYS = new Set([
+    'name', 'callback', 'message', 'phone', 'email',
+    'reason', 'urgency', 'time', 'date', 'notes',
+    'appointment', 'location', 'summary'
+]);
+
+/**
+ * Sanitize a parsed SUMMARY_JSON object: keep only allowlisted keys,
+ * enforce string values (no nested objects), and cap value length.
+ */
+function sanitizeSummaryJson(obj) {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+    const MAX_VALUE_LENGTH = 500;
+    const sanitized = {};
+    let hasKeys = false;
+    for (const [key, value] of Object.entries(obj)) {
+        if (!SUMMARY_JSON_ALLOWED_KEYS.has(key.toLowerCase())) continue;
+        // Only allow string/number/boolean values — no nested objects
+        if (typeof value === 'object' && value !== null) continue;
+        const strVal = String(value).slice(0, MAX_VALUE_LENGTH);
+        sanitized[key] = strVal;
+        hasKeys = true;
+    }
+    return hasKeys ? sanitized : null;
+}
+
 function extractInlineSummaryJsonObjects(transcriptText) {
     const lines = String(transcriptText || '').split(/\r?\n/);
     const objs = [];
@@ -197,9 +226,13 @@ function extractInlineSummaryJsonObjects(transcriptText) {
         }
         if (!candidate || !candidate.trim().startsWith('{')) continue;
 
+        // Cap candidate length to prevent parsing absurdly large blobs
+        if (candidate.length > 4096) continue;
+
         try {
             const parsed = JSON.parse(candidate);
-            if (parsed && typeof parsed === 'object') objs.push(parsed);
+            const sanitized = sanitizeSummaryJson(parsed);
+            if (sanitized) objs.push(sanitized);
         } catch {
             // ignore
         }
@@ -412,7 +445,9 @@ async function processLogsWithOptions(options) {
     // Load bridge outbound call data for resolving outbound call metadata
     let bridgeOutboundMap = {};
     try {
-        const bridgeMapPath = path.join(HOME, 'clawd/memory/bridge-outbound-map.json');
+        // Load outbound call map for resolving "to" numbers and objectives.
+        // Set BRIDGE_OUTBOUND_MAP env var to the path, or defaults to ../runtime/logs/bridge-outbound-map.json
+        const bridgeMapPath = process.env.BRIDGE_OUTBOUND_MAP || path.join(logsDir, 'bridge-outbound-map.json');
         const bridgeMapData = safeReadJson(bridgeMapPath);
         if (bridgeMapData && !bridgeMapData.__parse_error && bridgeMapData.calls) {
             bridgeOutboundMap = bridgeMapData.calls;

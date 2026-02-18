@@ -1,6 +1,6 @@
 # ☎️ Amber — Phone-Capable Voice Agent
 
-**A voice sub-agent for [OpenClaw](https://openclaw.ai)** — gives your OpenClaw deployment phone capabilities via Twilio + OpenAI Realtime.
+**A voice sub-agent for [OpenClaw](https://openclaw.ai)** — gives your OpenClaw deployment phone capabilities via a provider-swappable telephony bridge + OpenAI Realtime. Twilio is the default and recommended provider.
 
 [![ClawHub](https://img.shields.io/badge/ClawHub-amber--voice--assistant-blue)](https://clawhub.ai/skills/amber-voice-assistant)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -18,6 +18,7 @@ Amber is not a standalone voice agent — it operates as an extension of your Op
 - ⚡ **Launch in minutes** — `npm install`, configure `.env`, `npm start`
 - 🔒 **Safety guardrails** — operator approval for outbound calls, payment escalation, consent boundaries
 - 🎛️ **Fully configurable** — assistant name, operator info, org name, voice, screening style
+- 📝 **AGENT.md** — customize all prompts, greetings, booking flow, and personality in a single editable markdown file (no code changes needed)
 
 ## Quick Start
 
@@ -29,14 +30,24 @@ npm run build && npm start
 
 Point your Twilio voice webhook to `https://<your-domain>/twilio/inbound` — done!
 
+> **Switching providers?** Set `VOICE_PROVIDER=telnyx` (or another supported provider) in your `.env` — no code changes needed. See [SKILL.md](SKILL.md) for details.
+
 ## What's Included
 
-| Directory | Description |
-|-----------|-------------|
-| `runtime/` | Production-ready Twilio + OpenAI Realtime SIP bridge |
+| Path | Description |
+|------|-------------|
+| `AGENT.md` | **Editable prompts & personality** — customize without touching code |
+| `runtime/` | Production-ready voice bridge (Twilio default) + OpenAI Realtime SIP |
 | `dashboard/` | Call log web UI with search, filtering, transcripts |
 | `scripts/` | Setup quickstart and env validation |
 | `references/` | Architecture docs, env template, release checklist |
+| `UPGRADING.md` | Migration guide for major version upgrades |
+
+## Customizing Amber (AGENT.md)
+
+All voice prompts, conversational rules, booking flow, and greetings live in [`AGENT.md`](AGENT.md). Edit this file to change how Amber behaves — no TypeScript required.
+
+Template variables like `{{OPERATOR_NAME}}` and `{{ASSISTANT_NAME}}` are auto-replaced from your `.env` at runtime. See [UPGRADING.md](UPGRADING.md) for full details.
 
 ## Documentation
 
