@@ -5,7 +5,12 @@ metadata:
   {
     "openclaw":
       {
-        "requires": { "bins": ["groupme"] },
+        "requires":
+          {
+            "bins": ["groupme"],
+            "env": ["GROUPME_TOKEN"],
+          },
+        "primaryEnv": "GROUPME_TOKEN",
         "install":
           [
             {
@@ -14,6 +19,7 @@ metadata:
               "repo": "https://github.com/cuuush/groupme-cli",
               "bins": ["groupme"],
               "label": "Install groupme-cli (from source)",
+              "notes": "Builds via npm (git clone + npm install + npm run build + npm link). Review package.json scripts before running on sensitive systems.",
             },
           ],
       },
