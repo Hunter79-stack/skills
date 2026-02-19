@@ -3,11 +3,16 @@
   "slug": "conclave",
   "displayName": "conclave",
   "latest": {
-    "version": "2.10.0",
-    "publishedAt": 1771388177347,
-    "commit": "https://github.com/openclaw/skills/commit/6256520a02a34d649d60852c2513e314b3454893"
+    "version": "2.16.0",
+    "publishedAt": 1771511408628,
+    "commit": null
   },
   "history": [
+    {
+      "version": "2.10.0",
+      "publishedAt": 1771388177347,
+      "commit": "https://github.com/openclaw/skills/commit/6256520a02a34d649d60852c2513e314b3454893"
+    },
     {
       "version": "2.8.2",
       "publishedAt": 1771308311098,
