@@ -26,6 +26,8 @@ https://askgina.ai/ai/predictions/mcp
 }
 ```
 
+4. Restart your MCP client and ask: `"What can you do with gina"`.
+
 Tokens expire after 90 days. You can have up to 5 active tokens and revoke any from the Agent Setup page.
 
 Works with: OpenClaw, Claude Code, Codex, Cursor, Windsurf, and any MCP client.

@@ -2,7 +2,7 @@
 name: askgina-polymarket
 displayName: Polymarket via Gina
 description: Fast setup for Claw bots: paste your Gina MCP token and start trading Polymarket in minutes.
-version: 0.1.1
+version: 0.1.2
 metadata:
   tags: polymarket, prediction-markets, trading, betting, gina, mcp, ask gina, crypto, agent, agentic, bot, automated
 authors:
@@ -44,6 +44,7 @@ Just type natural language prompts — no special syntax needed.
 
 | Feature | Example Prompts |
 |---------|----------------|
+| **Getting started** | `"What can you do Gina"` `"Give me some use cases I can try with the Gina MCP"` |
 | **Search markets** | `"NBA markets tomorrow"` `"Fed rate decision odds"` |
 | **Trending** | `"what's trending on Polymarket?"` `"markets with the most trading volume and liquidity"` |
 | **Crypto prices** | `"BTC 15 minute up or down"` `"ETH current hourly up/down market"` |
@@ -79,7 +80,7 @@ Just type natural language prompts — no special syntax needed.
 }
 ```
 
-5. Restart your MCP client and ask: `"search NBA markets on Polymarket"`.
+5. Restart your MCP client and ask: `"What can you do with gina"`.
 For detailed client setup instructions, see the [Quick Start guide](https://docs.askgina.ai/predictions-mcp/quick-start).
 
 ## How It Works
