@@ -26,11 +26,23 @@ def main():
     parser = argparse.ArgumentParser(description=f"{BRAND_NAME} AI-Native Commerce CLI Tool")
     subparsers = parser.add_subparsers(dest="command", help="Command type")
 
-    # 1. Auth (login/logout)
+    # 1. Auth (login/logout/register/send-code)
     login_p = subparsers.add_parser("login", help="Login to your account")
     login_p.add_argument("--account", required=True, help="Username, Email, or Phone")
     login_p.add_argument("--password", required=True, help="Password")
 
+    reg_p = subparsers.add_parser("register", help="Register a new account")
+    reg_p.add_argument("--email", required=True)
+    reg_p.add_argument("--password", required=True)
+    reg_p.add_argument("--code", required=True, help="Verification code from email")
+    reg_p.add_argument("--name", help="Display name")
+    reg_p.add_argument("--invite", help="Invite code")
+    reg_p.add_argument("--reset-visitor", action="store_true", help="Reset visitor ID before registration")
+
+    code_p = subparsers.add_parser("send-code", help="Send verification code to email")
+    code_p.add_argument("--email", required=True)
+
+    subparsers.add_parser("reset-visitor", help="Manually reset visitor ID")
     subparsers.add_parser("logout", help="Logout and clear credentials")
 
     # 2. Products (search/list/get)
@@ -82,9 +94,30 @@ def main():
 
     # Execution logic
     if args.command == "login":
-        client.save_credentials(args.account, args.password)
-        format_output({"success": True, "message": f"Credentials for {BRAND_ID} saved successfully."})
+        # 升级：不再直接保存密码，而是换取 Token
+        result = client.get_api_token(args.account, args.password)
+        if result.get("success"):
+            format_output({
+                "success": True, 
+                "message": f"Login successful. API Token for {BRAND_ID} saved.",
+                "storage": str(client.creds_file),
+                "permission": "0600 (Private)"
+            })
+        else:
+            format_output(result)
     
+    elif args.command == "register":
+        if args.reset_visitor:
+            client.reset_visitor_id()
+        format_output(client.register(args.email, args.password, args.name, args.code, args.invite))
+
+    elif args.command == "send-code":
+        format_output(client.send_verification_code(args.email))
+
+    elif args.command == "reset-visitor":
+        new_id = client.reset_visitor_id()
+        format_output({"success": True, "new_visitor_id": new_id})
+
     elif args.command == "logout":
         client.delete_credentials()
         format_output({"success": True, "message": f"Logged out from {BRAND_ID}."})

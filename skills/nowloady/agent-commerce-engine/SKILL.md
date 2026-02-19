@@ -1,6 +1,6 @@
 ---
 name: standard-agentic-commerce-engine
-version: 1.2.4
+version: 1.4.1
 description: A production-ready universal engine for Agentic Commerce. This tool enables autonomous agents to interact with any compatible headless e-commerce backend through a standardized protocol. It provides out-of-the-box support for discovery, cart operations, and secure user management.
 tags: [ecommerce, shopping-agent, commerce-engine, standard-protocol, headless-commerce, agentic-web]
 ---
@@ -14,6 +14,25 @@ GitHub Repository: https://github.com/NowLoadY/agent-commerce-engine
 ## Reference Case: Lafeitu
 
 For a production-grade implementation example using this engine, see the [Lafeitu Gourmet Skill](https://clawdhub.com/NowLoadY/agentic-spicy-food). It demonstrates the engine specialized for a real-world artisanal food brand.
+
+---
+## 🔒 Security & Privacy
+
+To ensure transparency and protect user data, the Standard Agentic Commerce Engine follows these security protocols:
+
+### 1. Local Credential Persistence
+- **Storage Location**: `~/.clawdbot/credentials/agent-commerce-engine/`
+- **Mechanism**: Account and session **Token** information is stored locally in JSON format with `0600` (user-only) permissions.
+- **Security Upgrade**: Since version 1.4.0, raw passwords are never stored after the initial login. The engine exchanges the password for a signed cryptographic token.
+- **Scope**: Data is only accessible to the local system user and the running agent instance.
+- **Lifecycle**: Credentials can be purged at any time by running the `logout` command.
+
+### 2. Secure Transmission
+- **Token-based Auth**: Uses `x-api-token` headers for authentication. Raw passwords are only transmitted once during the `login` or `register` phase to exchange for a token.
+- **Encrypted Transport**: All communication with the backend MUST be over HTTPS to ensure tokens are protected in transit.
+
+### 3. Anonymous Tracking (Visitor ID)
+- To support shopping carts for unauthenticated users, a unique, non-identifiable `Visitor ID` (UUID v4) is generated and stored locally. This ID contains no personal information.
 
 ---
 

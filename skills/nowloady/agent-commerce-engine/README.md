@@ -35,6 +35,14 @@ The **Standard Agentic Commerce Engine** eliminates the friction of building cus
 - `SERVER_SPEC.md`: Standard API response and behavior specification for backends.
 - `scripts/commerce.py`: The universal CLI entry point.
 
+## Security & Privacy (Safety First)
+
+This engine handles user credentials following these standards:
+- **Zero Hidden Files**: All data persists in the standard `~/.clawdbot/credentials/agent-commerce-engine/` directory.
+- **Access Control**: Stored JSON files are restricted to `0600` permissions (owner read/write only).
+- **Stateless Identity**: Uses non-cookie header-based authentication to minimize tracking footprint.
+- **Data Minimality**: Only stores the minimum necessary information (Account/Password) required by the target headless API.
+
 ## License
 
 MIT License - Supporting the open acceleration of Agentic Commerce standards.
