@@ -1,5 +1,5 @@
 ---
-name: bitwarden-vaultwarden
+name: Bitwarden / Vaultwarden
 description: Bitwarden & Vaultwarden password manager integration. Use when storing, retrieving, generating, or managing passwords and credentials. Wraps the Bitwarden CLI (bw) with automatic session management. Works with both official Bitwarden and self-hosted Vaultwarden servers.
 homepage: https://github.com/TWhidden/openclaw-skill-bitwarden
 metadata:
@@ -8,7 +8,7 @@ metadata:
     requires:
       env: ["BW_SERVER", "BW_EMAIL", "BW_MASTER_PASSWORD"]
       primaryEnv: "BW_SERVER"
-      bins: ["bw", "python3"]
+      bins: ["bw", "openssl", "curl"]
       files: ["bw.sh"]
 ---
 
@@ -56,6 +56,7 @@ bash skills/bitwarden/bw.sh <command> [args...]
 
 | Command | Description | Example |
 |---------|-------------|---------|
+| `register [email] [pass] [name]` | Register new account | `bw.sh register user@example.com pass123 "My Name"` |
 | `login` | Login & unlock vault | `bw.sh login` |
 | `status` | Show vault status | `bw.sh status` |
 | `list [search]` | List/search items | `bw.sh list github` |
@@ -81,6 +82,28 @@ bash skills/bitwarden/bw.sh <command> [args...]
 PASS=$(bash skills/bitwarden/bw.sh generate 32)
 bash skills/bitwarden/bw.sh create "New Service" "user@email.com" "$PASS" "https://service.com"
 ```
+
+## Account Registration
+
+Register a new account on your Bitwarden/Vaultwarden server directly from the CLI:
+
+```bash
+# Register using configured credentials (from env/credentials file)
+bash skills/bitwarden/bw.sh register
+
+# Register with explicit credentials
+bash skills/bitwarden/bw.sh register "user@example.com" "SecurePass123!" "Display Name"
+```
+
+**How it works:**
+- Derives a master key using PBKDF2-SHA256 (600,000 iterations) with the email as salt
+- Creates a master password hash for server authentication
+- Generates a 64-byte symmetric key, encrypted with AES-256-CBC + HMAC-SHA256
+- Submits registration to the server's `/api/accounts/register` endpoint
+
+**Requirements:** OpenSSL 3.x+ (for PBKDF2 and HKDF support), curl, xxd.
+
+**Note:** The master password must be at least 12 characters. Works with both official Bitwarden and Vaultwarden servers.
 
 ## Guardrails
 

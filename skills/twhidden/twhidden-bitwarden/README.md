@@ -1,8 +1,12 @@
-# Bitwarden & Vaultwarden Password Manager Skill
+# Bitwarden / Vaultwarden — Password Manager Skill
+
+[![ClawHub](https://img.shields.io/badge/ClawHub-twhidden--bitwarden-blue)](https://clawhub.ai/skills/twhidden-bitwarden)
 
 An [OpenClaw](https://openclaw.dev) skill for [Bitwarden](https://bitwarden.com/) password management. Wraps the [Bitwarden CLI](https://bitwarden.com/help/cli/) with automatic session management.
 
 **Works with both official Bitwarden and [Vaultwarden](https://github.com/dani-garcia/vaultwarden) (self-hosted).**
+
+**📦 Install from ClawHub:** [`clawhub install twhidden-bitwarden`](https://clawhub.ai/skills/twhidden-bitwarden)
 
 ## Features
 
@@ -102,6 +106,7 @@ bash skills/bitwarden/bw.sh lock
 
 | Command | Description |
 |---------|-------------|
+| `register [email] [pass] [name]` | Register new account on server |
 | `login` | Login & unlock vault |
 | `status` | Show vault status |
 | `sync` | Sync vault with server |
@@ -141,6 +146,15 @@ Contributions welcome! Please ensure no credentials or instance-specific informa
 ## License
 
 MIT License — see [LICENSE](LICENSE).
+
+## Security Improvements in v1.0.3
+
+### Account Registration Support
+- **Added:** `register` command for creating new accounts via API
+- **Crypto:** Uses proper Bitwarden key derivation (PBKDF2 + HKDF-Expand + AES-256-CBC + HMAC-SHA256)
+- **Security:** 12-character minimum password, error messages don't leak server response details
+- **Compatibility:** Works with both official Bitwarden and Vaultwarden servers
+- **Dependencies:** Requires Python `cryptography` and `requests` packages
 
 ## Security Improvements in v1.0.1
 
