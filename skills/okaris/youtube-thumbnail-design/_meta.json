@@ -3,9 +3,15 @@
   "slug": "youtube-thumbnail-design",
   "displayName": "Youtube Thumbnail Design",
   "latest": {
-    "version": "0.1.0",
-    "publishedAt": 1770656262082,
-    "commit": "https://github.com/openclaw/skills/commit/ae6f957bb13e495a79a30bd85d91ef56da728b8c"
+    "version": "0.1.5",
+    "publishedAt": 1771403505653,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.1.0",
+      "publishedAt": 1770656262082,
+      "commit": "https://github.com/openclaw/skills/commit/ae6f957bb13e495a79a30bd85d91ef56da728b8c"
+    }
+  ]
 }

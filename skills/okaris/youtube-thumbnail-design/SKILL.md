@@ -1,12 +1,6 @@
 ---
 name: youtube-thumbnail-design
-description: |
-  YouTube thumbnail design with specific dimensions, contrast rules, and mobile preview optimization.
-  Covers safe zones, text placement, face expression psychology, and A/B testing.
-  Use for: YouTube thumbnails, video cover images, click-through optimization.
-  Triggers: youtube thumbnail, thumbnail design, video thumbnail, click through rate,
-  ctr optimization, youtube cover, video cover image, thumbnail maker, thumbnail tips,
-  youtube design, video preview image
+description: "YouTube thumbnail design with specific dimensions, contrast rules, and mobile preview optimization. Covers safe zones, text placement, face expression psychology, and A/B testing. Use for: YouTube thumbnails, video cover images, click-through optimization. Triggers: youtube thumbnail, thumbnail design, video thumbnail, click through rate, ctr optimization, youtube cover, video cover image, thumbnail maker, thumbnail tips, youtube design, video preview image"
 allowed-tools: Bash(infsh *)
 ---
 
@@ -26,6 +20,8 @@ infsh app run falai/flux-dev-lora --input '{
   "height": 720
 }'
 ```
+
+> **Install note:** The [install script](https://cli.inference.sh) only detects your OS/architecture, downloads the matching binary from `dist.inference.sh`, and verifies its SHA-256 checksum. No elevated permissions or background processes. [Manual install & verification](https://dist.inference.sh/cli/checksums.txt) available.
 
 ## Specifications
 
@@ -245,9 +241,9 @@ infsh app run falai/flux-dev-lora --input '{
 ## Related Skills
 
 ```bash
-npx skills add inferencesh/skills@ai-image-generation
-npx skills add inferencesh/skills@image-upscaling
-npx skills add inferencesh/skills@prompt-engineering
+npx skills add inference-sh/skills@ai-image-generation
+npx skills add inference-sh/skills@image-upscaling
+npx skills add inference-sh/skills@prompt-engineering
 ```
 
 Browse all apps: `infsh app list`
