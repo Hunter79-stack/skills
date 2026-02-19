@@ -1,11 +1,17 @@
 {
   "owner": "leegitw",
   "slug": "context-verifier",
-  "displayName": "Context Verifier - File Integrity and Hash Computation",
+  "displayName": "Context Verifier",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1771234335409,
-    "commit": "https://github.com/openclaw/skills/commit/a07a1ac369876ffb6b89f1581a488cb43087cc66"
+    "version": "1.2.0",
+    "publishedAt": 1771469703287,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1771234335409,
+      "commit": "https://github.com/openclaw/skills/commit/a07a1ac369876ffb6b89f1581a488cb43087cc66"
+    }
+  ]
 }

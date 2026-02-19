@@ -1,7 +1,7 @@
 ---
 name: context-verifier
-version: 1.0.0
-description: File integrity verification, hash computation, and context packet management
+version: 1.2.0
+description: Know the file you're editing is the file you think it is — verify integrity before you act
 author: Live Neon <contact@liveneon.dev>
 homepage: https://github.com/live-neon/skills/tree/main/agentic/context-verifier
 repository: leegitw/context-verifier
@@ -10,6 +10,15 @@ tags: [agentic, verification, hash, integrity, context]
 layer: foundation
 status: active
 alias: cv
+disable-model-invocation: true
+metadata:
+  openclaw:
+    requires:
+      config:
+        - .openclaw/context-verifier.yaml
+        - .claude/context-verifier.yaml
+      workspace:
+        - output/context-packets/
 ---
 
 # context-verifier (検証)
@@ -32,6 +41,21 @@ openclaw install leegitw/context-verifier
 **Standalone usage**: This skill is fully functional standalone. It provides file integrity
 verification that other skills in the suite depend on. Install this first when adopting
 the Neon Agentic Suite.
+
+**Data handling**: This skill is instruction-only (`disable-model-invocation: true`).
+It computes file hashes and creates context packets but does NOT invoke AI models itself.
+No external APIs or third-party services are called. Results are written to `output/context-packets/`
+in your workspace. The skill only accesses paths declared in its metadata.
+
+## What This Solves
+
+AI agents sometimes operate on stale data — editing a file that changed since it was read, or trusting cached content that's now outdated. This skill prevents that by:
+
+1. **Computing hashes** of files before and after operations
+2. **Detecting changes** between read and write
+3. **Generating context packets** with verifiable checksums for review workflows
+
+**The insight**: Trust but verify. The file you read might not be the file you're about to edit. Check first.
 
 ## Usage
 
@@ -78,7 +102,11 @@ the Neon Agentic Suite.
 |----------|----------|-------------|
 | files | Yes | Comma-separated file paths or glob pattern |
 | --name | No | Packet name (default: auto-generated) |
-| --include-content | No | Include file content in packet (default: false) |
+| --include-content | No | Include file content in packet (default: false) - **see Security section** |
+
+> **⚠️ Security Warning**: The `--include-content` flag stores file contents to disk.
+> Never use this flag with sensitive files (`.env`, credentials, secrets).
+> See the [Security Considerations](#security-considerations) section below.
 
 ## Configuration
 
@@ -86,6 +114,74 @@ Configuration is loaded from (in order of precedence):
 1. `.openclaw/context-verifier.yaml` (OpenClaw standard)
 2. `.claude/context-verifier.yaml` (Claude Code compatibility)
 3. Defaults (built-in patterns)
+
+## Security Considerations
+
+**What this skill does NOT do:**
+- Invoke AI models (instruction-only skill)
+- Call external APIs or third-party services
+- Access files outside user-specified paths
+- Send data to external services
+- Modify files (read-only except for writing packets to `output/context-packets/`)
+
+**What this skill accesses:**
+- Configuration files in `.openclaw/context-verifier.yaml` and `.claude/context-verifier.yaml`
+- User-specified files for hash computation (read-only)
+- Its own output directory `output/context-packets/` (write)
+
+This skill handles file metadata and optionally file contents. Follow these guidelines:
+
+### Sensitive File Detection (Not Reading)
+
+The `critical_patterns` (e.g., `*.env`, `*credentials*`, `*secret*`) are used for:
+- **Detection**: Identifying files that should trigger warnings
+- **Severity tagging**: Marking files as critical for change-blocking behavior
+
+By default, `/cv hash` and `/cv packet` compute hashes **without reading file contents into output**.
+The hash is computed but the file content is not stored.
+
+### --include-content Flag
+
+**⚠️ WARNING**: The `--include-content` flag writes actual file contents to disk.
+
+| Risk | Mitigation |
+|------|------------|
+| Secrets written to disk | Never use `--include-content` with `.env`, credentials, or secret files |
+| Sensitive data in git | Add `output/context-packets/` to `.gitignore` (see below) |
+| Data retention | Packets are stored indefinitely; manually delete when no longer needed |
+
+**Recommended usage**:
+```bash
+# Safe: Hash only (default) - no content stored
+/cv packet src/*.go --name "pre-refactor"
+
+# Risky: Content included - ensure no sensitive files in glob
+/cv packet docs/*.md --name "docs-backup" --include-content
+
+# NEVER do this:
+/cv packet .env --include-content  # Stores secrets to disk!
+```
+
+### Required .gitignore Entry
+
+Add to your `.gitignore` to prevent accidental commits:
+
+```gitignore
+# Context verification packets (may contain sensitive data)
+output/context-packets/
+```
+
+### Storage and Retention
+
+- **Location**: Packets stored in `output/context-packets/` (workspace-local)
+- **Format**: Unencrypted JSON
+- **Retention**: No automatic deletion; clean up manually
+- **Access**: Standard filesystem permissions (no additional access controls)
+
+For sensitive environments, consider:
+1. Restricting `output/` directory permissions
+2. Using encrypted filesystems
+3. Periodic cleanup of old packets
 
 ## Core Logic
 
@@ -190,18 +286,20 @@ Behavior: Warn on unexpected change
 ```
 [PACKET CREATED]
 ID: PKT-20260215-001
-Files: 5
-Total size: 12,345 bytes
+Files: 4
+Total size: 10,234 bytes
 
 Files included:
 - src/main.go (important) - a1b2c3...
 - src/handler.go (important) - d4e5f6...
-- .env (critical) - g7h8i9...
 - docs/README.md (important) - j0k1l2...
-- output/log.txt (minor) - m3n4o5...
+- config/settings.yaml (important) - m3n4o5...
 
 Stored: output/context-packets/PKT-20260215-001.json
 ```
+
+> **Note**: Avoid including sensitive files (`.env`, credentials) in packets.
+> Use specific globs like `src/*.go` rather than `*` to exclude secrets.
 
 ## Integration
 
