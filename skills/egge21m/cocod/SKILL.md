@@ -1,7 +1,7 @@
 ---
 name: cocod
-skill_version: 0.0.12
-requires_cocod_version: 0.0.12
+skill_version: 0.0.13
+requires_cocod_version: 0.0.13
 description: A Cashu ecash wallet CLI for Bitcoin and Lightning payments. Use when managing Cashu tokens, sending/receiving payments via Lightning (bolt11) or ecash, handling HTTP 402 X-Cashu payment requests, or viewing wallet history.
 compatibility: Requires cocod CLI to be installed. Supports Cashu ecash protocol, Lightning Network payments, and NUT-24 HTTP 402 X-Cashu flows.
 metadata:
@@ -18,6 +18,14 @@ metadata:
 Cocod is a Cashu wallet for managing ecash tokens and making Bitcoin/Lightning payments. It uses the Cashu protocol for privacy-preserving ecash transactions.
 
 If a web/API request returns HTTP `402 Payment Required` with an `X-Cashu` header, use this skill to parse and settle the request with cocod.
+
+## Agent Safety Policy (Required)
+
+When acting as an AGENT with this skill:
+
+- Always ask for explicit user permission before running any command/flow that can spend wallet funds, unless the user has already clearly instructed you to execute that spend action.
+- Prefer preview/inspection commands before execution whenever available. For example, run `cocod x-cashu parse <request>` to inspect costs and requirements before `cocod x-cashu handle <request>`.
+- Treat `~/.cocod` as sensitive. Never log, print, or expose its contents (including config, mnemonic material, wallet state, sockets, and pid files) unless the user explicitly requests a specific safe subset.
 
 ## What is Cashu?
 
@@ -91,6 +99,8 @@ cocod receive bolt11 <amount> [--mint-url <url>]
 
 ### Sending Payments
 
+AGENT rule: commands in this section spend wallet funds. Ask for permission first unless the user already explicitly requested the spend action.
+
 ```bash
 # Create Cashu token to send to someone
 cocod send cashu <amount> [--mint-url <url>]
@@ -102,6 +112,8 @@ cocod send bolt11 <invoice> [--mint-url <url>]
 ### HTTP 402 Web Payments (NUT-24)
 
 Use these commands when a server responds with HTTP `402` and an `X-Cashu` payment request.
+
+AGENT rule: `cocod x-cashu handle <request>` can spend funds. Prefer `cocod x-cashu parse <request>` first to preview amount/requirements, then ask permission before handling unless already instructed.
 
 ```bash
 # Parse an encoded X-Cashu request from a 402 response header
@@ -134,6 +146,8 @@ cocod mints info <url>
 ### Lightning Address (NPC)
 
 Lightning Addresses are email-style identifiers (like `name@npubx.cash`) that let others pay you over Lightning. If you have not purchased a username, NPC provides a free address from your Nostr npub; purchasing a username gives you a human-readable handle. Buying a username is a two-step flow so you can review the required sats before confirming payment.
+
+AGENT rule: `cocod npc username <name> --confirm` is a spend action. Ask permission before running `--confirm` unless already instructed.
 
 ```bash
 # Get your NPC Lightning Address
