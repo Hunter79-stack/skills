@@ -111,6 +111,15 @@ class Dispatcher {
     return result;
   }
 
+  /**
+   * Execute a single task and return the response string.
+   * Convenience wrapper for reflection and other single-shot needs.
+   */
+  async dispatchSingle(task) {
+    const result = await this.executeTask(task);
+    return result;
+  }
+
   // Execute multiple tasks in parallel (respecting max nodes)
   async executeParallel(tasks, phaseContext = {}) {
     const startTime = Date.now();
@@ -261,8 +270,53 @@ class Dispatcher {
         taskCount: tasks.length,
       });
       
-      // Execute phase tasks in parallel
-      const phaseResult = await this.executeParallel(tasks, { name: phase.name });
+      // Stage timeout — abort if a phase takes too long
+      const stageTimeoutMs = phase.timeoutMs ?? options.stageTimeoutMs ?? 60000;
+      
+      // Execute phase tasks in parallel, with stage-level retry on failures
+      const maxStageRetries = phase.retries ?? options.stageRetries ?? 1;
+      let phaseResult;
+      let stageAttempt = 0;
+      const stageStart = Date.now();
+      
+      while (stageAttempt <= maxStageRetries) {
+        // Check stage timeout before retrying
+        if (Date.now() - stageStart > stageTimeoutMs) {
+          this.log(`Phase ${i + 1}: stage timeout (${stageTimeoutMs}ms)`);
+          if (!phaseResult) {
+            phaseResult = { success: false, results: [], totalDurationMs: Date.now() - stageStart };
+          }
+          phaseResult.timedOut = true;
+          break;
+        }
+        if (stageAttempt > 0) {
+          this.log(`Phase ${i + 1}: retry ${stageAttempt}/${maxStageRetries}`);
+          // Only re-run the failed tasks
+          const failedIndices = phaseResult.results
+            .map((r, idx) => (!r || !r.success) ? idx : -1)
+            .filter(idx => idx >= 0);
+          
+          if (failedIndices.length === 0) break;
+          
+          const retryTasks = failedIndices.map(idx => tasks[idx]);
+          const retryResult = await this.executeParallel(retryTasks, { name: `${phase.name} (retry)` });
+          
+          // Merge retry results back
+          failedIndices.forEach((origIdx, retryIdx) => {
+            if (retryResult.results[retryIdx]?.success) {
+              phaseResult.results[origIdx] = retryResult.results[retryIdx];
+            }
+          });
+          
+          // Recalculate success
+          phaseResult.success = phaseResult.results.every(r => r?.success);
+          if (phaseResult.success) break;
+        } else {
+          phaseResult = await this.executeParallel(tasks, { name: phase.name });
+        }
+        stageAttempt++;
+      }
+      
       phaseResults.push({
         phase: phase.name,
         ...phaseResult,
@@ -274,10 +328,11 @@ class Dispatcher {
         name: phase.name,
         success: phaseResult.success,
         durationMs: phaseResult.totalDurationMs,
+        retries: stageAttempt > 0 ? stageAttempt : undefined,
       });
       
       if (!phaseResult.success && phase.required !== false) {
-        this.log(`Phase ${i + 1} had failures, continuing...`);
+        this.log(`Phase ${i + 1} had failures after ${stageAttempt} retries, continuing...`);
       }
     }
     

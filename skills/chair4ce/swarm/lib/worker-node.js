@@ -15,6 +15,8 @@ const {
 } = require('./tools');
 const config = require('../config');
 const { detectInjection, sanitizeOutput } = require('./security');
+const { promptCache } = require('./cache');
+const { routePrompt } = require('./router');
 
 const DEFAULT_TASK_TIMEOUT_MS = 30000;
 const DEFAULT_RETRIES = 1;
@@ -30,6 +32,7 @@ class WorkerNode {
     this.completedTasks = 0;
     this.totalDuration = 0;
     this.retriedTasks = 0;
+    this.routedToPro = 0;
     
     // Get node configuration
     this.config = config.nodeTypes[nodeType] || config.nodeTypes.analyze;
@@ -131,6 +134,23 @@ class WorkerNode {
         result.response = sanitizeOutput(result.response);
       }
       
+      // Quality validation — detect garbage/empty/low-quality outputs
+      const quality = this.validateOutput(result, task);
+      if (!quality.pass) {
+        const duration = Date.now() - startTime;
+        this.status = 'idle';
+        this.currentTask = null;
+        return {
+          nodeId: this.id,
+          nodeType: this.nodeType,
+          taskId: task.id,
+          success: false,
+          error: `Quality check failed: ${quality.reason}`,
+          durationMs: duration,
+          qualityIssue: true,
+        };
+      }
+      
       const duration = Date.now() - startTime;
       this.completedTasks++;
       this.totalDuration += duration;
@@ -144,6 +164,7 @@ class WorkerNode {
         success: true,
         result,
         durationMs: duration,
+        cached: result?.cached || false,
         securityWarnings: injectionCheck.safe ? undefined : injectionCheck.threats.length,
       };
     } catch (error) {
@@ -171,22 +192,103 @@ class WorkerNode {
   }
 
   async executeLLM(task) {
-    const prompt = `${this.config.systemPrompt}
+    // Chain stages can override system prompt with a perspective
+    const sysPrompt = task._systemPrompt || this.config.systemPrompt;
+    
+    const prompt = `${sysPrompt}
 
 Task: ${task.instruction}
 
 ${task.context ? `Context:\n${task.context}` : ''}
 ${task.input ? `Input:\n${typeof task.input === 'string' ? task.input : JSON.stringify(task.input, null, 2)}` : ''}
 
-Provide a focused, high-quality response.`;
+Provide a focused, high-quality response. Be concise — prioritize insight density over length.`;
 
-    const llmOptions = {};
+    // Check cache (skip for web search — results should be fresh)
+    const useCache = !task.webSearch && !task.grounding && task.cache !== false;
+    if (useCache) {
+      const cached = promptCache.get(task.instruction, task.input, sysPrompt);
+      if (cached) {
+        return { response: cached, cached: true };
+      }
+    }
+
+    const llmOptions = { ...(task._llmOptions || {}) };
+    if (task.maxOutputTokens) llmOptions.maxTokens = task.maxOutputTokens;
     // Enable Google Search grounding for research/analysis tasks
     if (task.webSearch || task.grounding) {
       llmOptions.webSearch = true;
     }
+    
+    // Smart routing — pick model tier based on complexity
+    if (config.routing?.enabled !== false) {
+      const route = routePrompt({
+        instruction: task.instruction,
+        input: task.input,
+        perspective: task._perspective || '',
+        stageIndex: task._stageIndex,
+        isLastStage: task._isLastStage,
+      }, { threshold: config.routing?.threshold });
+      
+      if (route.tier === 'pro') {
+        llmOptions.model = route.model;
+        task._routed = { tier: route.tier, score: route.score };
+      }
+    }
+    
     const result = await this.llm.complete(prompt, llmOptions);
-    return { response: result };
+    
+    // Store in cache
+    if (useCache && result) {
+      promptCache.set(task.instruction, task.input, sysPrompt, result);
+    }
+    
+    // Track routing
+    if (task._routed?.tier === 'pro') this.routedToPro++;
+    
+    return { response: result, routed: task._routed || null };
+  }
+
+  /**
+   * Validate output quality — catch garbage before it propagates through chains
+   */
+  validateOutput(result, task) {
+    const response = result?.response || '';
+    
+    // Empty or near-empty response
+    if (!response || response.trim().length < 5) {
+      return { pass: false, reason: 'empty or near-empty response' };
+    }
+    
+    // Repetition detection — same phrase repeated 5+ times indicates degenerate output
+    const lines = response.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length >= 5) {
+      const freq = {};
+      for (const line of lines) {
+        const key = line.substring(0, 60);
+        freq[key] = (freq[key] || 0) + 1;
+      }
+      const maxRepeat = Math.max(...Object.values(freq));
+      if (maxRepeat >= 5 && maxRepeat / lines.length > 0.5) {
+        return { pass: false, reason: `degenerate repetition (${maxRepeat}x repeated line)` };
+      }
+    }
+    
+    // Refusal detection — model declined to answer
+    const refusalPatterns = /^(I cannot|I'm unable to|I apologize|As an AI|I don't have access)/i;
+    if (refusalPatterns.test(response.trim()) && response.length < 200) {
+      return { pass: false, reason: 'model refusal detected' };
+    }
+    
+    // Truncation detection — response cuts off mid-sentence (no terminal punctuation)
+    const lastChar = response.trim().slice(-1);
+    const hasTerminal = /[.!?\n\]\)`"']/.test(lastChar);
+    if (!hasTerminal && response.length > 500) {
+      // Only flag if it's a long response that got cut off
+      return { pass: false, reason: 'response appears truncated' };
+    }
+    
+    return { pass: true };
   }
 
   getStats() {
@@ -202,6 +304,7 @@ Provide a focused, high-quality response.`;
         : 0,
       tokens: providerInfo.tokens,
       cost: providerInfo.cost,
+      routedToPro: this.routedToPro,
     };
   }
 }

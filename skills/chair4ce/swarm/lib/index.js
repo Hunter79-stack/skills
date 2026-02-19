@@ -14,6 +14,16 @@ const { runDiagnostics, getMachineProfile, printReport } = require('./diagnostic
 const { SwarmDaemon } = require('./daemon');
 const { SwarmClient, isDaemonRunning, parallel: parallelClient, research: researchClient } = require('./client');
 const { SECURITY_POLICY, securePrompt, detectInjection, sanitizeOutput } = require('./security');
+const { buildChainPhases, validateChain, PERSPECTIVES, TRANSFORMS } = require('./chain');
+const { buildAutoChain, previewChain, DEPTH_PRESETS, TASK_PATTERNS } = require('./chain-builder');
+const { runBenchmark, SCORING_DIMENSIONS, formatComparisonTable } = require('./benchmark');
+const { PromptCache, promptCache } = require('./cache');
+const { TEMPLATES, getTemplate, listTemplates } = require('./templates');
+const { routePrompt, routeBatch, TIERS } = require('./router');
+const { diagnoseError, formatErrorEvent, formatErrorCLI } = require('./errors');
+const { reflect, criticize, SCORE_DIMENSIONS } = require('./reflect');
+const { SCHEMAS, listSchemas, getSchema, validateAgainstSchema } = require('./structured');
+const { vote, pickLongest, pickBySimilarity } = require('./voting');
 
 /**
  * Create a configured dispatcher ready for use
@@ -170,4 +180,56 @@ module.exports = {
   securePrompt,
   detectInjection,
   sanitizeOutput,
+  
+  // Chain
+  buildChainPhases,
+  validateChain,
+  PERSPECTIVES,
+  TRANSFORMS,
+  
+  // Chain Builder (dynamic)
+  buildAutoChain,
+  previewChain,
+  DEPTH_PRESETS,
+  TASK_PATTERNS,
+  
+  // Benchmark
+  runBenchmark,
+  SCORING_DIMENSIONS,
+  formatComparisonTable,
+  
+  // Cache
+  PromptCache,
+  promptCache,
+  
+  // Templates
+  TEMPLATES,
+  getTemplate,
+  listTemplates,
+  
+  // Router
+  routePrompt,
+  routeBatch,
+  TIERS,
+  
+  // Errors
+  diagnoseError,
+  formatErrorEvent,
+  formatErrorCLI,
+  
+  // Reflection
+  reflect,
+  criticize,
+  SCORE_DIMENSIONS,
+  
+  // Structured Output
+  SCHEMAS,
+  listSchemas,
+  getSchema,
+  validateAgainstSchema,
+  
+  // Voting
+  vote,
+  pickLongest,
+  pickBySimilarity,
 };

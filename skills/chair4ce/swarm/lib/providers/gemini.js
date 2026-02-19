@@ -24,7 +24,8 @@ class GeminiProvider extends BaseLLMProvider {
     // Rate limiting - wait for token
     await globalLimiter.acquire();
     
-    const url = `${this.endpoint}/${this.model}:generateContent?key=${this.apiKey}`;
+    const model = options.model || this.model;
+    const url = `${this.endpoint}/${model}:generateContent?key=${this.apiKey}`;
     
     const body = {
       contents: [{
@@ -35,6 +36,14 @@ class GeminiProvider extends BaseLLMProvider {
         temperature: options.temperature || this.temperature,
       }
     };
+
+    // Structured output — force JSON via response_mime_type
+    if (options.responseSchema) {
+      body.generationConfig.responseMimeType = 'application/json';
+      body.generationConfig.responseSchema = options.responseSchema;
+    } else if (options.jsonMode) {
+      body.generationConfig.responseMimeType = 'application/json';
+    }
 
     // Enable Google Search grounding when requested or for research-type tasks
     if (options.webSearch || options.grounding) {

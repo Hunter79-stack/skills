@@ -1,5 +1,36 @@
 # Changelog
 
+## [1.3.0] - 2026-02-18
+
+### Added
+- **Chain pipelines** — Multi-stage refinement pipeline for complex analysis
+  - 4 stage modes: `parallel`, `single`, `fan-out`, `reduce`
+  - 10 built-in perspectives: extractor, filter, enricher, analyst, synthesizer, challenger, optimizer, strategist, researcher, critic
+  - 6 built-in transforms: merge, mergeUnique, best, split, passthrough, jsonParse
+  - `POST /chain` — Manual pipeline from JSON definition
+  - `swarm chain <file.json>` — CLI for manual chains
+- **Auto-chain** — Describe a task in natural language, get an optimal pipeline
+  - `POST /chain/auto` — Dynamic pipeline construction
+  - `POST /chain/preview` — Dry-run to see pipeline plan without executing
+  - 7 task pattern detectors (comparative, research-deep, adversarial, filter-refine, multi-perspective, opportunity, summarize)
+  - 4 depth presets: quick (2 stages), standard (4), deep (5-6), exhaustive (8)
+  - Smart perspective selection based on task keywords
+- **Capabilities discovery** — `GET /capabilities` endpoint for orchestrator LLMs
+  - Lists all execution modes, perspectives, transforms, and depth presets
+  - `swarm capabilities` CLI command
+- **Benchmark** — Quality comparison tool (single vs parallel vs chain)
+  - `POST /benchmark` — Runs same task through all 3 modes
+  - LLM-as-judge scoring on 6 dimensions (accuracy, depth, completeness, coherence, actionability, nuance)
+  - Cost/quality ratio comparison table
+  - Based on G-Eval/FLASK evaluation methodology
+- **Worker perspective override** — Chain stages inject custom system prompts per worker
+
+### Changed
+- Client library: added `chain()`, `chainSync()`, `capabilities()` methods
+- CLI help updated with chain and capabilities commands
+- Daemon endpoint listing now shows all routes
+- 404 response includes list of available endpoints
+
 ## [1.2.0] - 2026-02-17
 
 ### Added
