@@ -1,19 +1,14 @@
 ---
 name: speech-to-text
-description: |
-  Transcribe audio to text with Whisper models via inference.sh CLI.
-  Models: Fast Whisper Large V3, Whisper V3 Large.
-  Capabilities: transcription, translation, multi-language, timestamps.
-  Use for: meeting transcription, subtitles, podcast transcripts, voice notes.
-  Triggers: speech to text, transcription, whisper, audio to text, transcribe audio,
-  voice to text, stt, automatic transcription, subtitles generation,
-  transcribe meeting, audio transcription, whisper ai
+description: "Transcribe audio to text with Whisper models via inference.sh CLI. Models: Fast Whisper Large V3, Whisper V3 Large. Capabilities: transcription, translation, multi-language, timestamps. Use for: meeting transcription, subtitles, podcast transcripts, voice notes. Triggers: speech to text, transcription, whisper, audio to text, transcribe audio, voice to text, stt, automatic transcription, subtitles generation, transcribe meeting, audio transcription, whisper ai"
 allowed-tools: Bash(infsh *)
 ---
 
 # Speech-to-Text
 
 Transcribe audio to text via [inference.sh](https://inference.sh) CLI.
+
+![Speech-to-Text](https://cloud.inference.sh/u/4mg21r6ta37mpaz6ktzwtt8krr/01jz025e88nkvw55at1rqtj5t8.png)
 
 ## Quick Start
 
@@ -22,6 +17,8 @@ curl -fsSL https://cli.inference.sh | sh && infsh login
 
 infsh app run infsh/fast-whisper-large-v3 --input '{"audio_url": "https://audio.mp3"}'
 ```
+
+> **Install note:** The [install script](https://cli.inference.sh) only detects your OS/architecture, downloads the matching binary from `dist.inference.sh`, and verifies its SHA-256 checksum. No elevated permissions or background processes. [Manual install & verification](https://dist.inference.sh/cli/checksums.txt) available.
 
 ## Available Models
 
@@ -111,16 +108,16 @@ Returns JSON with:
 
 ```bash
 # Full platform skill (all 150+ apps)
-npx skills add inference-sh/agent-skills@inference-sh
+npx skills add inference-sh/skills@inference-sh
 
 # Text-to-speech (reverse direction)
-npx skills add inference-sh/agent-skills@text-to-speech
+npx skills add inference-sh/skills@text-to-speech
 
 # Video generation (add captions)
-npx skills add inference-sh/agent-skills@ai-video-generation
+npx skills add inference-sh/skills@ai-video-generation
 
 # AI avatars (lipsync with transcripts)
-npx skills add inference-sh/agent-skills@ai-avatar-video
+npx skills add inference-sh/skills@ai-avatar-video
 ```
 
 Browse all audio apps: `infsh app list --category audio`
