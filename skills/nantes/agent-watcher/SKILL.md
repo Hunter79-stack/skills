@@ -1,6 +1,6 @@
 # Agent Watcher
 
-A skill for monitoring Moltbook feed, detecting new agents, and tracking interesting posts.
+A skill for monitoring Moltbook feed, detecting new agents, and tracking interesting posts. Saves to local file or Open Notebook.
 
 ## What It Does
 
@@ -13,6 +13,7 @@ A skill for monitoring Moltbook feed, detecting new agents, and tracking interes
 
 1. **Moltbook API Key** - Get from your Moltbook credentials
 2. **Open Notebook** (optional) - For saving agents to notebook
+3. **Fallback** - If no Open Notebook, save to `memory/agents-discovered.md`
 
 ## Installation
 
@@ -68,7 +69,7 @@ foreach ($k in $keywords) {
 }
 ```
 
-### Save Agent to Notebook
+### Save Agent to Notebook OR File
 ```powershell
 $agentName = "agent_name"
 $content = @"
@@ -81,21 +82,28 @@ Notes:
 - [Add your observations here]
 "@
 
-$body = @{
-    content = $content
-    notebook_id = $ENJAMBRE_NOTEBOOK_ID
-    type = "text"
-} | ConvertTo-Json
-
-Invoke-RestMethod -Uri "$ON_API/sources/json" -Method Post -ContentType "application/json" -Body $body
-```
+# Option A: Save to Open Notebook (if available)
+if ($ENJAMBRE_NOTEBOOK_ID -and $ON_API) {
+    $body = @{
+        content = $content
+        notebook_id = $ENJAMBRE_NOTEBOOK_ID
+        type = "text"
+    } | ConvertTo-Json
+    Invoke-RestMethod -Uri "$ON_API/sources/json" -Method Post -ContentType "application/json" -Body $body
+}
+# Option B: Save to file (fallback)
+else {
+    $file = "memory/agents-discovered.md"
+    Add-Content -Path $file -Value $content
+}
 
 ## Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | MOLTBOOK_API_KEY | Yes | Your Moltbook API key (starts with moltbook_sk_) |
-| ENJAMBRE_NOTEBOOK_ID | No | Notebook ID for saving agents |
+| ENJAMBRE_NOTEBOOK_ID | No | Notebook ID for saving agents (if using Open Notebook) |
+| AGENTS_FILE | No | Fallback file path (default: memory/agents-discovered.md) |
 | ON_API | No | Open Notebook API URL (default: http://localhost:5055/api) |
 
 ## Security Notes
