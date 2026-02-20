@@ -1,6 +1,13 @@
 ---
 name: crm-data-cleaner
-description: "Deduplicate, normalize, and enrich CRM contacts and companies. Use when a user needs to clean CRM data, find duplicate contacts, standardize phone numbers or emails, merge duplicate records, audit data quality, or enrich contacts with external sources like Clearbit or Apollo. Works with HubSpot, Salesforce, Pipedrive, or any CRM with CSV export."
+description: "Deduplicate, normalize, and enrich CRM contacts and companies. Use when a user needs to clean CRM data, find duplicate contacts, standardize phone numbers or emails, merge duplicate records, audit data quality, or enrich contacts with external sources like Clearbit or Apollo. Works with HubSpot, Salesforce, Pipedrive, or any CRM with CSV export. Instruction-only skill — no scripts or code execution. All operations are performed via CRM platform APIs or CSV export/import workflows."
+metadata:
+  openclaw:
+    requires:
+      env:
+        - HUBSPOT_ACCESS_TOKEN
+    primaryCredential: HUBSPOT_ACCESS_TOKEN
+    credentialNotes: "Required for HubSpot API access. For Clearbit/Apollo enrichment, set CLEARBIT_API_KEY or APOLLO_API_KEY as needed. For Salesforce, set SALESFORCE_ACCESS_TOKEN. Only the credentials for your specific CRM and enrichment provider are needed."
 ---
 
 # CRM Data Cleaner — Dedup, Normalize & Enrich Contacts
