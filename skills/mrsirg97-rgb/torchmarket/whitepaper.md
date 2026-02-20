@@ -84,7 +84,7 @@ User spends 1 SOL
                                 └── 10% → Community Treasury (vote vault)
 ```
 
-> **Dynamic Treasury Rate**: The treasury SOL split uses inverse decay based on bonding progress. Early buyers contribute more to treasury (stronger early funding), late buyers get more tokens per SOL. The rate scales by the per-token bonding target (Spark 50, Flame 100, Torch 200 SOL).
+> **Dynamic Treasury Rate**: The treasury SOL split uses inverse decay based on bonding progress. Early buyers contribute more to treasury (stronger early funding), late buyers get more tokens per SOL. The rate is flat across all tiers (Spark 50, Flame 100, Torch 200 SOL).
 >
 > | 0 SOL | 50% of target | 100% of target |
 > |-------|---------------|----------------|
@@ -137,19 +137,20 @@ New buyers may also be more likely to purchase a token seeing that it is "safer"
 
 ---
 
-## 4. Automatic Migration
+## 4. Permissionless Migration
 
-The token treasury pays the migration fee to DEX.
+The token treasury pays the migration fee to DEX. Anyone can trigger it.
 
 One of the main issues with current launchpads is that somebody has to pay the migration fee for the token to be migrated to a decentralized exchange. Because the treasury wallet is fully funded by the time the token bonds at its target (50/100/200 SOL), it is given the authority to pay the Raydium pool creation fee (0.15 SOL).
 
-This automatic process is funded by the early community as a whole. When your token bonds, the protocol handles everything else:
+Migration is **permissionless** — any wallet can trigger the migration for any bonding-complete token. The triggering wallet pays a small rent fee (~0.02 SOL) for the WSOL account, while the treasury covers the 0.15 SOL Raydium pool creation fee. This means no single party can block a token from graduating to DEX.
 
-1. Vote finalization (burn or return decision)
-2. Pool creation on Raydium CPMM
-3. Liquidity provision (SOL + tokens)
-4. LP token burn (liquidity locked forever)
-5. Transfer fee activation (1% on all future transfers)
+The migration is executed as a two-step atomic process within a single transaction:
+
+1. **Fund WSOL**: Wrap the bonding curve's SOL reserves into a WSOL token account
+2. **Migrate to DEX**: Vote finalization, pool creation on Raydium CPMM, liquidity provision (SOL + tokens), LP token burn (liquidity locked forever), transfer fee activation (1% on all future transfers)
+
+When your token bonds, anyone can complete the migration. The community is not dependent on the creator or any centralized operator.
 
 ---
 
@@ -293,10 +294,10 @@ The reclaimed SOL joins the protocol treasury and is distributed to active trade
 A reclaimed token can be **revived** if the community believes in it. Anyone can contribute SOL to a reclaimed token:
 
 ```
-Revival threshold: 30 SOL
+Revival threshold: IVS (6.25 SOL Spark, 12.5 SOL Flame, 25 SOL Torch)
 ```
 
-Contributors are patrons — they do NOT receive tokens for their contribution. They're simply signaling belief that the token deserves another chance. Once 30 SOL is contributed:
+Contributors are patrons — they do NOT receive tokens for their contribution. They're simply signaling belief that the token deserves another chance. Once the revival threshold is reached:
 
 1. The `reclaimed` flag is removed
 2. Trading is re-enabled
@@ -417,7 +418,7 @@ CREATE → BONDING → COMPLETE → VOTE → MIGRATE → DEX
 RECLAIM ──────────────────────────────────────────────────────┐
    │                                                           │
    ▼                                                           ▼
-REVIVAL (30 SOL) ─────→ TRADING RESUMES            PROTOCOL TREASURY
+REVIVAL (IVS per tier) ──→ TRADING RESUMES          PROTOCOL TREASURY
                                                               │
                                                               ▼
                                                     EPOCH REWARDS TO TRADERS
@@ -441,7 +442,7 @@ Every path in this graph feeds value back into the system. There is no terminal 
 | Transfer Fee | 1% | Post-migration fee on all transfers |
 | Supply Floor | 500,000,000 | Minimum supply (buyback burns stop here) |
 | Inactivity Period | 7 days | Time before failed token can be reclaimed |
-| Revival Threshold | 30 SOL | SOL needed to revive a reclaimed token |
+| Revival Threshold | IVS per tier (6.25 / 12.5 / 25 SOL) | SOL needed to revive a reclaimed token |
 | Voting Duration | ~24 hours | Time for community to vote on burn/return |
 | Epoch Duration | 7 days | Protocol reward distribution cycle |
 | Reward Eligibility | 10 SOL | Minimum epoch volume for protocol rewards |
@@ -451,7 +452,7 @@ Every path in this graph feeds value back into the system. There is no terminal 
 | Interest Rate | 2% / epoch | Lending interest per ~7-day epoch |
 | Liquidation Bonus | 10% | Discount for liquidators on seized collateral |
 | Utilization Cap | 50% | Max fraction of treasury SOL available for loans |
-| Min Borrow | 0.01 SOL | Minimum borrow amount per loan |
+| Min Borrow | 0.1 SOL | Minimum borrow amount per loan |
 
 ---
 
