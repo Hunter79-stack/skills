@@ -331,7 +331,7 @@ function parsePolicyMode(raw?: string): PolicyMode {
 }
 
 // MCP Server implementation
-class MCPServer {
+export class MCPServer {
   private initialized = false;
   private idCounter = 1;
   private readonly options: MCPServerOptions;
@@ -639,13 +639,15 @@ class MCPServer {
     const baseUrl = envOrDotEnv("XINT_PACKAGE_API_BASE_URL");
     if (!baseUrl) {
       throw new Error(
-        "XINT_PACKAGE_API_BASE_URL not set. Start local API with `xint package-api-server --port=8080` and set XINT_PACKAGE_API_BASE_URL=http://localhost:8080/v1"
+        "XINT_PACKAGE_API_BASE_URL not set. Start xint-cloud service on :8787 and set XINT_PACKAGE_API_BASE_URL=http://localhost:8787/v1"
       );
     }
     const apiKey = envOrDotEnv("XINT_PACKAGE_API_KEY");
+    const workspaceId = envOrDotEnv("XINT_WORKSPACE_ID");
     const url = `${baseUrl.replace(/\/+$/, "")}${path}`;
     const headers: Record<string, string> = {};
     if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+    if (workspaceId) headers["x-workspace-id"] = workspaceId;
     if (body !== undefined) headers["Content-Type"] = "application/json";
 
     const res = await fetch(url, {
@@ -656,7 +658,29 @@ class MCPServer {
 
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`Package API ${res.status}: ${text.slice(0, 300)}`);
+      let message = `Package API ${res.status}: ${text.slice(0, 300)}`;
+      try {
+        const parsed = JSON.parse(text) as {
+          error?: string;
+          code?: string;
+          details?: Record<string, unknown>;
+        };
+        const code = parsed.code || "UNKNOWN";
+        const apiError = parsed.error || "Package API request failed";
+        message = `Package API ${res.status} [${code}]: ${apiError}`;
+        if (code === "PLAN_REQUIRED" || code === "QUOTA_EXCEEDED" || code === "FEATURE_NOT_IN_PLAN") {
+          const upgradeUrl =
+            envOrDotEnv("XINT_BILLING_UPGRADE_URL") || "https://xint.dev/pricing";
+          message = `${message}. Upgrade: ${upgradeUrl}`;
+          const feature = parsed.details?.required_feature;
+          if (typeof feature === "string" && feature) {
+            message = `${message} (required_feature=${feature})`;
+          }
+        }
+      } catch {
+        // non-json response; keep text slice
+      }
+      throw new Error(message);
     }
 
     const contentType = res.headers.get("content-type") || "";
