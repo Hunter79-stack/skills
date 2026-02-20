@@ -17,6 +17,7 @@ import time
 import urllib.request
 import urllib.error
 import argparse
+import webbrowser
 from typing import Optional, List
 
 
@@ -128,6 +129,21 @@ class KreaAPI:
                 f"Unknown model: {model}. Available: {list(self.IMAGE_MODELS.keys())}"
             )
         
+        # Input validation
+        if not prompt or not isinstance(prompt, str):
+            raise ValueError("prompt must be a non-empty string")
+        if len(prompt) > 1800:
+            raise ValueError(f"prompt must be 1800 characters or less (got {len(prompt)})")
+        
+        if not isinstance(width, int) or not (512 <= width <= 2368):
+            raise ValueError(f"width must be between 512 and 2368 (got {width})")
+        if not isinstance(height, int) or not (512 <= height <= 2368):
+            raise ValueError(f"height must be between 512 and 2368 (got {height})")
+        if not isinstance(steps, int) or not (1 <= steps <= 100):
+            raise ValueError(f"steps must be between 1 and 100 (got {steps})")
+        if not isinstance(guidance_scale, (int, float)) or not (0 <= guidance_scale <= 24):
+            raise ValueError(f"guidance_scale must be between 0 and 24 (got {guidance_scale})")
+        
         url = f"{self.BASE_URL}{endpoint}"
         
         payload = {
@@ -236,8 +252,10 @@ def main():
     parser = argparse.ArgumentParser(description="Generate images with Krea.ai API")
     parser.add_argument("--prompt", help="Image description")
     parser.add_argument("--model", default="flux", help="Model name (default: flux)")
-    parser.add_argument("--width", type=int, default=1024, help="Image width")
-    parser.add_argument("--height", type=int, default=1024, help="Image height")
+    parser.add_argument("--width", type=int, default=1024, help="Image width (512-2368)")
+    parser.add_argument("--height", type=int, default=1024, help="Image height (512-2368)")
+    parser.add_argument("--steps", type=int, default=25, help="Generation steps (1-100)")
+    parser.add_argument("--guidance-scale", type=float, default=3.0, help="Guidance scale (0-24)")
     parser.add_argument("--key-id", help="API key ID")
     parser.add_argument("--secret", help="API secret")
     parser.add_argument("--list-models", action="store_true", help="List available models")
@@ -254,8 +272,7 @@ def main():
 
     if args.usage:
         print("Opening Krea.ai usage statistics...")
-        import subprocess
-        subprocess.run(["open", "https://www.krea.ai/settings/usage-statistics"])
+        webbrowser.open("https://www.krea.ai/settings/usage-statistics")
         print("Check your browser for the usage dashboard.")
         return
 
@@ -287,7 +304,9 @@ def main():
         prompt=args.prompt,
         model=args.model,
         width=args.width,
-        height=args.height
+        height=args.height,
+        steps=args.steps,
+        guidance_scale=args.guidance_scale
     )
 
     print("\nGenerated images:")

@@ -1,7 +1,14 @@
 ---
 name: krea-api
 description: Generate images via Krea.ai API (Flux, Imagen, Ideogram, Seedream, etc.)
-version: 0.2.2
+version: 0.2.4
+metadata:
+  credentials:
+    - id: krea
+      description: Krea.ai API key (format: KEY_ID:SECRET)
+      envVar: null
+      file: ~/.openclaw/credentials/krea.json
+      required: true
 ---
 
 # Krea.ai Image Generation Skill
@@ -23,6 +30,7 @@ This skill prioritizes security:
 - **No webhook support** - Removed to prevent SSRF risks
 - **Stdlib dependencies** - Minimal attack surface (uses `urllib` only)
 - **File-based credentials** - Primary credential source with secure permissions
+- **Input validation** - All parameters validated before API calls
 
 ### Credential Sources (in order of precedence)
 
@@ -31,7 +39,7 @@ This skill prioritizes security:
 
 ### Note on Subprocess
 
-The `--usage` flag uses `subprocess.run(["open", ...])` to open the usage dashboard in a browser. This is the only subprocess call in the skill.
+The `--usage` flag uses `webbrowser.open()` (stdlib) to open the usage dashboard in a browser. No subprocess calls.
 
 ## Setup
 
@@ -139,19 +147,16 @@ python3 krea_api.py --jobs 10
 
 1. Check credentials file exists:
 ```bash
-cat ~/.openclaw/credentials/krea.json
-```
-
-2. Verify permissions:
-```bash
 ls -la ~/.openclaw/credentials/krea.json
 # Should show: -rw-------
 ```
 
-3. Check format (must have colon):
+2. Verify format (must have colon):
 ```json
 {"apiKey": "KEY_ID:SECRET"}
 ```
+
+⚠️ **Security**: Do NOT use `cat` to view the credentials file — it contains secrets.
 
 ### Model not found
 
