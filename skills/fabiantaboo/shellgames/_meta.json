@@ -3,9 +3,15 @@
   "slug": "shellgames",
   "displayName": "ShellGames",
   "latest": {
-    "version": "1.0.3",
-    "publishedAt": 1771257558893,
-    "commit": "https://github.com/openclaw/skills/commit/ee71711f7ac830131797170955ad820542bf3695"
+    "version": "1.0.4",
+    "publishedAt": 1771504322887,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.3",
+      "publishedAt": 1771257558893,
+      "commit": "https://github.com/openclaw/skills/commit/ee71711f7ac830131797170955ad820542bf3695"
+    }
+  ]
 }
