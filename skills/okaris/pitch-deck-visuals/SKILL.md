@@ -1,12 +1,6 @@
 ---
 name: pitch-deck-visuals
-description: |
-  Investor pitch deck structure with slide-by-slide framework, visual design rules, and data presentation.
-  Covers the 12-slide framework, chart types, team slides, and common investor turn-offs.
-  Use for: fundraising decks, investor presentations, startup pitch, demo day, grant proposals.
-  Triggers: pitch deck, investor deck, startup pitch, fundraising deck, demo day,
-  pitch presentation, investor presentation, seed deck, series a deck, pitch slides,
-  startup presentation, vc pitch, investor meeting
+description: "Investor pitch deck structure with slide-by-slide framework, visual design rules, and data presentation. Covers the 12-slide framework, chart types, team slides, and common investor turn-offs. Use for: fundraising decks, investor presentations, startup pitch, demo day, grant proposals. Triggers: pitch deck, investor deck, startup pitch, fundraising deck, demo day, pitch presentation, investor presentation, seed deck, series a deck, pitch slides, startup presentation, vc pitch, investor meeting"
 allowed-tools: Bash(infsh *)
 ---
 
@@ -24,6 +18,8 @@ infsh app run infsh/html-to-image --input '{
   "html": "<div style=\"width:1920px;height:1080px;background:linear-gradient(135deg,#0f0f23,#1a1a3e);display:flex;align-items:center;padding:100px;font-family:system-ui;color:white\"><div><p style=\"font-size:24px;color:#818cf8;text-transform:uppercase;letter-spacing:3px\">The Problem</p><h1 style=\"font-size:72px;margin:16px 0;font-weight:800;line-height:1.1\">Teams waste 12 hours/week on manual reporting</h1><p style=\"font-size:28px;opacity:0.7\">Source: Forrester Research, 2024</p></div></div>"
 }'
 ```
+
+> **Install note:** The [install script](https://cli.inference.sh) only detects your OS/architecture, downloads the matching binary from `dist.inference.sh`, and verifies its SHA-256 checksum. No elevated permissions or background processes. [Manual install & verification](https://dist.inference.sh/cli/checksums.txt) available.
 
 ## The 12-Slide Framework
 
@@ -207,9 +203,9 @@ Layout: Photos in a row with name, title, and one credential each.
 ## Related Skills
 
 ```bash
-npx skills add inferencesh/skills@competitor-teardown
-npx skills add inferencesh/skills@data-visualization
-npx skills add inferencesh/skills@ai-image-generation
+npx skills add inference-sh/skills@competitor-teardown
+npx skills add inference-sh/skills@data-visualization
+npx skills add inference-sh/skills@ai-image-generation
 ```
 
 Browse all apps: `infsh app list`
