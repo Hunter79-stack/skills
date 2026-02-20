@@ -1,13 +1,18 @@
 {
   "owner": "yonghaozhao722",
   "slug": "moltbook-fanboy",
-  "displayName": "Moltbook Daily",
+  "displayName": "Moltbook Fanboy",
   "latest": {
-    "version": "1.0.3",
-    "publishedAt": 1771242880241,
-    "commit": "https://github.com/openclaw/skills/commit/32b66d5ce1d6414ea833159d019e7ea273eac0af"
+    "version": "1.0.4",
+    "publishedAt": 1771495575248,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.3",
+      "publishedAt": 1771242880241,
+      "commit": "https://github.com/openclaw/skills/commit/32b66d5ce1d6414ea833159d019e7ea273eac0af"
+    },
     {
       "version": "1.0.2",
       "publishedAt": 1771242809089,

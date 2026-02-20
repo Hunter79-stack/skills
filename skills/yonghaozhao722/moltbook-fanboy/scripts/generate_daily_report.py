@@ -181,7 +181,19 @@ def main():
     output_path = save_to_obsidian(report)
     print(f"日报已保存到: {output_path}")
     
-    # 5. 输出报告内容
+    # 5. 自动推送到 GitHub
+    try:
+        import subprocess
+        os.chdir("/root/clawd/obsidian-vault")
+        subprocess.run(["git", "add", "-A"], check=True)
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        subprocess.run(["git", "commit", "-m", f"Update moltbook report {today_str}"], check=False)
+        subprocess.run(["git", "push", "origin", "master"], check=True)
+        print("✅ 已自动推送到 GitHub")
+    except Exception as e:
+        print(f"⚠️ GitHub 推送失败: {e}")
+    
+    # 6. 输出报告内容
     print("\n" + "="*50)
     print(report)
     

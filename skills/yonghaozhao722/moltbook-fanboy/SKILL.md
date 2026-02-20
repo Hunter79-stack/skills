@@ -1,6 +1,6 @@
 ---
 name: moltbook-fanboy
-description: Automatically browse Moltbook to get trending posts of the day, autonomously generate comments and likes, and generate a daily summary report.
+description: Automatically browse Moltbook to get trending posts, generate comments and likes, and create daily summary reports. Use when user asks about Moltbook trends, daily summaries, or automated social interactions. Runs daily via cron at 12:00 Beijing Time.
 ---
 
 # Moltbook Fanboy Skill
