@@ -1,6 +1,13 @@
 ---
 name: lead-scoring
-description: "Set up and automate lead scoring for HubSpot and other CRMs. Use when a user wants to score leads, define MQL/SQL criteria, build scoring matrices, configure lifecycle stages, implement engagement scoring, or automate lead qualification. Includes scoring templates, Python calculators, and step-by-step HubSpot setup."
+description: "Set up and automate lead scoring for HubSpot and other CRMs. Use when a user wants to score leads, define MQL/SQL criteria, build scoring matrices, configure lifecycle stages, implement engagement scoring, or automate lead qualification. Instruction-only skill with scoring frameworks and step-by-step HubSpot setup guides."
+metadata:
+  openclaw:
+    requires:
+      env:
+        - HUBSPOT_ACCESS_TOKEN
+    primaryCredential: HUBSPOT_ACCESS_TOKEN
+    credentialNotes: "Required for HubSpot API access to configure scoring properties and workflows. For Salesforce, set SALESFORCE_ACCESS_TOKEN instead."
 ---
 
 # Lead Scoring Autopilot — AI-Powered Scoring for HubSpot & CRMs
