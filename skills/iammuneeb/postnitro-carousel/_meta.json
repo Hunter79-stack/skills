@@ -3,9 +3,15 @@
   "slug": "postnitro-carousel",
   "displayName": "PostNitro Carousel Generator",
   "latest": {
-    "version": "1.0.2",
-    "publishedAt": 1771088984510,
-    "commit": "https://github.com/openclaw/skills/commit/f3d39393459c1dbca94b0b941d2d23ea9693372c"
+    "version": "1.0.3",
+    "publishedAt": 1771537020735,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.2",
+      "publishedAt": 1771088984510,
+      "commit": "https://github.com/openclaw/skills/commit/f3d39393459c1dbca94b0b941d2d23ea9693372c"
+    }
+  ]
 }
