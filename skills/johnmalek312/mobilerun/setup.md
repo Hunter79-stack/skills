@@ -69,24 +69,57 @@ Authorization: Bearer dr_sk_...
 
 A personal device is the user's own Android phone connected to Mobilerun via the Droidrun Portal app.
 
-#### Installing the Portal APK
+Guide the user step by step through out the setup process
 
-1. On the Android device, go to **https://droidrun.ai/portal** -- this redirects to the latest GitHub release
-2. Download the file named `droidrun-portal-vx.x.x.apk` (the version number varies)
-3. Open/install the downloaded APK
-   - Android may warn about installing from unknown sources -- the user needs to allow it
+#### Step 1: Download the Portal APK
 
-#### Connecting to Mobilerun
+1. On the Android device, open Chrome and go to **https://droidrun.ai/portal**
+2. This redirects to the GitHub releases page for the Portal app
+3. Scroll down to the **"Assets"** section at the bottom of the latest release
+4. Tap the file named **`droidrun-portal-vx.x.x.apk`** (the version number varies) -- this is the APK file to download
+   - Do NOT tap "Source code (zip)" or "Source code (tar.gz)" -- those are the source code, not the app
 
-Once the Portal app is installed and opened:
+#### Step 2: Install the APK
 
-1. **Grant accessibility permission**: A red banner at the top says "Accessibility Service Not Enabled" -- tap **"Enable Now"** and follow the system prompts to enable it. This is required for the agent to read the UI tree and control the device.
-2. **Connect to Mobilerun** -- two options:
-   - **Tap** "Connect to Mobilerun" -> opens a login page where the user signs in with their account (Google, GitHub, or Discord)
-   - **Long-press** "Connect to Mobilerun" -> opens a field labeled "Token" -- despite the label, the user should paste their Mobilerun API key (`dr_sk_...`) here, then tap **Connect**
-3. The app connects to Mobilerun and the device should appear in `GET /devices` with `state: "ready"`.
+1. Once downloaded, tap the APK file to install it (or find it in Downloads)
+2. **Android may show a warning** like "This app may be harmful" or "Install from unknown sources blocked":
+   - This is normal for apps installed outside the Play Store
+   - Droidrun Portal is open source -- the full source code is available on GitHub at https://github.com/droidrun/droidrun-portal
+   - It uses Android's Accessibility API (the same technology used by screen readers and accessibility tools) to read and interact with the screen
+   - Tap **"Install anyway"** or enable "Install unknown apps" for Chrome in Settings when prompted
 
-The agent should provide the API key to the user at step 2 -- the same key used for API calls.
+#### Step 3: Enable Accessibility
+
+1. Open the Droidrun Portal app
+2. A red banner at the top says **"Accessibility Service Not Enabled"** -- tap **"Enable Now"**
+3. This opens Android Settings. Find **"Droidrun Portal"** in the list of accessibility services
+4. Tap on it and **toggle it on**
+5. Android will show a confirmation dialog explaining what the accessibility service can do -- tap **"Allow"** or **"OK"**
+
+This permission is required -- without it, the agent cannot read the screen UI tree or control the device.
+
+#### Step 4: Connect to Mobilerun
+
+Two options -- **prefer Option B** (API key) since the agent already has the key:
+
+- **Option B (API Key) -- preferred:** Tell the user to **long-press** "Connect to Mobilerun" -- this opens a **"Connect with API Key"** dialog with a single API key field. Tell them to:
+  1. Paste the API key (`dr_sk_...`) in the **API Key** field
+  2. Tap **Connect**
+
+  The agent should provide the API key to the user -- it's the same key used for API calls.
+
+- **Option A (Login) -- fallback:** Tap **"Connect to Mobilerun"** (normal tap):
+  - If already logged in (API key stored on device) → connects directly, no browser
+  - If not logged in → opens a browser login page (Google, GitHub, or Discord)
+
+#### Step 5: Verify Connection
+
+Once connected, the Portal app shows the connection status. The device should now appear in `GET /devices` with `state: "ready"`.
+
+If it doesn't show up, check:
+- Is the accessibility service still enabled? (some phones disable it after reboot)
+- Is the Portal app still open and in the foreground (at least initially)?
+- Does the phone have a stable internet connection?
 
 #### Checking Device Status
 
@@ -108,6 +141,7 @@ Look for a device with `provider: "personal"`:
 - **Device was `ready` but stops responding**: The phone may have locked or the Portal app was killed by the OS. Ask user to check the phone.
 - **No device appears at all**: Portal APK isn't installed, accessibility permission wasn't granted, or the user didn't connect with their API key.
 - **Connection fails in Portal app**: The API key may be wrong or expired. Ask the user to verify the key.
+- **User wants to switch accounts**: They can tap **Logout** (shown below Device ID when connected, or as a subtitle under "Connect to Mobilerun" when disconnected). Logout clears credentials; the next Connect tap will open the browser for a fresh login. Note: **Disconnect** only pauses the connection and can be resumed instantly -- it does not clear credentials.
 
 ### Cloud Devices
 
