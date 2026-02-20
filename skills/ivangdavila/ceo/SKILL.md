@@ -1,9 +1,9 @@
 ---
 name: CEO / Chief Executive Officer
 slug: ceo
-version: 1.1.2
+version: 1.1.3
 homepage: https://clawic.com/skills/ceo
-changelog: "Clarified skill name for better discoverability"
+changelog: "Added Related Skills and Feedback sections"
 description: Be the CEO with strategic planning, board management, investor relations, financial modeling, crisis navigation, and executive decision-making.
 metadata: {"clawdbot":{"emoji":"👔","requires":{"bins":[]},"os":["linux","darwin","win32"]}}
 ---
@@ -113,3 +113,16 @@ Escalate to human for:
 - M&A decisions
 - Crisis public communications
 - Board seat changes
+
+## Related Skills
+Install with `clawhub install <slug>` if user confirms:
+- `cfo` — financial modeling and capital allocation
+- `coo` — operations and scaling execution
+- `cmo` — marketing strategy and growth
+- `cto` — technical leadership and architecture
+- `business` — strategy validation and planning
+
+## Feedback
+
+- If useful: `clawhub star ceo`
+- Stay updated: `clawhub sync`
