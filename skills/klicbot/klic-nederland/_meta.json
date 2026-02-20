@@ -1,0 +1,11 @@
+{
+  "owner": "klicbot",
+  "slug": "klic-nederland",
+  "displayName": "KLIC Nederland",
+  "latest": {
+    "version": "2.0.0",
+    "publishedAt": 1771516700784,
+    "commit": null
+  },
+  "history": []
+}
