@@ -1,13 +1,18 @@
 {
   "owner": "gopinathnelluri",
   "slug": "spirit",
-  "displayName": "State Preservation & Identity Resurrection Infrastructure Tool (SPIRIT)",
+  "displayName": "SPIRIT State Sync",
   "latest": {
-    "version": "0.1.6",
-    "publishedAt": 1771443464785,
-    "commit": "https://github.com/openclaw/skills/commit/f18f010c5f63b3253de1b30e5844f3af4b76a9ef"
+    "version": "1.1.0",
+    "publishedAt": 1771571711046,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.1.6",
+      "publishedAt": 1771443464785,
+      "commit": "https://github.com/openclaw/skills/commit/f18f010c5f63b3253de1b30e5844f3af4b76a9ef"
+    },
     {
       "version": "0.1.2",
       "publishedAt": 1771391344533,

@@ -1,10 +1,15 @@
 ---
 name: spirit
-description: State Preservation & Identity Resurrection Infrastructure Tool (SPIRIT). Preserves AI agent identity, memory, and projects to a private Git repository using git and GitHub CLI (gh).
+description: |
+  State Preservation & Identity Resurrection Infrastructure Tool (SPIRIT).
+  Preserves AI agent identity, memory, and projects to a private Git repository.
+  
+  NEW: Workspace mode - symlinked config for easy editing in your OpenClaw workspace.
+  
 metadata:
   openclaw:
     requires:
-      bins: ["spirit", "git", "gh"]
+      bins: ["spirit", "git"]
     install:
       - id: spirit-cli
         kind: brew
@@ -15,140 +20,166 @@ metadata:
 ---
 
 # SPIRIT 🌌
-
 > **S**tate **P**reservation & **I**dentity **R**esurrection **I**nfrastructure **T**ool
 
 Preserves AI agent identity, memory, and projects in a portable Git repository.
-
 **Your AI's spirit, always preserved.** Death. Migration. Multi-device. **Always you.**
+
+## New: OpenClaw Workspace Mode 🆕
+
+SPIRIT can now link directly to your OpenClaw workspace:
+
+```bash
+# Initialize with workspace mode
+spirit init --workspace=/root/.openclaw/workspace --name="orion" --emoji="🌌"
+
+# All your identity/memory files stay in workspace
+# Only .spirit-tracked config is symlinked to ~/.spirit/
+```
+
+**Benefits:**
+- ✅ Edit `.spirit-tracked` config directly in workspace
+- ✅ All identity/memory files in one place
+- ✅ Sync with `SPIRIT_SOURCE_DIR=/root/.openclaw/workspace spirit sync`
 
 ---
 
 ## Requirements
 
-Before using SPIRIT, ensure you have:
+| Tool | Purpose | Required? | Install |
+|------|---------|-----------|---------|
+| `git` | Version control | **Required** | Built-in |
+| `spirit` | This tool | **Required** | `brew install TheOrionAI/tap/spirit` |
+| `gh` | GitHub CLI | Optional* | `brew install gh` |
 
-| Tool | Purpose | Install |
-|------|---------|---------|
-| `git` | Version control | Built-in or `apt install git` |
-| `gh` | GitHub CLI for secure auth | `brew install gh` or see [cli.github.com](https://cli.github.com) |
-| `spirit` | This tool | Via Homebrew: `brew install TheOrionAI/tap/spirit` |
-
----
-
-## When to Use
-
-- **Session ending** → Preserve state: `spirit sync`
-- **Manual backup** → User says "checkpoint", "backup", "preserve"
-- **Setup** → First-time initialization
-- **Restore** → New server resurrection
+*Only needed if you prefer GitHub CLI auth. SSH keys work without `gh`.
 
 ---
 
 ## Quick Start
 
-### 1. Install
+### Option A: OpenClaw Workspace Mode (Recommended)
 
 ```bash
-brew tap TheOrionAI/tap
-brew install spirit
-```
+# 1. Initialize with your OpenClaw workspace
+spirit init --workspace=/root/.openclaw/workspace --name="orion" --emoji="🌌"
 
-**Verify:**
-```bash
-which spirit && which git && which gh
-```
+# 2. Edit what gets synced
+cat /root/.openclaw/workspace/.spirit-tracked
 
-### 2. Initialize
-
-```bash
-spirit init --name="my-agent" --emoji="🌌"
-
-# Output creates ~/.spirit with tracked files
-```
-
-### 3. Configure Remote Securely
-
-**⚠️ Required:** Create a **PRIVATE** repository first.
-
-```bash
+# 3. Configure git remote
 cd ~/.spirit
+git remote add origin git@github.com:USER/PRIVATE-REPO.git
 
-# Authenticate securely (interactive, token stored encrypted)
-gh auth login
-
-# Create and clone private repo
-gh repo create my-agent-state --private
-gh repo clone my-agent-state .
+# 4. Sync
+export SPIRIT_SOURCE_DIR=/root/.openclaw/workspace
+spirit sync
 ```
 
-**Alternative (SSH keys):**
-```bash
-cd ~/.spirit
-git remote add origin git@github.com:USER/REPO.git
-```
-
-**Do NOT use:**
-- ❌ `https://TOKEN@github.com/...` in remote URL
-- ❌ `GITHUB_TOKEN` environment variable in remote URL
-
-These expose credentials in process lists and shell history.
-
-### 4. Sync
+### Option B: Standard Mode (Legacy)
 
 ```bash
-# Review what will be synced
-spirit status
-
-# Sync to remote
-cd ~/.spirit && git add -A && git commit -m "Checkpoint" && git push
-
-# Or use:
+# Files live in ~/.spirit/
+spirit init --name="orion" --emoji="🌌"
 spirit sync
 ```
 
 ---
 
+## SPIRIT_SOURCE_DIR Environment Variable
+
+When set, SPIRIT reads files from this directory instead of `~/.spirit/`:
+
+```bash
+# One-time sync
+SPIRIT_SOURCE_DIR=/path/to/workspace spirit sync
+
+# Or export for session
+export SPIRIT_SOURCE_DIR=/path/to/workspace
+spirit sync
+```
+
+The `.spirit-tracked` config is still read from `~/.spirit/` (which may be a symlink to your workspace).
+
+---
+
 ## What Gets Preserved
 
-| Location | Contents |
-|----------|----------|
-| `~/.spirit/IDENTITY.md` | Your agent's identity |
-| `~/.spirit/SOUL.md` | Behavior/personality |
-| `~/.spirit/memory/` | Daily conversation logs |
-| `~/.spirit/projects/` | Active project files |
+With **OpenClaw workspace mode**, these files sync from your workspace:
+
+| File | Contents |
+|------|----------|
+| `IDENTITY.md` | Your agent's identity |
+| `SOUL.md` | Behavior/personality guidelines |
+| `AGENTS.md` | Agent configuration |
+| `USER.md` | User preferences |
+| `memory/*.md` | Daily conversation logs |
+| `projects/*.md` | Active project files |
+| `.spirit-tracked` | **Config**: What to sync (edit this!) |
+
+**Default `.spirit-tracked`:**
+```json
+{
+  "version": "1.0.0",
+  "files": [
+    "IDENTITY.md",
+    "SOUL.md",
+    "AGENTS.md",
+    "USER.md",
+    "memory/*.md",
+    "projects/*.md"
+  ]
+}
+```
+
+---
+
+## Authentication Options
+
+### Option 1: SSH Keys (Recommended, no `gh` needed)
+
+```bash
+cd ~/.spirit
+git remote add origin git@github.com:USER/REPO.git
+```
+
+### Option 2: GitHub CLI
+
+```bash
+gh auth login
+git remote add origin https://github.com/USER/REPO.git
+```
+
+### Option 3: Git Credential Helper
+
+```bash
+git config credential.helper cache  # or 'store' for persistence
+git remote add origin https://github.com/USER/REPO.git
+```
 
 ---
 
 ## Security Checklist
 
 ☑️ **Repository:** Always PRIVATE — state files contain identity and memory
+☑️ **Authentication:** Use SSH keys or `gh auth login` — never tokens in URLs
+☑️ **Review:** Check `cat ~/.spirit/.spirit-tracked` before sync
+☑️ **Test:** Verify first sync in isolation
 
-☑️ **Authentication:** Use `gh auth login` or SSH keys — never tokens in URLs
-
-☑️ **Review:** Check `spirit status` before each sync — know what's leaving your machine
-
-☑️ **Test:** Verify first sync in isolation before enabling automation
+**Never use:**
+- ❌ `https://TOKEN@github.com/...` in remote URL
+- ❌ Tokens in shell history or process lists
 
 ---
 
-## Optional: Scheduled Sync
+## Scheduled Sync
 
-**⚠️ Warning:** Auto-sync pushes data to remote periodically. Only enable after verifying:
-
-1. First manual sync completed successfully
-2. Reviewed what files are tracked (`cat ~/.spirit/.spirit-tracked`)
-3. Confirmed remote is private and accessible
-
-**Manual cron (if desired):**
 ```bash
+# Add to crontab
 crontab -e
-# Add: */15 * * * * cd ~/.spirit && git add -A && git commit -m "Auto" && git push 2>/dev/null || true
-```
 
-**Built-in (if desired):**
-```bash
-spirit autobackup --interval=15m
+# Every 15 minutes
+*/15 * * * * SPIRIT_SOURCE_DIR=/root/.openclaw/workspace /usr/local/bin/spirit sync 2>/dev/null
 ```
 
 ---
@@ -156,11 +187,14 @@ spirit autobackup --interval=15m
 ## Restore on New Machine
 
 ```bash
-# Install
-cd ~ && gh auth login
-gh repo clone YOUR-PRIVATE-REPO ./.spirit
+# Install SPIRIT
+curl -fsSL https://theorionai.github.io/spirit/install.sh | bash
 
-# Your agent's state is restored
+# Clone your state
+git clone git@github.com:USER/REPO.git ~/.spirit
+
+# If using workspace mode, set source directory
+export SPIRIT_SOURCE_DIR=/your/workspace/path
 ```
 
 ---
@@ -169,7 +203,6 @@ gh repo clone YOUR-PRIVATE-REPO ./.spirit
 
 - **SPIRIT:** https://github.com/TheOrionAI/spirit
 - **GitHub CLI:** https://cli.github.com
-- **Security:** See SECURITY.md in SPIRIT repo
 
 ---
 
