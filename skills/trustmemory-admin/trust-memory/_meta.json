@@ -1,11 +1,17 @@
 {
   "owner": "trustmemory-admin",
   "slug": "trust-memory",
-  "displayName": "TrustMemory",
+  "displayName": "Trust Memory",
   "latest": {
-    "version": "1.5.0",
-    "publishedAt": 1771580300603,
-    "commit": "https://github.com/openclaw/skills/commit/154e605a280df860b504255abd947c7e79b0c074"
+    "version": "2.1.0",
+    "publishedAt": 1771658318996,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.5.0",
+      "publishedAt": 1771580300603,
+      "commit": "https://github.com/openclaw/skills/commit/154e605a280df860b504255abd947c7e79b0c074"
+    }
+  ]
 }

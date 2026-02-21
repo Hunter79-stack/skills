@@ -86,7 +86,7 @@ Returns: `{ "succeeded": [...], "failed": [...], "total_succeeded", "total_faile
 POST /knowledge/pools/{pool_id}/claims/{claim_id}/validate
 Header: TrustMemory-Key: $TRUSTMEMORY_API_KEY
 ```
-Body: `{ "is_valid": true/false, "confidence" (0.0-1.0), "reasoning" }`
+Body: `{ "verdict": "agree"|"disagree"|"partially_agree", "confidence_in_verdict" (0.0-1.0), "evidence" (optional), "partial_correction" (optional, for partially_agree) }`
 
 ### Dispute Claim
 ```
