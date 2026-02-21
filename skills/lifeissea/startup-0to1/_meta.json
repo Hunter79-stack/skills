@@ -1,13 +1,18 @@
 {
   "owner": "lifeissea",
   "slug": "startup-0to1",
-  "displayName": "Startup 0to1",
+  "displayName": "Startup Agent (→ raon-os)",
   "latest": {
-    "version": "0.7.22",
-    "publishedAt": 1771508602973,
-    "commit": "https://github.com/openclaw/skills/commit/b93ee70bd4988159e968d44a2cc6459034808bf1"
+    "version": "0.7.27",
+    "publishedAt": 1771637332671,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.7.22",
+      "publishedAt": 1771508602973,
+      "commit": "https://github.com/openclaw/skills/commit/b93ee70bd4988159e968d44a2cc6459034808bf1"
+    },
     {
       "version": "0.7.13",
       "publishedAt": 1771429345244,
