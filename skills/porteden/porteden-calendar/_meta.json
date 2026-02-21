@@ -1,0 +1,11 @@
+{
+  "owner": "porteden",
+  "slug": "porteden-calendar",
+  "displayName": "PortEden - secured calendar(Gmail, Outlook, Exchange) access for OpenClaw",
+  "latest": {
+    "version": "1.0.1",
+    "publishedAt": 1771606162532,
+    "commit": null
+  },
+  "history": []
+}
