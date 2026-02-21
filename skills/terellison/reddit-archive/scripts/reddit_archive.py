@@ -1,367 +1,313 @@
 #!/usr/bin/env python3
-"""Reddit archive tool — download images, GIFs, videos from users or subreddits."""
-import argparse, json, os, subprocess, sys
-import shutil
-import threading
+"""
+Reddit Archive - Download images, GIFs, and videos from Reddit users or subreddits.
+Usage: python3 reddit_archive.py -u username | -s subreddit [options]
+"""
 
-# Check dependencies on import
-def check_dependencies():
-    """Check and install required dependencies."""
-    missing = []
-    
-    # Check requests
-    try:
-        import requests
-    except ImportError:
-        missing.append('requests')
-    
-    # Check yt-dlp
-    ytdlp_path = find_ytdlp()
-    if not ytdlp_path:
-        missing.append('yt-dlp')
-    
-    if missing:
-        print("Installing missing dependencies:", ", ".join(missing))
-        install_dependencies(missing)
-
-def find_ytdlp():
-    """Find yt-dlp in common locations or PATH."""
-    # Check environment override
-    env_path = os.environ.get("YTDLP_PATH")
-    if env_path and os.path.isfile(env_path) and os.access(env_path, os.X_OK):
-        return env_path
-    
-    # Check common system paths
-    common_paths = [
-        "/usr/local/bin/yt-dlp",
-        "/opt/homebrew/bin/yt-dlp",
-        "/opt/bin/yt-dlp",
-        os.path.expanduser("~/.local/bin/yt-dlp"),
-    ]
-    
-    for path in common_paths:
-        if os.path.isfile(path) and os.access(path, os.X_OK):
-            return path
-    
-    # Check in PATH
-    ytdlp_in_path = shutil.which("yt-dlp")
-    if ytdlp_in_path:
-        return ytdlp_in_path
-    
-    return None
-
-def install_dependencies(missing):
-    """Install missing Python packages."""
-    packages = []
-    
-    if 'requests' in missing:
-        packages.append('requests')
-    if 'yt-dlp' in missing:
-        packages.append('yt-dlp')
-    
-    if packages:
-        try:
-            subprocess.check_call(
-                [sys.executable, "-m", "pip", "install", "--user"] + packages,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
-            )
-            print("Dependencies installed successfully.")
-        except subprocess.CalledProcessError as e:
-            print(f"Warning: Failed to install dependencies: {e}")
-            print("Please install manually: pip3 install requests yt-dlp")
-            sys.exit(1)
-
-# Run dependency check on import
-check_dependencies()
-
-# Now import after check
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
+import argparse
+import json
+import os
+import sys
 import time
+import urllib.parse
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+
 import requests
 
-HEADERS = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Accept": "application/json"}
-YTDLP = find_ytdlp() or "yt-dlp"
-IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".webp")
+# === CONFIG ===
+USER_AGENT = "Mozilla/5.0 (compatible; archiver/1.0)"
+API_DELAY = 0.8  # seconds between API calls to avoid 403s
 
-def reddit_get(url):
-    r = requests.get(url, headers=HEADERS, timeout=15)
-    r.raise_for_status()
-    return r.json()
+# === ARGS ===
+def parse_args():
+    p = argparse.ArgumentParser(description="Archive Reddit posts (images, GIFs, videos)")
+    g = p.add_mutually_exclusive_group(required=True)
+    g.add_argument("-u", "--user", help="Reddit username")
+    g.add_argument("-s", "--subreddit", help="Subreddit name (without r/)")
+    p.add_argument("-o", "--output", default=None, help="Output directory")
+    p.add_argument("--sort", default="hot", choices=["hot", "new", "rising", "top", "controversial"])
+    p.add_argument("--time", default=None, choices=["hour", "day", "week", "month", "year", "all"])
+    p.add_argument("--after", default=None, help="Start date (YYYY-MM-DD)")
+    p.add_argument("--before", default=None, help="End date (YYYY-MM-DD)")
+    p.add_argument("--limit", type=int, default=0, help="Max posts (0=unlimited)")
+    p.add_argument("--images", action="store_true", default=True, help="Download images (jpg,png,webp)")
+    p.add_argument("--gifs", action="store_true", default=True, help="Download GIFs/videos")
+    p.add_argument("--skip-existing", action="store_true", default=True, help="Skip existing files")
+    p.add_argument("--workers", type=int, default=4, help="Parallel workers")
+    return p.parse_args()
 
-def to_utc_timestamp(date_str):
-    """Convert YYYY-MM-DD to Reddit's created_utc timestamp."""
-    dt = datetime.strptime(date_str, "%Y-%m-%d")
-    return int(dt.replace(tzinfo=timezone.utc).timestamp())
+# === HELPERS ===
+def get_output_dir(args):
+    if args.output:
+        return Path(args.output)
+    target = args.user or f"r_{args.subreddit}"
+    return Path.home() / "temp" / f".reddit_{target}"
+
+def ensure_dir(path):
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+def date_to_utc(date_str):
+    """Convert YYYY-MM-DD to Reddit API after parameter."""
+    if not date_str:
+        return None
+    try:
+        from datetime import datetime
+        dt = datetime.strptime(date_str, "%Y-%m-%d")
+        return str(int(dt.timestamp()))
+    except:
+        return None
 
 def get_posts(args):
-    """Fetch posts from user or subreddit."""
-    target = args.user or args.subreddit
-    posts = []
-    after = None
-    page = 0
-    
-    # Build base URL with sort
-    sort = args.sort or "hot"
+    """Fetch posts from Reddit API."""
     if args.user:
-        base_url = f"https://www.reddit.com/user/{args.user}/submitted.json?limit=100&raw_json=1"
+        url = f"https://www.reddit.com/user/{args.user}/submitted.json?limit=100&raw_json=1"
     else:
-        # For subreddits, support sort: hot, new, rising, top, controversial
-        base_url = f"https://www.reddit.com/r/{args.subreddit}/{sort}.json?limit=100&raw_json=1"
-        # Add time filter for top/controversial
-        if sort in ("top", "controversial") and args.time:
-            base_url += f"&t={args.time}"
+        url = f"https://www.reddit.com/r/{args.subreddit}/{args.sort}.json?limit=100&raw_json=1"
+        if args.time:
+            url += f"&t={args.time}"
     
-    # Add date filters if specified
-    if args.after:
-        base_url += f"&after=t3_{'a'*6}"  # placeholder, we'll filter manually
+    after = None
+    all_posts = []
+    fetched = 0
     
     while True:
-        url = base_url
+        fetch_url = url
         if after:
-            url += f"&after={after}"
+            fetch_url += f"&after={after}"
         
-        print(f"  fetching page {page + 1}...")
-        data = reddit_get(url)
+        print(f"Fetching: {fetch_url[:80]}...")
+        r = requests.get(fetch_url, headers={"User-Agent": USER_AGENT})
+        if r.status_code != 200:
+            print(f"Error: {r.status_code} - {r.text[:200]}")
+            break
+        
+        data = r.json()
         children = data.get("data", {}).get("children", [])
-        
         if not children:
             break
-            
-        for c in children:
-            post = c.get("data", {})
-            
-            # Date filtering
-            created_utc = post.get("created_utc", 0)
-            if args.after and created_utc < to_utc_timestamp(args.after):
-                continue
-            if args.before and created_utc > to_utc_timestamp(args.before):
-                continue
-                
-            posts.append(post)
-            
-            # Limit check
-            if args.limit and len(posts) >= args.limit:
+        
+        for child in children:
+            post = child.get("data", {})
+            all_posts.append(post)
+            fetched += 1
+            if args.limit and fetched >= args.limit:
                 break
         
         after = data.get("data", {}).get("after")
-        page += 1
-        
-        if not after or (args.limit and len(posts) >= args.limit):
+        if not after or (args.limit and fetched >= args.limit):
             break
-        time.sleep(0.8)
+        
+        time.sleep(API_DELAY)
     
-    return posts, target
-
-def is_image_url(url, domain):
-    url_lower = url.lower()
-    # i.redd.it .gif files are static images
-    if domain == "i.redd.it" and url_lower.endswith((".jpg", ".jpeg", ".png", ".webp", ".gif")):
-        return True
-    if domain in ("i.imgur.com", "imgur.com", "m.imgur.com") and any(url_lower.endswith(e) for e in IMAGE_EXTS):
-        return True
-    return False
-
-def is_gif_url(url, domain):
-    # i.redd.it .gif are actually static images, not videos
-    if domain == "i.redd.it" and url.lower().endswith(".gif"):
-        return False
-    if any(x in domain for x in ["gfycat", "redgifs"]):
-        return True
-    if domain in ("i.imgur.com", "imgur.com", "m.imgur.com"):
-        url_lower = url.lower()
-        return url_lower.endswith((".gif", ".gifv"))
-    return False
-
-def get_reddit_video(post):
-    """Extract video URL from Reddit-hosted media (reddit.com/media)."""
-    # Check media field
-    media = post.get("media", {})
-    if media:
-        reddit_video = media.get("reddit_video")
-        if reddit_video:
-            fallback = reddit_video.get("fallback_url")
-            if fallback:
-                return fallback
+    # Filter by date
+    if args.after or args.before:
+        from datetime import datetime
+        filtered = []
+        for post in all_posts:
+            created = post.get("created_utc", 0)
+            post_date = datetime.utcfromtimestamp(created)
+            if args.after:
+                after_dt = datetime.strptime(args.after, "%Y-%m-%d")
+                if post_date < after_dt:
+                    continue
+            if args.before:
+                before_dt = datetime.strptime(args.before, "%Y-%m-%d")
+                if post_date > before_dt:
+                    continue
+            filtered.append(post)
+        all_posts = filtered
     
-    # Check secure_media field
-    secure_media = post.get("secure_media", {})
-    if secure_media:
-        reddit_video = secure_media.get("reddit_video")
-        if reddit_video:
-            fallback = reddit_video.get("fallback_url")
-            if fallback:
-                return fallback
+    if args.limit:
+        all_posts = all_posts[:args.limit]
     
-    # Check for crosspost parent
-    crosspost = post.get("crosspost_parent_list", [])
-    if crosspost:
-        return get_reddit_video(crosspost[0])
+    print(f"Fetched {len(all_posts)} posts")
+    return all_posts
+
+def get_image_url(post):
+    """Extract direct image URL from post."""
+    url = post.get("url", "")
     
-    return None
+    # Direct images
+    if url.startswith("https://i.redd.it/"):
+        return url, "image", url.split("/")[-1]
+    
+    # Imgur
+    if "imgur.com" in url and not url.endswith(".gifv"):
+        img_id = url.split("/")[-1].split(".")[0]
+        ext = "jpg"
+        if url.endswith(".png"):
+            ext = "png"
+        elif url.endswith(".gif"):
+            ext = "gif"
+        elif url.endswith(".gifv"):
+            ext = "gif"
+            return f"https://i.imgur.com/{img_id}.gif", "gif", f"{img_id}.gif"
+        return f"https://i.imgur.com/{img_id}.{ext}", "image", f"{img_id}.{ext}"
+    
+    # Gallery
+    if post.get("is_gallery"):
+        metadata = post.get("media_metadata", {})
+        images = []
+        for item in metadata.values():
+            if item.get("status") == "ready":
+                img_url = item.get("s", {}).get("u", "").replace("&amp;", "&")
+                if img_url:
+                    images.append(img_url)
+        return images, "gallery", None
+    
+    return None, None, None
 
-def get_gallery_images(post):
-    """Extract image URLs from Reddit gallery posts."""
-    items = []
-    gallery_data = post.get("gallery_data", {})
-    media_metadata = post.get("media_metadata", {})
-    if not gallery_data or not media_metadata:
-        return items
-    for i, item in enumerate(gallery_data.get("items", []), 1):
-        media_id = item.get("media_id")
-        if not media_id or media_id not in media_metadata:
-            continue
-        meta = media_metadata[media_id]
-        if meta.get("status") != "valid":
-            continue
-        mime = meta.get("m", "image/jpeg")
-        ext_map = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
-        ext = ext_map.get(mime, ".jpg")
-        src = meta.get("s", {})
-        url = src.get("u") or src.get("gif")
-        if url:
-            url = url.replace("&amp;", "&")
-            items.append((url, f"_{i}"))
-    return items
+def get_video_url(post):
+    """Extract video/GIF URL from post."""
+    url = post.get("url", "")
+    
+    # v.redd.it
+    if "v.redd.it" in url:
+        media = post.get("media", {}) or post.get("secure_media", {})
+        if "reddit_video" in media:
+            video_url = media["reddit_video"].get("fallback_url", "")
+            if video_url:
+                return video_url, "video"
+    
+    # redgifs
+    if "redgifs.com" in url:
+        return url, "video"
+    
+    # gfycat
+    if "gfycat.com" in url:
+        return url, "gif"
+    
+    # imgur gifv
+    if "imgur.com" in url and url.endswith(".gifv"):
+        img_id = url.split("/")[-1].replace(".gifv", "")
+        return f"https://i.imgur.com/{img_id}.gif", "gif"
+    
+    # Direct mp4/gif
+    if url.endswith(".mp4") or url.endswith(".gif"):
+        return url, "video" if url.endswith(".mp4") else "gif"
+    
+    return None, None
 
-def download_file(url, out_path):
-    r = requests.get(url, headers=HEADERS, timeout=30)
-    r.raise_for_status()
-    with open(out_path, "wb") as f:
-        f.write(r.content)
+def is_image_ext(url):
+    return any(url.lower().endswith(ext) for ext in [".jpg", ".jpeg", ".png", ".webp"])
 
-def download_image(post_id, url, suffix, out_path, skip_existing):
-    if skip_existing and os.path.exists(out_path):
-        return f"skip  {os.path.basename(out_path)}"
+def is_video_ext(url):
+    return any(url.lower().endswith(ext) for ext in [".mp4", ".gif", ".webm"])
+
+def download_file(url, path, session):
+    """Download a single file."""
     try:
-        download_file(url, out_path)
-        return f"✓     {os.path.basename(out_path)}"
+        r = session.get(url, stream=True, timeout=30)
+        if r.status_code == 200:
+            with open(path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            return True
     except Exception as e:
-        return f"✗     {os.path.basename(out_path)} — {str(e)[:50]}"
+        print(f"Error downloading {url}: {e}")
+    return False
 
-def download_video(post_id, url, out_path, skip_existing):
-    for ext in ("mp4", "gif", "webm"):
-        if os.path.exists(out_path.replace(".%(ext)s", f".{ext}")):
-            return f"skip  {os.path.basename(out_path)}"
-    if skip_existing and os.path.exists(out_path.replace(".%(ext)s", ".mp4")):
-        return f"skip  {os.path.basename(out_path.replace('.%(ext)s', '.mp4'))}"
-    result = subprocess.run(
-        [YTDLP, url, "-o", out_path, "--no-part", "-q",
-         "--merge-output-format", "mp4", "--socket-timeout", "30"],
-        capture_output=True, timeout=120
-    )
-    if result.returncode == 0:
-        return f"✓     {os.path.basename(out_path)}"
-    else:
-        err = result.stderr.decode(errors="ignore").strip().splitlines()
-        short_err = err[-1] if err else "unknown"
-        return f"✗     {os.path.basename(out_path)} — {short_err[:50]}"
+def download_with_ytdlp(url, path):
+    """Download video using yt-dlp."""
+    import subprocess
+    ytdlp = os.environ.get("YTDLP_PATH", "yt-dlp")
+    try:
+        subprocess.run([ytdlp, "-o", str(path), "--no-warnings", url], 
+                       capture_output=True, timeout=120, check=True)
+        return True
+    except Exception as e:
+        print(f"yt-dlp error for {url}: {e}")
+    return False
+
+def process_post(post, dirs, args):
+    """Process a single post - returns list of downloaded files."""
+    post_id = post.get("id", "unknown")
+    subreddit = post.get("subreddit", "unknown")
+    target = args.user or subreddit
+    downloaded = []
+    
+    urls_to_download = []
+    
+    # Images
+    if args.images:
+        img_urls, img_type, _ = get_image_url(post)
+        if img_type == "gallery" and isinstance(img_urls, list):
+            for i, img_url in enumerate(img_urls):
+                ext = Path(img_url).suffix or ".jpg"
+                filename = f"{target}_{post_id}_gallery_{i}{ext}"
+                urls_to_download.append((img_url, dirs["pictures"] / filename, False))
+        elif img_urls:
+            ext = Path(img_urls).suffix or ".jpg"
+            filename = f"{target}_{post_id}{ext}"
+            urls_to_download.append((img_urls, dirs["pictures"] / filename, False))
+    
+    # Videos/GIFs
+    if args.gifs:
+        video_url, video_type = get_video_url(post)
+        if video_url:
+            if "redgifs.com" in video_url or "gfycat.com" in video_url:
+                # Use yt-dlp for these
+                filename = f"{target}_{post_id}.mp4"
+                urls_to_download.append((video_url, dirs["videos"] / filename, True))
+            elif is_video_ext(video_url):
+                ext = Path(video_url).suffix or ".mp4"
+                filename = f"{target}_{post_id}{ext}"
+                urls_to_download.append((video_url, dirs["videos"] / filename, True))
+    
+    # Download
+    session = requests.Session()
+    session.headers.update({"User-Agent": USER_AGENT})
+    
+    for url, path, use_ytdlp in urls_to_download:
+        if args.skip_existing and path.exists():
+            print(f"Skipping existing: {path.name}")
+            continue
+        
+        print(f"  Downloading: {url[:60]}...")
+        
+        success = False
+        if use_ytdlp:
+            success = download_with_ytdlp(url, path)
+        else:
+            success = download_file(url, path, session)
+        
+        if success:
+            downloaded.append(str(path))
+    
+    return downloaded
 
 def main():
-    parser = argparse.ArgumentParser(description="Archive Reddit posts")
-    parser.add_argument("-u", "--user", help="Reddit username")
-    parser.add_argument("-s", "--subreddit", help="Subreddit name")
-    parser.add_argument("-o", "--output", help="Output directory", 
-                        default=None)
-    parser.add_argument("--sort", choices=["hot", "new", "rising", "top", "controversial"],
-                        default="hot", help="Sort order (subreddits only)")
-    parser.add_argument("--time", choices=["hour", "day", "week", "month", "year", "all"],
-                        help="Time filter for top/controversial (hour, day, week, month, year, all)")
-    parser.add_argument("--after", help="Start date (YYYY-MM-DD)")
-    parser.add_argument("--before", help="End date (YYYY-MM-DD)")
-    parser.add_argument("--images/--no-images", default=True, dest="images",
-                        help="Download images (default: true)")
-    parser.add_argument("--gifs/--no-gifs", default=True, dest="gifs",
-                        help="Download GIFs/videos (default: true)")
-    parser.add_argument("--skip-existing", action="store_true", default=True,
-                        help="Skip already-downloaded files")
-    parser.add_argument("--workers", type=int, default=4,
-                        help="Parallel workers")
-    parser.add_argument("--limit", type=int, default=0,
-                        help="Max posts to fetch (0 = unlimited)")
-    args = parser.parse_args()
+    args = parse_args()
     
-    if not args.user and not args.subreddit:
-        print("Error: specify either --user or --subreddit")
-        sys.exit(1)
-    if args.user and args.subreddit:
-        print("Error: specify either --user OR --subreddit, not both")
-        sys.exit(1)
+    output_dir = get_output_dir(args)
+    ensure_dir(output_dir)
+    ensure_dir(output_dir / "Pictures")
+    ensure_dir(output_dir / "Videos")
     
-    target = args.user or args.subreddit
-    outdir = args.output or os.path.expanduser(f"~/temp/.reddit_{target}")
-    os.makedirs(outdir, exist_ok=True)
+    dirs = {
+        "pictures": output_dir / "Pictures",
+        "videos": output_dir / "Videos"
+    }
     
-    print(f"Fetching posts from {'u/' + args.user if args.user else 'r/' + args.subreddit}...")
-    posts, target = get_posts(args)
-    print(f"Total posts (filtered): {len(posts)}")
+    print(f"Output: {output_dir}")
+    print(f"Fetching posts...")
     
-    image_tasks = []
-    gif_tasks = []
+    posts = get_posts(args)
+    print(f"Processing {len(posts)} posts...")
     
-    for p in posts:
-        domain = p.get("domain", "")
-        url = p.get("url", "")
-        pid = p.get("id", "unknown")
-        
-        # Gallery posts
-        if args.images and p.get("is_gallery"):
-            for img_url, suffix in get_gallery_images(p):
-                ext = os.path.splitext(img_url.lower().split("?")[0])[1] or ".jpg"
-                out_path = os.path.join(outdir, f"{target}_{pid}{suffix}{ext}")
-                image_tasks.append((pid, img_url, suffix, out_path))
-        
-        # Single image
-        elif args.images and is_image_url(url, domain):
-            ext = os.path.splitext(url.lower().split("?")[0])[1] or ".jpg"
-            out_path = os.path.join(outdir, f"{target}_{pid}{ext}")
-            image_tasks.append((pid, url, "", out_path))
-        
-        # GIFs/videos (external hosts)
-        if args.gifs and is_gif_url(url, domain):
-            out_tmpl = os.path.join(outdir, f"{target}_{pid}.%(ext)s")
-            gif_tasks.append((pid, url, out_tmpl))
-        
-        # Reddit-hosted videos (reddit.com/media)
-        if args.gifs and domain == "reddit.com":
-            video_url = get_reddit_video(p)
-            if video_url:
-                out_tmpl = os.path.join(outdir, f"{target}_{pid}.mp4")
-                gif_tasks.append((pid, video_url, out_tmpl))
+    all_downloaded = []
+    with ThreadPoolExecutor(max_workers=args.workers) as executor:
+        futures = {executor.submit(process_post, post, dirs, args): post for post in posts}
+        for future in as_completed(futures):
+            try:
+                downloaded = future.result()
+                all_downloaded.extend(downloaded)
+            except Exception as e:
+                print(f"Error processing post: {e}")
     
-    print(f"Image tasks: {len(image_tasks)}, GIF/video tasks: {len(gif_tasks)}\n")
-    
-    ok = fail = skip = 0
-    
-    # Download images
-    if image_tasks:
-        print("=== Downloading images ===")
-        with ThreadPoolExecutor(max_workers=args.workers) as ex:
-            futures = {ex.submit(download_image, pid, url, sfx, out, args.skip_existing): (pid, url) 
-                       for pid, url, sfx, out in image_tasks}
-            for f in as_completed(futures):
-                msg = f.result()
-                print(msg)
-                if msg.startswith("✓"): ok += 1
-                elif msg.startswith("✗"): fail += 1
-                else: skip += 1
-    
-    # Download GIFs/videos
-    if gif_tasks:
-        print("\n=== Downloading GIFs/videos ===")
-        with ThreadPoolExecutor(max_workers=args.workers) as ex:
-            futures = {ex.submit(download_video, pid, url, out, args.skip_existing): (pid, url) 
-                       for pid, url, out in gif_tasks}
-            for f in as_completed(futures):
-                msg = f.result()
-                print(msg)
-                if msg.startswith("✓"): ok += 1
-                elif msg.startswith("✗"): fail += 1
-                else: skip += 1
-    
-    print(f"\n=== Done: {ok} downloaded, {skip} skipped, {fail} failed ===")
-    print(f"Output: {outdir}")
+    print(f"\nDone! Downloaded {len(all_downloaded)} files to {output_dir}")
 
 if __name__ == "__main__":
     main()

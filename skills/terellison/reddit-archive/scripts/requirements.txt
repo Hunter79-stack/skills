@@ -1,4 +1,2 @@
-# This file is for reference only - dependencies are auto-installed
-# Run: pip3 install requests yt-dlp
 requests
 yt-dlp

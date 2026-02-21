@@ -64,9 +64,30 @@ python3 reddit_archive.py -u someuser -o ~/Downloads/reddit_archive
 
 ## Output
 
-Downloads are saved to the output directory with naming:
-- `{target}_{post_id}.{ext}` for images
-- `{target}_{post_id}.mp4` for videos
+Downloads are saved to the output directory with the following structure:
+
+```
+output_directory/
+├── Pictures/
+│   ├── {target}_{post_id}.jpg
+│   ├── {target}_{post_id}.png
+│   └── ...
+└── Videos/
+    ├── {target}_{post_id}.mp4
+    └── ...
+```
+
+## File Organization
+
+The skill is organized as:
+
+```
+reddit-archive/
+├── SKILL.md              ← This file
+└── scripts/
+    ├── reddit_archive.py ← Main downloader script
+    └── requirements.txt  ← Python dependencies
+```
 
 ## Rate Limiting
 
