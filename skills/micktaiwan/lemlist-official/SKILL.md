@@ -1,5 +1,6 @@
 ---
 name: lemlist
+primaryEnv: LEMLIST_API_KEY
 description: |
   Official Lemlist API integration for sales automation and multichannel outreach.
   Use this skill when users want to:
