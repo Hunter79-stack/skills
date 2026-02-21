@@ -1,13 +1,18 @@
 {
   "owner": "deeqyaqub1-cmd",
   "slug": "hyperstack",
-  "displayName": "HyperStack (requires HYPERSTACK_API_KEY)",
+  "displayName": "Agent Memory Graph — Typed Knowledge Graph for AI Agents",
   "latest": {
-    "version": "1.0.19",
-    "publishedAt": 1771556284859,
-    "commit": "https://github.com/openclaw/skills/commit/415cfcb845db21f68ab07cb8ac7bc0b3a42629dc"
+    "version": "1.0.22",
+    "publishedAt": 1771632509520,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.19",
+      "publishedAt": 1771556284859,
+      "commit": "https://github.com/openclaw/skills/commit/415cfcb845db21f68ab07cb8ac7bc0b3a42629dc"
+    },
     {
       "version": "1.0.15",
       "publishedAt": 1771373314022,

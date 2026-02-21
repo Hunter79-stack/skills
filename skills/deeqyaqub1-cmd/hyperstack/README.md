@@ -1,80 +1,145 @@
-# HyperStack — Developer-Controlled Knowledge Graph Memory for AI Agents
+# HyperStack — Typed Graph Memory for AI Agents
 
-**Your agent controls the graph, not an LLM hallucination.**
+**Your agents forget everything between sessions. HyperStack fixes that.**
 
-HyperStack gives AI agents persistent memory with a typed knowledge graph. Store knowledge as typed cards with explicit linked relations. Retrieve via hybrid semantic + keyword search, graph traversal, impact analysis, or scored recommendations. Time-travel to debug past decisions.
+Persistent memory built on a typed knowledge graph. Store decisions, blockers, dependencies, and findings as cards with explicit typed relations. Query with exact answers — not fuzzy similarity. Branch memory like Git. Track provenance on every card.
 
-## Why HyperStack?
+## Why this instead of vector memory?
 
-- **Explicit control** — Your agent defines cards and links directly. No LLM auto-extraction, no phantom relationships, no extraction cost.
-- **Four graph modes** — Forward traversal, reverse impact analysis, co-citation recommendations, and time-travel. Neo4j needs Cypher for each. HyperStack: one parameter.
-- **Time-travel debugging** — Query the graph at any timestamp. See what your agent knew when it made a bad decision. "Git blame for agent memory."
-- **Zero LLM cost** — Mem0 and Zep charge ~$0.002 per memory operation (LLM extraction). HyperStack: $0.
-- **60-second setup** — One API key, one env var. No Neo4j, no Docker, no OpenSearch.
-- **94% token savings** — ~350 tokens per retrieval vs ~6,000 tokens stuffing full context.
+- **"What blocks deploy?"** → exact typed blockers, not 17 similar tasks
+- **"What breaks if auth changes?"** → full reverse impact chain, instantly
+- **Git-style branching** — fork memory, experiment, diff, merge or discard
+- **Agent identity + trust** — SHA256 fingerprints, trust scores per agent
+- **$0 per operation** — Mem0/Zep charge ~$0.002/op (LLM extraction). This: $0
+- **Works everywhere** — Cursor, Claude Desktop, LangGraph, any MCP client simultaneously
+- **60-second setup** — one API key, one env var
+- **94% token savings** — ~350 tokens per retrieval vs ~6,000 tokens stuffing full context
+- **Self-hostable** — one Docker command, point at your own Postgres
 
 ## Quick Start
 
-1. Sign up at https://cascadeai.dev/hyperstack (free, 10 cards)
-2. Set env vars:
-```bash
-export HYPERSTACK_API_KEY=hs_your_key
-export HYPERSTACK_WORKSPACE=default
+1. Get free API key: https://cascadeai.dev/hyperstack
+2. Add to your MCP config:
+```json
+{
+  "mcpServers": {
+    "hyperstack": {
+      "command": "npx",
+      "args": ["-y", "hyperstack-mcp"],
+      "env": {
+        "HYPERSTACK_API_KEY": "hs_your_key",
+        "HYPERSTACK_WORKSPACE": "my-project",
+        "HYPERSTACK_AGENT_SLUG": "cursor-agent"
+      }
+    }
+  }
+}
 ```
-3. Store a card:
-```bash
-curl -X POST "https://hyperstack-cloud.vercel.app/api/cards?workspace=default" \
-  -H "X-API-Key: $HYPERSTACK_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"slug":"use-clerk","title":"Use Clerk for Auth","body":"Chose Clerk over Auth0","cardType":"decision","links":[{"target":"alice","relation":"decided"}]}'
+3. Register your agent and start storing:
 ```
-
-## The Four Graph Modes
-
-```bash
-# Forward — what does this card connect to?
-GET /api/graph?from=use-clerk&depth=2
-
-# Impact — what depends on this card? What breaks if it changes?
-GET /api/graph?from=use-clerk&mode=impact
-
-# Recommend — what's topically related, even without direct links?
-GET /api/graph?from=use-clerk&mode=recommend
-
-# Time-travel — what did the graph look like at this moment?
-GET /api/graph?from=use-clerk&at=2026-02-15T03:00:00Z
+hs_identify({ agentSlug: "cursor-agent" })
+hs_store({ slug: "use-clerk", title: "Use Clerk for auth",
+  body: "Better DX, lower cost", type: "decision",
+  confidence: 0.95, truthStratum: "confirmed", verifiedBy: "human:deeq" })
 ```
 
-## Features
+## Eight Graph Modes
 
-- **Knowledge graph** with 9 typed relations (owns, decided, triggers, blocks, depends-on, etc.)
-- **Forward traversal** — trace decisions, dependencies, ownership across linked cards
-- **Impact analysis** — reverse traversal, find everything that depends on a card NEW
-- **Recommendations** — co-citation scoring, surface related cards without direct links NEW
-- **Time-travel** — reconstruct the graph at any point in time using version history
-- **Hybrid search** — semantic (pgvector) + keyword matching
-- **Auto-extract** — pattern-based fact extraction from text (no LLM, free)
-- **Visual graph explorer** — interactive canvas with force-directed layout
-- **Team workspaces** — shared memory across multiple agents
+| Mode | Tool | Question answered |
+|------|------|-------------------|
+| Smart | `hs_smart_search` | Ask anything — auto-routes to right mode |
+| Forward | `hs_graph` | What does this card connect to? |
+| Impact | `hs_impact` | What depends on this? What breaks if it changes? |
+| Recommend | `hs_recommend` | What's topically related? |
+| Time-travel | `hs_graph` with `at=` | What did the graph look like at any past moment? |
+| Prune | `hs_prune` | What stale memory is safe to remove? |
+| Branch diff | `hs_diff` | What changed in this branch vs parent? |
+| Trust | `hs_profile` | How trustworthy is this agent? |
 
-## Also Available As
+## Git-Style Memory Branching (NEW in v1.1.0)
 
-- **MCP Server**: `npx hyperstack-mcp`
-- **Python SDK**: `pip install hyperstack-py`
-- **JavaScript SDK**: `npm install hyperstack-core`
+```
+hs_fork({ branchName: "experiment-v2" })      # Fork — parent untouched
+hs_store({ slug: "new-approach", ... })        # Make changes in branch
+hs_diff({ branchWorkspaceId: "clx..." })       # See what changed
+hs_merge({ branchWorkspaceId: "clx...", strategy: "ours" })  # Merge if it worked
+hs_discard({ branchWorkspaceId: "clx..." })    # Or discard if it didn't
+```
+
+## Agent Identity + Trust (NEW in v1.1.0)
+
+```
+hs_identify({ agentSlug: "research-agent" })   # Register with SHA256 fingerprint
+hs_profile({ agentSlug: "research-agent" })    # trustScore: 0.84
+```
+
+## Trust & Provenance
+
+Every card carries epistemic metadata:
+- `confidence` — float 0.0–1.0, writer's self-reported certainty
+- `truthStratum` — `draft` | `hypothesis` | `confirmed`
+- `verifiedBy` — who/what confirmed this card
+- `verifiedAt` — server-set automatically
+- `sourceAgent` — immutable, set on creation
+
+## Full Memory Lifecycle
+
+```
+Store facts      → hs_store (permanent, graph-linked)
+Working memory   → hs_store with ttl= + type=scratchpad (auto-expires)
+Commit outcomes  → hs_commit (what worked, as a decided card)
+Clean up stale   → hs_prune dry=true → inspect → execute
+Protect forever  → hs_store with pinned=true
+Branch safely    → hs_fork → experiment → hs_merge or hs_discard
+```
+
+## How it compares
+
+| | HyperStack | Mem0 | Engram | Cognee |
+|--|---|---|---|---|
+| "What blocks deploy?" | **Exact: typed blockers** | Fuzzy: similar tasks | Generic | Cypher required |
+| Cost per op | **$0** | ~$0.002 LLM | Usage-based | ~$0.002 LLM |
+| Memory branching | **✅ fork/diff/merge** | ❌ | ❌ | ❌ |
+| Agent trust scores | **✅ Built-in** | ❌ | ❌ | ❌ |
+| Provenance layer | **✅ Built-in** | ❌ | ❌ | ❌ |
+| Time-travel | **✅ Any timestamp** | ❌ | ❌ | ❌ |
+| Works in Cursor | **✅ MCP** | ❌ | ❌ | ❌ |
+| Self-hostable | **✅ One Docker command** | ✅ Complex | ✅ | ✅ |
+| Setup | **60 seconds** | 5-10min | 5min | 5min + Neo4j |
+
+## Self-Hosting
+
+```bash
+docker run -d -p 3000:3000 \
+  -e DATABASE_URL=postgresql://... \
+  -e JWT_SECRET=your-secret \
+  -e OPENAI_API_KEY=sk-... \
+  ghcr.io/deeqyaqub1-cmd/hyperstack:latest
+```
+
+Full guide: https://github.com/deeqyaqub1-cmd/hyperstack-core/blob/main/SELF_HOSTING.md
+
+## Available as
+
+- **MCP Server**: `npx hyperstack-mcp` (v1.9.0) — 14 tools
+- **Python SDK**: `pip install hyperstack-py` (v1.4.0)
+- **LangGraph**: `pip install hyperstack-langgraph` (v1.4.0)
+- **JavaScript SDK**: `npm install hyperstack-core` (v1.3.0)
+- **Docker**: `ghcr.io/deeqyaqub1-cmd/hyperstack:latest`
 - **REST API**: https://hyperstack-cloud.vercel.app
 
 ## Pricing
 
-| Plan | Price | Cards | Graph Modes |
-|------|-------|-------|-------------|
-| Free | $0 | 10 | — |
-| Pro | $29/mo | 100 | All 4 modes |
-| Team | $59/mo | 500 | All 4 modes + webhooks |
-| Business | $149/mo | 2,000 | All 4 modes + SSO |
+| Plan | Price | Cards | Features |
+|------|-------|-------|---------|
+| Free | $0 | 10 | Search only |
+| Pro | $9/mo | 100 | All 8 modes + branching + agent identity |
+| Team | $19/mo | 500 | All modes + webhooks + agent tokens |
+| Business | $29/mo | 2,000 | All modes + SSO + 20 members |
+| Self-hosted | $0 | Unlimited | Full feature parity |
 
 ## Links
 
 - Website: https://cascadeai.dev/hyperstack
-- API: https://hyperstack-cloud.vercel.app
+- GitHub: https://github.com/deeqyaqub1-cmd/hyperstack-core
 - Discord: https://discord.gg/tdnXaV6e
