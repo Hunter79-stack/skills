@@ -1,0 +1,11 @@
+{
+  "owner": "zororaka00",
+  "slug": "r2-cli",
+  "displayName": "Cloudflare R2 CLI",
+  "latest": {
+    "version": "1.0.6",
+    "publishedAt": 1771659057692,
+    "commit": null
+  },
+  "history": []
+}
