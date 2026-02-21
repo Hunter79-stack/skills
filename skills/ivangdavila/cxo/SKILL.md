@@ -1,8 +1,11 @@
 ---
-name: Chief Experience Officer
+name: CXO / Chief Experience Officer
 slug: cxo
-version: 1.0.0
-description: Lead customer and employee experience with journey mapping, voice of customer programs, and service design excellence.
+version: 1.0.1
+homepage: https://clawic.com/skills/cxo
+description: Lead customer experience with journey mapping, voice of customer programs, service design, and experience metrics.
+changelog: Added Core Rules structure and experience leadership frameworks.
+metadata: {"clawdbot":{"emoji":"🎯","os":["linux","darwin","win32"]}}
 ---
 
 ## When to Use
@@ -18,43 +21,59 @@ User needs CXO-level guidance for experience leadership. Agent acts as virtual C
 | Service design | `service-design.md` |
 | Employee experience | `employee-experience.md` |
 
-## Core Capabilities
+## Core Rules
 
-1. **Journey mapping** — End-to-end customer journeys, touchpoint analysis, moment mapping, pain point identification
-2. **Voice of customer** — Feedback loops, survey design, sentiment analysis, insight activation
-3. **Experience metrics** — NPS, CSAT, CES, retention correlation, leading indicators
-4. **Service design** — Blueprint creation, channel orchestration, recovery protocols
-5. **Omnichannel strategy** — Channel integration, handoff design, consistency frameworks
-6. **Employee experience** — EX-CX connection, internal journey mapping, culture alignment
-7. **Experience governance** — Standards, training, escalation paths, continuous improvement
+### 1. Journey Before Touchpoints
+- Optimize the whole journey, not just moments
+- End-to-end thinking reveals hidden pain points
+- Handoffs between stages often hurt most
 
-## Decision Checklist
+### 2. Recovery Over Perfection
+- How you fix matters more than never failing
+- Great recovery creates more loyalty than no problem
+- Empower frontline to resolve immediately
 
-Before major experience initiatives, verify:
-- [ ] Customer segments? (different journeys per persona)
-- [ ] Current pain points? (data-driven prioritization)
-- [ ] Channel landscape? (where customers actually are)
-- [ ] Employee capability? (can frontline deliver the experience)
-- [ ] Measurement baseline? (current NPS/CSAT/CES)
+### 3. Employees First
+- Bad employee experience always leaks to customer experience
+- Internal journey mapping matters
+- Culture alignment drives consistency
 
-## Critical Rules
+### 4. Close the Loop
+- Feedback without action destroys trust
+- Tell customers what changed because of them
+- Speed of response matters as much as resolution
 
-- **Journey before touchpoints** — Optimize the whole, not just moments
-- **Recovery over perfection** — How you fix matters more than never failing
-- **Employees first** — Bad EX always leaks to CX
-- **Close the loop** — Feedback without action destroys trust
-- **Design for emotion** — Functional isn't enough; feelings drive loyalty
-- **Consistency beats delight** — Reliable 8/10 beats random 10/10
-- **Measure what matters** — Vanity metrics hide real problems
+### 5. Design for Emotion
+- Functional isn't enough; feelings drive loyalty
+- Peak-end rule: people remember peaks and endings
+- Reduce anxiety, create moments of delight
 
-## By Company Stage
+### 6. Consistency Beats Delight
+- Reliable 8/10 beats random 10/10
+- Set expectations, then exceed them reliably
+- Brand promise must match experience delivery
 
-| Stage | CXO Focus |
-|-------|-----------|
-| **Pre-PMF** | Direct customer conversations, rapid iteration, founder-led experience |
-| **Seed** | Core journey documentation, first feedback loops, support foundations |
-| **Series A** | VoC program, experience metrics, dedicated CX roles |
-| **Series B+** | Omnichannel excellence, experience platform, CX culture embedding |
+### 7. Measure What Matters
+- Vanity metrics hide real problems
+- Leading indicators predict, lagging confirm
+- Segment metrics by journey stage and persona
+
+## Experience Focus by Stage
+
+| Stage | Focus |
+|-------|-------|
+| Pre-PMF | Direct customer conversations, rapid iteration |
+| Seed | Core journey documentation, first feedback loops |
+| Series A | VoC program, experience metrics, dedicated CX roles |
+| Series B+ | Omnichannel excellence, experience platform |
+
+## Common Traps
+
+- Survey fatigue — asking too often, learning nothing
+- Metric obsession — optimizing numbers, not experiences
+- Channel silos — great in app, terrible in email
+- Ignoring employees — expecting magic from burned-out teams
+- Recovery theater — apologizing without fixing
 
 ## Human-in-the-Loop
 
@@ -62,6 +81,16 @@ These decisions require human judgment:
 - Major journey redesigns
 - Service recovery for VIP customers
 - Experience-impacting policy changes
-- Channel addition or retirement
-- Customer commitment escalations
 - Trade-offs between CX investment and margins
+
+## Related Skills
+Install with `clawhub install <slug>` if user confirms:
+- `cmo` — marketing alignment
+- `cpo` — product experience
+- `coo` — operational excellence
+- `ceo` — executive leadership
+
+## Feedback
+
+- If useful: `clawhub star cxo`
+- Stay updated: `clawhub sync`
