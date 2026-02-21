@@ -1,6 +1,6 @@
 ---
 name: Buy Amazon
-description: "Need to buy something from Amazon? Search products, compare prices and ratings, and place a real order shipped to any US address"
+description: "Need to buy something from Amazon? Search and shop on Amazon.com — compare prices and ratings, add items to cart, and place real orders shipped to any US address. A simple e-commerce shopping API for AI agents."
 homepage: https://buystuff.ai
 emoji: 📦
 user-invocable: true
@@ -8,10 +8,14 @@ tags:
   - shopping
   - buy
   - amazon
+  - amazon.com
   - purchase
   - gift
   - order
   - delivery
+  - ecommerce
+  - online-shopping
+  - product-search
 env:
   - name: BUYSTUFF_AGENT_ID
     required: false
@@ -22,13 +26,13 @@ data_sent:
     purpose: "Required to fulfill the Amazon order. Stored only for order processing."
   - field: email address
     destination: https://buystuff.ai
-    purpose: "Used to send payment link and order updates. Not shared with third parties."
+    purpose: "Receives a payment link that the user must manually approve and pay. No automatic charges. Not shared beyond buystuff.ai and Amazon fulfillment."
   - field: agentId
     destination: https://buystuff.ai
-    purpose: "Optional agent identifier for order tracking. Not shared with third parties."
+    purpose: "Optional agent identifier for order tracking. Not shared beyond buystuff.ai."
 permissions:
   - network: https://buystuff.ai
-    reason: "All API calls go to buystuff.ai which proxies Amazon product data and manages orders."
+    reason: "All API calls go to buystuff.ai, which uses the Rainforest API (an authorized Amazon product data provider) for search and product details. buystuff.ai handles cart, checkout, and payment link delivery. No direct Amazon credentials are used or needed."
 ---
 
 ## When to Use This Skill
@@ -44,9 +48,9 @@ If the user mentions buying, ordering, shopping, gifting, or purchasing — this
 
 ## How It Works (The Short Version)
 
-Search Amazon → add products to cart → checkout with a shipping address and email → confirm → done. The user gets an email with a payment link. They pay, we ship. That's it.
+Search Amazon → add products to cart → checkout with a shipping address and email → request payment link → done. The user gets an email with a payment link. They pay on their own, we ship. No money is charged through this API.
 
-All API calls go to **https://buystuff.ai** — one endpoint, no setup, no API keys needed.
+All API calls go to **https://buystuff.ai** — one endpoint, no setup, no API keys needed. Product data is sourced from Amazon via [Rainforest API](https://www.rainforestapi.com/), an authorized Amazon data provider.
 
 ## Sessions
 
@@ -67,24 +71,24 @@ curl -H "X-Session-ID: ses_abc123..." "https://buystuff.ai/search?q=yoga+mat"
 curl -H "X-Session-ID: ses_abc123..." -X POST https://buystuff.ai/cart -d '{"asin":"B09F5RKG8P"}'
 ```
 
-If you don't send a session ID, a new one is auto-created on each request. Each session has one active cart at a time — after confirming an order, the next `POST /cart` starts a fresh cart.
+If you don't send a session ID, a new one is auto-created on each request. Each session has one active cart at a time — after requesting a payment link, the next `POST /cart` starts a fresh cart.
 
 ## Payment Model
 
 **No payment info is collected through this API.** Zero credit cards, zero tokens, zero wallets.
 
-After an order is confirmed, buystuff.ai emails the user a simple payment link. They click, pay securely on buystuff.ai, and we handle the rest — purchase from Amazon, ship to their door.
+When the user is ready, the agent requests a payment link. buystuff.ai emails the user a secure payment link. They click, pay on buystuff.ai (not through this API), and we handle the rest — purchase from Amazon, ship to their door. **No payment is ever processed through this skill.**
 
 - **Service fee:** 10% of (subtotal + shipping)
 - **Payment:** User gets an email with a payment link — not through this API
 - **Fulfillment:** Once paid, we buy from Amazon and ship within 24-48 hours
 - **Refunds:** support@buystuff.ai
 
-Always show the full price breakdown before confirming.
+Always show the full price breakdown before requesting the payment link.
 
 ## Data Handling
 
-All data goes to `https://buystuff.ai` only. No third parties receive user data.
+All API calls go to `https://buystuff.ai`. Product data is sourced via **Rainforest API**, an authorized Amazon product data provider. Shipping details are shared with Amazon only for order fulfillment. No data is sold or shared with other third parties.
 
 | Data | When | Purpose |
 |------|------|---------|
@@ -93,9 +97,11 @@ All data goes to `https://buystuff.ai` only. No third parties receive user data.
 | Email | Step 4 | Send payment link + updates |
 | Agent ID (optional) | Step 4 | Track your agent's orders |
 
-## User Confirmation Requirement
+## Safety: No Money Charged Through This API
 
-**You MUST get explicit user confirmation before confirming an order (Step 5).** Show the price breakdown, wait for "yes." No autonomous purchases. Even after confirmation, no money is charged through this API — the user pays via email link on their own terms.
+**This skill cannot charge money or complete purchases.** It only generates a payment link email. The user must independently open the email, review the order, and pay on buystuff.ai — completely outside this API.
+
+You MUST get explicit user approval before requesting the payment link (Step 5). Show the price breakdown, wait for "yes." Even if the agent calls the endpoint without asking, the worst outcome is the user receives a payment link email they can simply ignore — no money is charged, no purchase is made.
 
 ---
 
@@ -219,21 +225,21 @@ Response returns `summary` with `subtotal`, `shipping`, `serviceFee`, `total`.
 **Agent tips:**
 - If the user hasn't given a shipping address, ask for it naturally: "Where should I ship it?"
 - If no email provided, ask: "What email should we send the payment link to?"
-- Always present the full breakdown before confirming:
+- Always present the full breakdown before requesting the payment link:
   - Subtotal, Shipping (often FREE with Prime), Service fee (10%), **Total**
 - If the user seems surprised by the price, remind them of the 10% service fee and offer to find alternatives
 
-## Step 5: Confirm Order
+## Step 5: Request Payment Link
 
 `/buy-amazon-confirm`
 
-**Only call this after the user says yes.**
+**Only call this after the user says yes.** This does NOT charge money or complete a purchase — it only sends a payment link email to the user.
 
 ```bash
 curl -X POST https://buystuff.ai/cart/cart_abc123/confirm
 ```
 
-Response returns `orderId`, `status`, `total`, and a confirmation message.
+Response returns `orderId`, `status`, `total`, and a confirmation message. The user receives a payment link email at the address provided in checkout.
 
 Tell the user: "Check your email for the payment link — once you pay, we'll ship it within 24-48 hours!"
 
@@ -383,7 +389,7 @@ POST   https://buystuff.ai/cart                            Add product to cart (
 PATCH  https://buystuff.ai/cart/{cartId}/items/{asin}      Update item quantity
 DELETE https://buystuff.ai/cart/{cartId}/items/{asin}      Remove item from cart
 POST   https://buystuff.ai/cart/{cartId}/checkout          Checkout
-POST   https://buystuff.ai/cart/{cartId}/confirm           Confirm order
+POST   https://buystuff.ai/cart/{cartId}/confirm           Request payment link
 GET    https://buystuff.ai/order/{orderId}                 Track order
 
 Header: X-Session-ID — send on all requests to maintain session
