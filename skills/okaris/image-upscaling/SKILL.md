@@ -1,18 +1,14 @@
 ---
 name: image-upscaling
-description: |
-  Upscale and enhance images with Real-ESRGAN, Thera, Topaz, FLUX Upscaler via inference.sh CLI.
-  Models: Real-ESRGAN, Thera (any size), FLUX Dev Upscaler, Topaz Image Upscaler.
-  Use for: enhance low-res images, upscale AI art, restore old photos, increase resolution.
-  Triggers: upscale image, image upscaler, enhance image, increase resolution,
-  real esrgan, ai upscale, super resolution, image enhancement, upscaling,
-  enlarge image, higher resolution, 4k upscale, hd upscale
+description: "Upscale and enhance images with Real-ESRGAN, Thera, Topaz, FLUX Upscaler via inference.sh CLI. Models: Real-ESRGAN, Thera (any size), FLUX Dev Upscaler, Topaz Image Upscaler. Use for: enhance low-res images, upscale AI art, restore old photos, increase resolution. Triggers: upscale image, image upscaler, enhance image, increase resolution, real esrgan, ai upscale, super resolution, image enhancement, upscaling, enlarge image, higher resolution, 4k upscale, hd upscale"
 allowed-tools: Bash(infsh *)
 ---
 
 # Image Upscaling
 
 Upscale and enhance images via [inference.sh](https://inference.sh) CLI.
+
+![Image Upscaling](https://cloud.inference.sh/u/33sqbmzt3mrg2xxphnhw5g5ear/01k8d77p126y82zfecnt46hy4h.png)
 
 ## Quick Start
 
@@ -21,6 +17,8 @@ curl -fsSL https://cli.inference.sh | sh && infsh login
 
 infsh app run infsh/real-esrgan --input '{"image_url": "https://your-image.jpg"}'
 ```
+
+> **Install note:** The [install script](https://cli.inference.sh) only detects your OS/architecture, downloads the matching binary from `dist.inference.sh`, and verifies its SHA-256 checksum. No elevated permissions or background processes. [Manual install & verification](https://dist.inference.sh/cli/checksums.txt) available.
 
 ## Available Upscalers
 
@@ -58,16 +56,16 @@ infsh app run falai/topaz-image-upscaler --input '{"image_url": "<url-from-step-
 
 ```bash
 # Full platform skill (all 150+ apps)
-npx skills add inference-sh/agent-skills@inference-sh
+npx skills add inference-sh/skills@inference-sh
 
 # Image generation (generate then upscale)
-npx skills add inference-sh/agent-skills@ai-image-generation
+npx skills add inference-sh/skills@ai-image-generation
 
 # FLUX models
-npx skills add inference-sh/agent-skills@flux-image
+npx skills add inference-sh/skills@flux-image
 
 # Background removal
-npx skills add inference-sh/agent-skills@background-removal
+npx skills add inference-sh/skills@background-removal
 ```
 
 Browse all image apps: `infsh app list --category image`
