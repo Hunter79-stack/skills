@@ -55,7 +55,70 @@ Works with person names ("Jesse Shrader") AND company/org names ("Amboss", "Bloo
 
 ---
 
-## Retrieve: Search the Corpus
+## Search Strategy: Choosing the Right Endpoint
+
+Before searching, **triage the request type**. The API has three search layers — use the most specific one first:
+
+| Request Type | Best Method | Endpoint(s) | Example |
+|---|---|---|---|
+| **Specific episode by title/number** | Episode title search | 1. `/corpus/feeds?search=<podcast>`<br>2. `/corpus/feeds/:feedId/episodes?search=<title>` | "Find NAG25: Berlin" |
+| **Topic within known episode** | Chapter keywords | 1. Get episode guid<br>2. `/corpus/episodes/:guid/chapters`<br>3. Filter keywords client-side | "Privacy topics in NAG25" |
+| **All episodes from feed** | List episodes | `/corpus/feeds/:feedId/episodes` (paginated) | "All Bitcoin Park episodes" |
+| **Topic across corpus** | Semantic search | `/search-quotes` with optional filters | "What do podcasters say about tariffs?" |
+| **Hybrid** (episode + topic) | Episode search → chapters → semantic fallback | Try title/chapters first, semantic if needed | "Zaprite episode discussing payments" |
+
+### Why This Order Matters
+
+- **Episode title search** is instant and exact (no token cost)
+- **Chapters** give structured navigation within episodes — headlines, keywords, timestamps
+- **Semantic search** is powerful but searches 1.9M paragraphs — slower, costs tokens
+
+**When in doubt:** If a user mentions an episode title/number, try title search first. Only fall back to semantic if title search fails.
+
+### Episode Title Search
+
+Find episodes by name/number across the corpus:
+
+```bash
+# Step 1: Find the feed
+curl -s "API_BASE/api/corpus/feeds?search=News+and+Guidance"
+# Returns: feedId (e.g., 7648986)
+
+# Step 2: Search episode titles within that feed
+curl -s "API_BASE/api/corpus/feeds/7648986/episodes?search=Berlin&limit=20"
+```
+
+**No auth required** for corpus browsing. Returns:
+- `title` — episode name
+- `guid` — episode identifier (use for chapters and clip search)
+- `publishedDate`, `duration`, `creator`, `imageUrl`
+
+Search is fuzzy — "Berlin" matches "NAG25: Berlin, Germany".
+
+### Chapter Search
+
+Get structured topic navigation within an episode:
+
+```bash
+curl -s "API_BASE/api/corpus/episodes/EPISODE_GUID/chapters"
+```
+
+Returns chapters with:
+- `headline` — chapter title
+- `keywords` — array of topic tags (e.g., `["privacy tools", "Lightning Network"]`)
+- `summary` — brief description
+- `startTime`, `endTime`, `duration` — timestamps for clip generation
+- `pineconeId` — use for semantic search or session items
+
+**Use case:** "What privacy topics are in NAG25?" → get chapters → filter by keywords like "privacy", "encryption", "surveillance".
+
+**Limitation:** No corpus-wide chapter search yet (only episode-level). To search chapters across all episodes, you'd need to iterate through episodes first.
+
+---
+
+## Retrieve: Semantic Search
+
+When title/chapter search doesn't fit, use semantic search across all transcribed content:
 
 ```bash
 curl -s -X POST \
@@ -230,32 +293,35 @@ Use corpus exploration to answer:
 
 ## Ingestion: Add New Podcasts
 
-If a podcast isn't in the corpus yet, ingest it on demand from any RSS feed.
+If a podcast isn't in the corpus yet, ingest it on demand from any RSS feed. All endpoints proxied through the Jamie API for security.
 
-### Step 1: Find the Feed
+### Step 1: Search for the Podcast
 ```bash
-curl -s -X POST "https://rss-extractor-app-yufbq.ondigitalocean.app/searchFeeds" \
+curl -s -X POST "https://www.pullthatupjamie.ai/api/rss/searchFeeds" \
   -H "Content-Type: application/json" \
   -d '{"podcastName": "Podcast Name"}'
 ```
 Returns `data.feeds[]` with `id` (feedId), `title`, `url` (RSS URL).
 
-### Step 2: Parse Episodes from RSS
+### Step 2: Get Feed Episodes
 ```bash
-curl -s "RSS_FEED_URL" | python3 -c "
-import sys, xml.etree.ElementTree as ET
-tree = ET.parse(sys.stdin)
-for item in tree.findall('.//item'):
-    title = item.find('title').text if item.find('title') is not None else '?'
-    guid = item.find('guid').text if item.find('guid') is not None else '?'
-    date = item.find('pubDate').text if item.find('pubDate') is not None else '?'
-    print(f'{date} | {title} | {guid}')
-"
+curl -s -X POST "https://www.pullthatupjamie.ai/api/rss/getFeed" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "feedUrl": "https://feeds.example.com/feed.xml",
+    "feedId": "12345",
+    "limit": 50,
+    "skipCleanGuid": true
+  }'
 ```
-Also extract `feedGuid` from `<podcast:guid>` tag.
+Returns:
+- `episodes.feedInfo` — feed metadata (feedGuid, feedTitle, etc.)
+- `episodes.episodes[]` — array of episodes with `episodeGUID`, `itemTitle`, `publishedDate`, `enclosureUrl`
+
+Extract `feedGuid` from `feedInfo.feedGuid`.
 
 ### Step 3: Confirm with User
-**Always show the episode list and get approval before ingesting.** Never auto-submit.
+**Always show the episode list and get approval before ingesting.** Never auto-submit. Present episode titles and dates for review.
 
 ### Step 4: Submit Ingestion
 ```bash
@@ -269,17 +335,19 @@ curl -s -X POST \
       {"guid": "episode-guid", "feedGuid": "feed-guid", "feedId": 12345}
     ]
   }' \
-  "API_BASE/api/on-demand/submitOnDemandRun"
+  "https://www.pullthatupjamie.ai/api/on-demand/submitOnDemandRun"
 ```
 - `parameters` must be `{}` (required but empty)
 - Response: `jobId` at top level
+- `guid` comes from `episodeGUID` field in getFeed response
+- `feedGuid` comes from `feedInfo.feedGuid` field
 
 ### Step 5: Poll Status
 ```bash
-curl -s "API_BASE/api/on-demand/getOnDemandJobStatus/JOB_ID" \
+curl -s "https://www.pullthatupjamie.ai/api/on-demand/getOnDemandJobStatus/JOB_ID" \
   -H "Authorization: PREIMAGE:PAYMENT_HASH"
 ```
-Poll every 30-60 seconds. Typical: 8 episodes in ~1 minute.
+Poll every 30-60 seconds. Status: `pending` → `complete` or `failed`. Typical: 8 episodes in ~1 minute.
 
 ---
 
@@ -307,7 +375,7 @@ Browse `GET /api/corpus/feeds` for the full list.
 - Always include `items` array with metadata in session creation
 - Share endpoint: `nodes` is optional (backend auto-layouts from embeddings if omitted)
 - `shareLink` = `pineconeId` (interchangeable)
-- RSS extractor `getFeed` is unreliable — curl RSS directly
+- RSS endpoints: Always use `/api/rss/*` (proxied through Jamie API for security)
 - `submitOnDemandRun` needs `"parameters": {}` even if empty
 - Always confirm episodes with user before ingesting
 - If results look wrong, check the echoed `query` field in the response — it should match your input exactly

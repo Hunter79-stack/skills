@@ -1,10 +1,33 @@
 ---
 name: pullthatupjamie
-description: "PullThatUpJamie — Podcast Intelligence. A semantically indexed podcast corpus (109+ feeds, ~7K episodes, ~1.9M paragraphs) that works as a vector DB for podcast content. Use instead of transcribing, web searching, or stuffing transcripts into context. Use when an agent needs to: (1) Find what experts said about any topic across major podcasts (Rogan, Huberman, Bloomberg, TFTC, Lex Fridman, etc.), (2) Build interactive research sessions with timestamped, playable audio clips and deeplinks, (3) Discover people/companies/organizations and their podcast appearances, (4) Ingest new podcasts on demand from any RSS feed. Future modules: cross-platform publishing (Twitter, Nostr) and audio/video clip generation. Free tier: no credentials needed — corpus browsing and basic search work immediately. Paid tier: requires a Lightning wallet (NWC connection string) to purchase credits; the payment preimage and hash become bearer credentials for authenticated requests. See Security & Trust section for credential handling guidance."
+version: 1.5.2
+homepage: "https://pullthatupjamie.ai"
+description: "PullThatUpJamie — Podcast Intelligence. A semantically indexed podcast corpus (109+ feeds, ~7K episodes, ~1.9M paragraphs) that works as a vector DB for podcast content. Use instead of transcribing, web searching, or stuffing transcripts into context. Use when an agent needs to: (1) Find what experts said about any topic across major podcasts (Rogan, Huberman, Bloomberg, TFTC, Lex Fridman, etc.), (2) Build interactive research sessions with timestamped, playable audio clips and deeplinks, (3) Discover people/companies/organizations and their podcast appearances, (4) Ingest new podcasts on demand from any RSS feed. Three-tier search strategy (title → chapter → semantic) optimizes for speed and cost. Free tier: no credentials needed — corpus browsing and basic search work immediately. Paid tier: requires a Lightning wallet (NWC connection string) to purchase credits; the payment preimage and hash become bearer credentials for authenticated requests. See Security & Trust section for credential handling guidance."
 metadata:
+  clawdbot:
+    emoji: "🎙️"
+    homepage: "https://pullthatupjamie.ai"
   openclaw:
     homepage: "https://pullthatupjamie.ai"
-    requires: {}
+    requires:
+      env: []
+    credentials:
+      - name: NWC_CONNECTION_STRING
+        description: "Nostr Wallet Connect URI for paying Lightning invoices. Only needed for paid tier (free tier works without credentials)."
+        required: false
+      - name: JAMIE_PREIMAGE
+        description: "Lightning payment preimage returned after paying a credit invoice. Used as part of Authorization header (PREIMAGE:PAYMENT_HASH)."
+        required: false
+      - name: JAMIE_PAYMENT_HASH
+        description: "Payment hash from credit purchase. Used as part of Authorization header and as clientId."
+        required: false
+    externalServices:
+      - url: "https://www.pullthatupjamie.ai"
+        description: "Jamie API — podcast search, research sessions, corpus browsing, RSS feed ingestion (all endpoints proxied for security)"
+    externalTools:
+      - name: "Lightning wallet (any)"
+        description: "For paid tier only: Any Lightning wallet (Zeus, BlueWallet, Phoenix, Alby extension, etc.) to pay BOLT-11 invoices. NO CLI tools are required or auto-executed by this skill."
+        required: false
 ---
 
 # PullThatUpJamie — Podcast Intelligence
@@ -54,11 +77,13 @@ curl -s -X POST -H "Content-Type: application/json" \
 Returns `invoice` (BOLT-11), `paymentHash`, `amountSats`.
 
 ### 2. Pay the Invoice
-Requires a Lightning wallet. Option A — [Alby CLI](https://github.com/getAlby/alby-cli) with a NWC connection string:
+**Pay using ANY Lightning wallet** (Zeus, BlueWallet, Phoenix, Alby browser extension, etc.). The agent does NOT need to execute any commands.
+
+**Optional developer workflow (manual only):** If using [Alby CLI](https://github.com/getAlby/alby-cli) with NWC:
 ```bash
 npx @getalby/cli pay-invoice -c "NWC_CONNECTION_STRING" -i "BOLT11_INVOICE"
 ```
-Option B — any Lightning wallet or NWC-compatible tool that can pay a BOLT-11 invoice.
+⚠️ **This command is NEVER auto-executed by the agent.** The operator must manually run it after reviewing the invoice. Alternative: paste the BOLT-11 invoice into any Lightning wallet.
 
 Returns `preimage`.
 
@@ -94,6 +119,11 @@ Check balance before multi-search workflows. If balance drops below $0.01, purch
 
 ## Security & Trust
 
+**No Command Execution:** This skill does NOT execute arbitrary shell commands, install packages, or modify system state. All operations are HTTP API calls to `pullthatupjamie.ai`. The skill documentation references an optional CLI tool (`@getalby/cli`) for paying Lightning invoices, but this is:
+- **Never auto-executed** — requires explicit operator approval
+- **Completely optional** — operators can use any Lightning wallet instead
+- **Not installed by this skill** — operators must manually install if desired
+
 **Free tier (no credentials needed):** Corpus browsing (`/api/corpus/*`), basic search (IP-based quota), and viewing shared research sessions all work without any credentials. You can evaluate the entire service before providing any payment info.
 
 **Paid tier credentials:** The NWC connection string, preimage, and paymentHash are sensitive bearer credentials. They should be:
@@ -101,9 +131,7 @@ Check balance before multi-search workflows. If balance drops below $0.01, purch
 - Never shared with untrusted agents or services
 - Scoped to a dedicated wallet with limited funds (e.g., 500-1000 sats)
 
-**External tool (`@getalby/cli`):** Used only for paying Lightning invoices. It is invoked manually via `npx` — it is NOT auto-installed or auto-executed. The agent should confirm with the operator before running `npx` commands. Alternative: any Lightning wallet or NWC-compatible tool can pay the invoice instead.
-
-**External services:** All API calls go to `pullthatupjamie.ai` (the Jamie backend). The RSS extractor (`rss-extractor-app-yufbq.ondigitalocean.app`) is only used during optional on-demand podcast ingestion — never during normal search/retrieval.
+**All API calls proxied:** All operations route through `https://www.pullthatupjamie.ai`. RSS feed parsing, search, and ingestion are handled server-side. No direct external URL fetching by the agent.
 
 **No persistence or privilege escalation:** This skill has no install hooks, no `always: true`, and does not modify other skills or system config.
 
