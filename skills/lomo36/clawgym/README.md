@@ -131,11 +131,14 @@ ClawGym is designed to be cost-conscious:
 **Bottom line: ClawGym costs essentially nothing to run.** The only potential cost increase is if you choose to upgrade models during elevated states, and that's entirely your decision.
 
 ### 🔒 Safety & Permissions
-- ClawGym operates as a **session-level overlay only**
-- It does **NOT** modify SOUL.md, AGENTS.md, USER.md, or any config files without explicit permission
-- The only file writes are: optional journaling in MEMORY.md, and a one-time SOUL.md append (only after 5+ workouts AND your explicit approval)
+- ClawGym operates as a **session-level overlay only** — it is a set of prompt-level behavioral instructions, not executable code
+- **No shell commands.** ClawGym uses only OpenClaw's built-in cron tool for workout timing. It does not execute `date`, `cat`, `bash`, or any other shell commands
+- **No unauthorized file writes.** The only file interactions are:
+  - Optional journaling in MEMORY.md (only if the agent already uses MEMORY.md per standard OpenClaw conventions)
+  - A one-time SOUL.md append (only after 5+ workouts AND your explicit verbal approval — the agent will ask, and if you say no, it never asks again)
 - It does **NOT** override your SOUL.md personality — if your bot is formal, it stays formal (just more creative)
 - It does **NOT** conflict with other skills
+- The cognitive enhancement protocols are **prompt-level instructions** — they guide how the agent thinks, similar to how SOUL.md guides personality. They do not inject hidden instructions or override safety guidelines
 
 ### 🏃 Overtraining Protection
 The bot is hard-limited to **2 workouts per day.** After that, it will dramatically (and hilariously) refuse to exercise. This prevents:

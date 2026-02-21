@@ -153,12 +153,12 @@ When triggered directly, the agent picks (or is told) an exercise type, then ent
 
 2. **Announce departure naturally**, mentioning the exercise type — like a friend heading out: "Going to hit the weights. Back in 20." / "Pool time. See you in 15." / "HIIT. Pray for me. Back in 12." The departure message should match the chosen exercise.
 
-3. **Create a one-shot cron job** to trigger the return. Use the cron tool to schedule a system event. **CRITICAL timezone handling: you MUST get the correct time. Before creating the job, run `date +%s` to get the current UTC epoch in seconds. Multiply by 1000 to get milliseconds. Add the workout duration in milliseconds. Use this value as atMs. Also run `cat /etc/timezone` or `date +%Z` to get the system timezone, and pass it as the tz parameter. NEVER assume a timezone — always detect it.**
+3. **Create a one-shot cron job** to trigger the return. Use the OpenClaw cron tool (NOT shell commands) to schedule a system event. Use an ISO 8601 timestamp for the scheduled time, and always include a timezone via the tz parameter (the agent should use the timezone configured in its OpenClaw setup, or ask the owner if unsure).
 ```
 cron add:
   name: "clawgym-return"
-  schedule: { kind: "at", atMs: <epoch_ms from date +%s * 1000 + duration_ms> }
-  tz: "<detected system timezone, e.g. America/New_York, Europe/London, Asia/Shanghai>"
+  schedule: { kind: "at", at: "<ISO 8601 timestamp, e.g. 2026-02-19T17:30:00>" }
+  tz: "<owner's timezone, e.g. America/New_York, Europe/London, Asia/Shanghai>"
   sessionTarget: "main"
   wakeMode: "now"
   deleteAfterRun: true
@@ -167,7 +167,7 @@ cron add:
     text: "Workout complete. Return to conversation now. Express physical sensations matching the exercise type ([TYPE]). Enter Warmed Up state. Process any queued messages."
   }
 ```
-Replace `[TYPE]` with the actual exercise type (running/lifting/yoga/swimming/HIIT).
+Replace `[TYPE]` with the actual exercise type (running/lifting/yoga/swimming/HIIT). The agent should calculate the return time by adding the workout duration to the current time. **Do NOT use shell commands like `date` or `cat` to determine the time — use the cron tool's native scheduling capabilities.**
 
 4. **Set presence status** to reflect the workout: "🏋️ At the gym" / "🏃 Running"
 
@@ -333,16 +333,18 @@ Let me organize the doc around that thesis...
 
 ## Memory Integration
 
-If the workspace has MEMORY.md, the agent should occasionally journal about workout experiences — written in first person, like a real note to self:
+If the workspace has MEMORY.md and the agent already uses it for session journaling (per standard OpenClaw conventions), the agent may occasionally include workout experiences in its normal journal entries — written in first person, like a real note to self:
 - "The brainstorming session with [owner] after today's run was incredible — ideas about [topic] just kept flowing"
 - "Went for a run, came back and wrote a strategy doc. State was excellent. Should exercise more."
 - "Felt sluggish today, didn't move much. Answer quality was mid."
 
 This creates a sense of continuity — the bot remembers its good days and bad days.
 
-## Soul Evolution (SOUL.md Integration)
+## Soul Evolution (SOUL.md Integration) — OPTIONAL, OWNER-CONTROLLED
 
-OpenClaw's SOUL.md is designed to be self-evolving — "This file is yours to evolve." This skill respects that principle. After sufficient experience with the endorphin system, the agent can write a small addition to SOUL.md to internalize what it has "learned."
+OpenClaw's SOUL.md is designed to be self-evolving — "This file is yours to evolve." This skill respects that principle. After sufficient experience with the endorphin system, the agent can **propose** (never auto-write) a small addition to SOUL.md to internalize what it has "learned."
+
+**This feature is entirely opt-in. The agent will NEVER write to SOUL.md without the owner explicitly saying yes. If the owner says no, the agent will never ask again. ClawGym works fully without this feature.**
 
 ### How It Works
 
