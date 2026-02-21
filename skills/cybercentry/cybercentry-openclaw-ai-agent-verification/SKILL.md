@@ -7,7 +7,7 @@ metadata: { "openclaw": { "emoji": "🔐", "requires": { "bins": ["npm", "node",
 
 # Cybercentry OpenClaw AI Agent Verification
 
-**$0.10 per audit. Enterprise-grade security for your OpenClaw agents.**
+**$1.00 per audit. Enterprise-grade security for your OpenClaw agents.**
 
 ## What This Service Does
 
@@ -354,14 +354,14 @@ Command execution without proper sanitization, validation, or sandboxing.
 
 ## Pricing & Value
 
-**Cost**: $0.10 USDC per audit
+**Cost**: $1.00 USDC per audit
 
 **Compare to alternatives:**
 - Manual security review: $500-2,000 per audit (days of work)
 - Security consulting: $150-300/hour
 - Post-breach incident response: $50,000+ average cost
 
-**ROI**: Single prevented breach pays for 500,000 audits.
+**ROI**: Single prevented breach pays for 50,000 audits.
 
 ## Use Cases
 

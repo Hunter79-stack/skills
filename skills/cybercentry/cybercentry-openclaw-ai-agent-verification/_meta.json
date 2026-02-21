@@ -3,11 +3,16 @@
   "slug": "cybercentry-openclaw-ai-agent-verification",
   "displayName": "Cybercentry OpenClaw AI Agent Verification",
   "latest": {
-    "version": "1.0.3",
-    "publishedAt": 1771152532075,
-    "commit": "https://github.com/openclaw/skills/commit/73ba8713a2723a44370f76b1944922bae0db9f6d"
+    "version": "1.0.4",
+    "publishedAt": 1771598735710,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.3",
+      "publishedAt": 1771152532075,
+      "commit": "https://github.com/openclaw/skills/commit/73ba8713a2723a44370f76b1944922bae0db9f6d"
+    },
     {
       "version": "1.0.2",
       "publishedAt": 1771068299484,
