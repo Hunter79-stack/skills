@@ -24,12 +24,10 @@ Ask the user how they'd like to provide their credentials:
 > "I need your Bring! email and password. You can either share them here in chat (I'll write them to a config file and never mention them again), or if you prefer to keep them out of the chat entirely, I can give you a terminal command to enter them privately. Which do you prefer?"
 
 **Option A — via chat (convenient):**
-User shares email + password in chat. Write them directly to the config file and do not echo them back:
+User shares email + password in chat. Write them directly to the config file using `jq` for safe JSON encoding (prevents injection via special characters) and do not echo them back:
 ```bash
 mkdir -p ~/.config/bring
-cat > ~/.config/bring/credentials.json << 'EOF'
-{"email": "USER_EMAIL", "password": "USER_PASSWORD"}
-EOF
+jq -n --arg e "USER_EMAIL" --arg p "USER_PASSWORD" '{email: $e, password: $p}' > ~/.config/bring/credentials.json
 chmod 600 ~/.config/bring/credentials.json
 ```
 After writing, confirm: "Done — credentials saved securely. I won't repeat them."
@@ -38,9 +36,9 @@ After writing, confirm: "Done — credentials saved securely. I won't repeat the
 Give the user this command to run in their own terminal. Credentials never appear in chat:
 ```bash
 mkdir -p ~/.config/bring
-read -rsp "Bring! Email: " BEMAIL && echo
+read -rp "Bring! Email: " BEMAIL
 read -rsp "Bring! Password: " BPASS && echo
-printf '{"email":"%s","password":"%s"}\n' "$BEMAIL" "$BPASS" > ~/.config/bring/credentials.json
+jq -n --arg e "$BEMAIL" --arg p "$BPASS" '{email: $e, password: $p}' > ~/.config/bring/credentials.json
 chmod 600 ~/.config/bring/credentials.json
 unset BEMAIL BPASS
 ```
@@ -51,9 +49,7 @@ Tell the user: "Run that in your terminal, then come back and I'll continue the 
 ### Step 3: Save credentials and test login
 ```bash
 mkdir -p ~/.config/bring
-cat > ~/.config/bring/credentials.json << 'EOF'
-{"email": "USER_EMAIL", "password": "USER_PASSWORD"}
-EOF
+jq -n --arg e "USER_EMAIL" --arg p "USER_PASSWORD" '{email: $e, password: $p}' > ~/.config/bring/credentials.json
 chmod 600 ~/.config/bring/credentials.json
 scripts/bring.sh login
 ```
