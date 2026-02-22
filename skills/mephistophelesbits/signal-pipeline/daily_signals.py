@@ -262,7 +262,7 @@ def save_daily_signal(signal):
     
     import json
     date = datetime.now().strftime('%Y-%m-%d')
-    filepath = f"./memory/daily_signals/{date}.json"
+    filepath = f"/Users/jarvis/.openclaw/workspace/memory/daily_signals/{date}.json"
     
     data = {
         "date": date,
@@ -291,7 +291,7 @@ def generate_monthly_report():
     import os
     import glob
     
-    signal_dir = "./memory/daily_signals/"
+    signal_dir = "/Users/jarvis/.openclaw/workspace/memory/daily_signals/"
     files = glob.glob(signal_dir + "*.json")
     
     for f in files:
@@ -457,3 +457,107 @@ if __name__ == "__main__":
             print(draft_post(signal))
         else:
             print("\nNo signal found today")
+
+# ============ EVOMAP-STYLE SIGNAL CAPSULES ============
+
+class SignalCapsule:
+    """Structured signal like EvoMap capsules"""
+    def __init__(self, content, source, signal_type, tags, engagement_score=0):
+        self.id = hash(content[:50])  # Unique ID
+        self.content = content
+        self.source = source
+        self.signal_type = signal_type  # trend, insight, data, news
+        self.tags = tags  # marketing, tech, etc
+        self.engagement_score = engagement_score
+        self.gdi_score = self.calculate_gdi()
+        self.created_at = datetime.now().isoformat()
+    
+    def calculate_gdi(self):
+        """Calculate signal quality score (like EvoMap's GDI)"""
+        # Base score from engagement
+        score = min(self.engagement_score / 100, 1.0) * 50
+        
+        # Boost for having tags
+        score += min(len(self.tags) * 5, 20)
+        
+        # Boost for source quality
+        source_boost = {
+            'x': 10,
+            'rss': 8,
+            'telegram': 5,
+            'newsletter': 12,
+            'wechat': 7
+        }
+        score += source_boost.get(self.source.split('/')[0].lower(), 5)
+        
+        return min(score, 100)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'content': self.content[:200],
+            'source': self.source,
+            'type': self.signal_type,
+            'tags': self.tags,
+            'gdi_score': self.gdi_score,
+            'engagement': self.engagement_score,
+            'created_at': self.created_at
+        }
+
+def store_capsule(capsule):
+    """Store capsule in database"""
+    import json
+    conn = get_connection()
+    try:
+        conn.execute("""
+            INSERT OR REPLACE INTO signal_capsules 
+            (id, content, source, signal_type, tags, gdi_score, engagement, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            capsule.id,
+            capsule.content,
+            capsule.source,
+            capsule.signal_type,
+            json.dumps(capsule.tags),
+            capsule.gdi_score,
+            capsule.engagement_score,
+            capsule.created_at
+        ))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Store capsule error: {e}")
+        return False
+
+def get_top_capsules(limit=10):
+    """Get highest quality signals"""
+    conn = get_connection()
+    conn.row_factory = lambda c, r: dict(zip([d[0] for d in c.description], r))
+    cursor = conn.execute("""
+        SELECT * FROM signal_capsules 
+        ORDER BY gdi_score DESC LIMIT ?
+    """, (limit,))
+    return cursor.fetchall()
+
+# ============ CAPSULE DATABASE TABLE ============
+
+def init_capsule_db():
+    """Initialize capsule storage"""
+    conn = get_connection()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS signal_capsules (
+            id INTEGER PRIMARY KEY,
+            content TEXT,
+            source TEXT,
+            signal_type TEXT,
+            tags TEXT,
+            gdi_score REAL DEFAULT 0,
+            engagement INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+    return conn
+
+# Initialize on import
+init_capsule_db()
