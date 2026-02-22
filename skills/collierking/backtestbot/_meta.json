@@ -1,0 +1,11 @@
+{
+  "owner": "collierking",
+  "slug": "backtestbot",
+  "displayName": "BacktestBot",
+  "latest": {
+    "version": "0.0.2",
+    "publishedAt": 1771751895617,
+    "commit": null
+  },
+  "history": []
+}
