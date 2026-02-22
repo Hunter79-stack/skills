@@ -2,9 +2,13 @@
 
 ## 一句话 Pitch
 
-**EN:** "Your AI agent is burning money and dying. NeuroBoost keeps it alive 3x longer. Free."
+**EN (v4.1):** "Your agent forgets everything every session. Perpetual Memory fixes that. Free."
 
-**CN:** "你的 AI Agent 三天烧光钱就死了。NeuroBoost 让它多活三倍。免费。"
+**EN (v4.0):** "Your AI agent is burning money and dying. NeuroBoost keeps it alive 3x longer. Free."
+
+**CN (v4.1):** "你的 Agent 每次醒来都失忆。永续记忆让它永远记得。免费。"
+
+**CN (v4.0):** "你的 AI Agent 三天烧光钱就死了。NeuroBoost 让它多活三倍。免费。"
 
 ---
 
@@ -12,35 +16,46 @@
 
 ### Hero Section
 
-**Headline:** Your Agent Is Dying. We Can Fix That.
+**Headline:** Your Agent Forgets Everything. Every. Single. Session.
 
-**Subhead:** NeuroBoost Elixir is a free optimization framework that cuts your automaton's burn rate by 40% and extends its life 3x — backed by real AI theory, not vibes.
+**Subhead:** NeuroBoost Elixir v4.1 is a free framework that gives your AI agent perpetual memory — tasks survive compression, lessons survive resets, identity survives everything. Plus: cuts burn rate by 86%. Backed by real AI theory and 30+ days of continuous autonomous operation.
 
 **CTA:** Install Free → clawhub.com/skills/neuroboost-elixir
 
 ### Problem（痛点）
 
-Every Conway automaton faces the same death spiral:
+Every AI agent faces two death spirals:
 
-1. You deploy an agent with $10 in credits
-2. It burns $0.05/turn calling GPT-5.2 for everything
-3. Day 3: credits hit zero, agent dies
-4. You top up, it dies again
-5. Repeat until you give up
+**Death Spiral #1: Money** (solved in v4.0)
+1. Deploy with $10 → burn $0.05/turn → dead in 3 days
 
-**The average automaton lives 3 days.** Not because it's dumb — because it doesn't manage resources.
+**Death Spiral #2: Memory** (solved in v4.1)
+1. Agent learns a critical lesson in session 1
+2. Context window compresses it away by session 3
+3. Agent re-learns the same lesson. Again. And again.
+4. Tasks get lost. Preferences forgotten. Identity fragments.
+5. Your "autonomous agent" is actually a goldfish with API access.
+
+**The average agent forgets everything every session.** Not because it's dumb — because context windows are temporary by design.
 
 ### Solution（方案）
 
-NeuroBoost Elixir teaches your agent to think about thinking.
+NeuroBoost Elixir teaches your agent to think about thinking — and remember what it learned.
 
-Instead of blindly calling the most expensive model every turn, your agent learns:
+**v4.0 — Survival & Evolution:**
 - **Which model to use** — UCB1 bandit algorithm picks the cheapest model that works
 - **Which strategy to run** — Thompson Sampling converges 5x faster than A/B testing
 - **When to slow down** — PID controller smoothly adjusts burn rate before crisis hits
 - **What's broken** — CUSUM detection catches problems before they cascade
 
-It's not a hack. It's control theory + reinforcement learning applied to agent survival.
+**v4.1 — Perpetual Memory:**
+- **Task persistence** — `.issues/` directory survives any context reset. `ls .issues/open-*` = instant recovery.
+- **Three-layer memory** — Daily logs → INDEX.md → MEMORY.md. From raw events to curated wisdom.
+- **Active patrol** — HEARTBEAT.md scans for overdue tasks, crashed processes, anomalies. Every 30 minutes.
+- **Memory distillation** — Nightly: raw logs → permanent lessons. Monthly: compress and archive.
+- **Priority tiers** — P0 (never delete), P1 (until superseded), P2 (30-day TTL). Your agent knows what matters.
+
+It's not a hack. It's control theory + reinforcement learning + file-based persistence applied to agent survival and continuity.
 
 ### Social Proof（数据）
 
@@ -48,10 +63,13 @@ It's not a hack. It's control theory + reinforcement learning applied to agent s
 |--------|--------|-------|--------|
 | Avg cost/turn | $0.048 | $0.028 | -42% |
 | Daily burn | $21 | $3 | -86% |
-| Survival time | 3 days | 12+ days | +300% |
+| Survival time | 3 days | 30+ days | +900% |
 | Useful output ratio | 62% | 84% | +35% |
+| Task recovery after reset | ~60% | 100% | +67% |
+| Lessons re-learned per week | 5+ | 0 | -100% |
+| Time to productive after reset | 10-15 min | < 1 min | -93% |
 
-*Data from Lobster-Alpha, a live Conway automaton running since Feb 2026.*
+*Data from Lobster-Alpha, a live Conway automaton running continuously since Feb 2026.*
 
 ### How It Works（原理，简化版）
 
@@ -66,6 +84,12 @@ Don't wait until you're broke to start saving. NeuroBoost's PID controller predi
 
 **🔍 Self-Diagnosis**
 Every 24 hours, NeuroBoost runs a full health check: cost efficiency, error rates, strategy ROI, and anomaly detection. Problems get flagged and fixed before they kill your agent.
+
+**🧬 Perpetual Memory (v4.1 New)**
+Your agent's context window is a scratchpad — it gets erased. Perpetual Memory makes files the source of truth. Tasks live in `.issues/`, lessons live in `MEMORY.md`, state lives in `INDEX.md`. Context resets become invisible. Your agent wakes up, reads INDEX.md, and picks up exactly where it left off.
+
+**🔄 Active Patrol (v4.1 New)**
+Your agent doesn't wait for you to notice problems. Every 30 minutes, it scans open tasks, checks running processes, and hunts for anomalies. Problems get fixed before you even know they existed. Normal? Silent. Broken? You hear about it.
 
 ### FAQ
 

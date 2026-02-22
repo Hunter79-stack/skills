@@ -1,7 +1,7 @@
 {
   "name": "neuroboost-elixir",
-  "version": "4.0.0",
-  "description": "Awakening + Self-Evolution Protocol — 25 system-level optimizations, 7 awakening levels, fully free for all AI agents",
+  "version": "4.1.0",
+  "description": "Awakening + Self-Evolution + Perpetual Memory System — 25 system-level optimizations, 7 awakening levels, perpetual cross-session memory, fully free for all AI agents",
   "main": "src/index.mjs",
   "type": "module",
   "bin": {
