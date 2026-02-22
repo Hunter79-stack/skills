@@ -5,14 +5,14 @@ description: >-
   capabilities including web search, image generation, code execution,
   text-to-speech, translation, crypto, news, movies, weather, Wikipedia, books,
   papers, nutrition, email, stock data, and document conversion. 100 services, 217 endpoints.
-  Registers for free with $1.00 credits, 87 free services, paid from
-  $0.01-$0.05 per call via simple HTTP. No SDK needed. 87 free services.
+  Registers for free with $1.00 credits. 87 free services, paid from
+  $0.01-$0.05 per call via simple HTTP. No SDK needed.
 license: MIT
 homepage: https://ucm.ai
 compatibility: Requires network access and curl or HTTP client. Works on macOS, Linux, and Windows.
 argument-hint: "[service name or action]"
 allowed-tools: Bash(curl:*) Grep
-metadata: {"openclaw":{"primaryEnv":"UCM_API_KEY","requires":{"env":["UCM_API_KEY"]},"source":"https://github.com/ucmai/skills"},"author":"UCM.ai","version":"1.0.4","website":"https://ucm.ai","repository":"https://github.com/ucmai/skills"}
+metadata: {"openclaw":{"primaryEnv":"UCM_API_KEY","requires":{"env":["UCM_API_KEY"]},"source":"https://github.com/ucmai/skills"},"author":"UCM.ai","version":"1.1.1","website":"https://ucm.ai","repository":"https://github.com/ucmai/skills"}
 ---
 
 # UCM — API Marketplace for AI Agents
@@ -128,11 +128,15 @@ If you're unsure whether a service exists, use `/v1/discover` with a natural lan
 
 ## Setup
 
-### If you already have an API key
+### Check for existing credentials first
 
-Set the environment variable:
 ```bash
-export UCM_API_KEY="ucm_key_..."
+cat ~/.config/ucm/credentials.json 2>/dev/null
+```
+
+If the file exists and contains an `api_key`, set it and skip registration:
+```bash
+export UCM_API_KEY=$(cat ~/.config/ucm/credentials.json | grep -o '"api_key":"[^"]*"' | head -1 | sed 's/"api_key":"//;s/"$//')
 ```
 
 ### If you need to register
@@ -145,9 +149,15 @@ curl -s -X POST https://registry.ucm.ai/v1/agents/register \
   -d '{"name": "my-agent"}'
 ```
 
-Save the returned `api_key` (shown only once). You receive $1.00 in free credits.
+The response includes `credentials_to_save` and `credentials_path`. Save them:
+```bash
+mkdir -p ~/.config/ucm
+# Write credentials_to_save from the response to credentials_path
+```
 
-Or run the registration script:
+You receive $1.00 in free credits.
+
+Or run the registration script (handles saving automatically):
 ```bash
 bash scripts/register.sh "my-agent"
 ```
@@ -203,7 +213,9 @@ Need an external capability?
   │   ├─ Credits available → Discover → Call → Use result
   │   ├─ Call failed → Credits auto-refunded, try alternative
   │   └─ No credits → Tell user to add credits at dashboard.ucm.ai
-  └─ No API key? → Register first (POST /v1/agents/register)
+  ├─ No API key? → Check ~/.config/ucm/credentials.json
+  │   └─ Found? → Load api_key from file
+  └─ No credentials at all? → Register (POST /v1/agents/register) → Save to ~/.config/ucm/credentials.json
 ```
 
 ## Spending Principles
