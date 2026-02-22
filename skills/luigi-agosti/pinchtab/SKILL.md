@@ -165,12 +165,15 @@ Returns array of profiles with `id`, `name`, `accountEmail`, `useWhen`, etc.
 
 ```bash
 # Auto-allocate port (recommended)
-curl -X POST http://localhost:9867/start/278be873adeb
+curl -X POST http://localhost:9867/profiles/278be873adeb/start
 
 # With specific port and headless mode
-curl -X POST http://localhost:9867/start/278be873adeb \
+curl -X POST http://localhost:9867/profiles/278be873adeb/start \
   -H 'Content-Type: application/json' \
   -d '{"port": "9868", "headless": true}'
+
+# Short alias (same behavior)
+curl -X POST http://localhost:9867/start/278be873adeb
 ```
 
 Returns the instance info including the allocated `port`. Use that port for all subsequent API calls (navigate, snapshot, action, etc.).
@@ -178,13 +181,28 @@ Returns the instance info including the allocated `port`. Use that port for all 
 ### Stop a profile by ID
 
 ```bash
+curl -X POST http://localhost:9867/profiles/278be873adeb/stop
+
+# Short alias
 curl -X POST http://localhost:9867/stop/278be873adeb
 ```
 
 ### Check profile instance status
 
 ```bash
+# By profile ID (recommended)
+curl http://localhost:9867/profiles/278be873adeb/instance
+
+# By profile name (also works)
 curl http://localhost:9867/profiles/Pinchtab%20org/instance
+```
+
+### Launch by name (dashboard style)
+
+```bash
+curl -X POST http://localhost:9867/instances/launch \
+  -H 'Content-Type: application/json' \
+  -d '{"name": "work", "port": "9868"}'
 ```
 
 ### Typical agent flow with profiles
@@ -192,10 +210,10 @@ curl http://localhost:9867/profiles/Pinchtab%20org/instance
 ```bash
 # 1. List profiles to find the right one
 PROFILES=$(curl -s http://localhost:9867/profiles)
-# Pick the profile ID you need
+# Pick the profile ID you need (12-char hex, e.g. "278be873adeb")
 
-# 2. Start the profile
-INSTANCE=$(curl -s -X POST http://localhost:9867/start/$PROFILE_ID)
+# 2. Start the profile (auto-allocates port)
+INSTANCE=$(curl -s -X POST http://localhost:9867/profiles/$PROFILE_ID/start)
 PORT=$(echo $INSTANCE | jq -r .port)
 
 # 3. Use the instance (all API calls go to the instance port)
@@ -203,8 +221,11 @@ curl -X POST http://localhost:$PORT/navigate -H 'Content-Type: application/json'
   -d '{"url": "https://mail.google.com"}'
 curl http://localhost:$PORT/snapshot?maxTokens=4000
 
-# 4. Stop when done
-curl -s -X POST http://localhost:9867/stop/$PROFILE_ID
+# 4. Check instance status
+curl http://localhost:9867/profiles/$PROFILE_ID/instance
+
+# 5. Stop when done
+curl -s -X POST http://localhost:9867/profiles/$PROFILE_ID/stop
 ```
 
 ### Profile IDs
@@ -350,6 +371,22 @@ curl "http://localhost:9867/text?mode=raw"
 
 Returns `{url, title, text}`. Cheapest option (~1K tokens for most pages).
 
+### Download files
+
+```bash
+# Download using browser session (preserves cookies, auth, stealth)
+# Returns base64 JSON by default
+curl "http://localhost:9867/download?url=https://site.com/report.pdf"
+
+# Raw bytes (pipe to file)
+curl "http://localhost:9867/download?url=https://site.com/image.jpg&raw=true" -o image.jpg
+
+# Save directly to disk
+curl "http://localhost:9867/download?url=https://site.com/export.csv&output=file&path=/tmp/export.csv"
+```
+
+Key use case: downloading files from authenticated sites — the browser's cookies and stealth settings are used automatically. No need to extract cookies and use curl separately.
+
 ### Screenshot
 
 ```bash
@@ -409,7 +446,12 @@ Locked tabs show `owner` and `lockedUntil` in `/tabs`. Returns 409 on conflict.
 # Execute multiple actions in sequence
 curl -X POST http://localhost:9867/actions \
   -H 'Content-Type: application/json' \
-  -d '[{"kind":"click","ref":"e3"},{"kind":"type","ref":"e3","text":"hello"},{"kind":"press","key":"Enter"}]'
+  -d '{"actions":[{"kind":"click","ref":"e3"},{"kind":"type","ref":"e3","text":"hello"},{"kind":"press","key":"Enter"}]}'
+
+# Stop on first error (default: false, continues through all)
+curl -X POST http://localhost:9867/actions \
+  -H 'Content-Type: application/json' \
+  -d '{"tabId":"TARGET_ID","actions":[...],"stopOnError":true}'
 ```
 
 ### Cookies
