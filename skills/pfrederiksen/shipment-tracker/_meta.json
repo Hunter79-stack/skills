@@ -1,0 +1,11 @@
+{
+  "owner": "pfrederiksen",
+  "slug": "shipment-tracker",
+  "displayName": "Shipment Tracker",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1771705685438,
+    "commit": null
+  },
+  "history": []
+}
