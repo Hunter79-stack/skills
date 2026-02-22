@@ -72,10 +72,31 @@
   "injectionDetection": {
     "enabled": true,
     "sensitivity": "medium",
-    "customPatterns": []
+    "customPatterns": [],
+    "obfuscationDetection": true,
+    "multiLanguage": true,
+    "canaryTokens": []
   },
   "auditLog": {
     "path": "audit.jsonl",
     "maxFileSizeMB": 100
+  },
+  "outputDlp": {
+    "enabled": false,
+    "mode": "log",
+    "redactionMode": "mask",
+    "customPatterns": []
+  },
+  "escalation": {
+    "enabled": false,
+    "reviewOnMediumInjection": true,
+    "reviewOnFirstToolUse": false,
+    "tokenTTLSeconds": 300
+  },
+  "behavioralMonitoring": {
+    "enabled": false,
+    "spikeThreshold": 3.0,
+    "monitoringWindowSeconds": 3600,
+    "action": "log"
   }
 }
