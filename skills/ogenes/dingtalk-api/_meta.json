@@ -1,0 +1,11 @@
+{
+  "owner": "ogenes",
+  "slug": "dingtalk-api",
+  "displayName": "DingTalk API",
+  "latest": {
+    "version": "1.0.3",
+    "publishedAt": 1771744377497,
+    "commit": null
+  },
+  "history": []
+}
