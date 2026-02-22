@@ -1,0 +1,11 @@
+{
+  "owner": "upinvoice",
+  "slug": "upinvoice",
+  "displayName": "UpInvoice: Document AI",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1771426595511,
+    "commit": null
+  },
+  "history": []
+}
