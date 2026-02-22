@@ -1,0 +1,11 @@
+{
+  "owner": "newbienodes",
+  "slug": "trade-history",
+  "displayName": "Trade History",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1771785064790,
+    "commit": null
+  },
+  "history": []
+}
