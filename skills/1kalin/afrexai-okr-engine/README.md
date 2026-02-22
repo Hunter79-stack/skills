@@ -1,18 +1,17 @@
-# AfrexAI OKR & Goal Alignment Engine
+# OKR & Strategy Execution Engine
 
-Complete Objectives and Key Results system — from company vision to individual weekly priorities.
+Complete OKR methodology — from company vision to weekly execution. Built for founders, team leads, and operators who want goal-setting that actually drives results.
 
-## What This Does
+## What This Skill Does
 
-- Guides you through writing objectives that actually inspire (not corporate jargon)
-- Structures key results with baselines, targets, and scoring
-- Cascades goals from company → department → team → individual
-- Weekly execution system that keeps OKRs alive (not set-and-forget)
-- Mid-quarter course correction framework
-- End-of-quarter scoring and retrospective
-- 100-point quality rubric to catch bad OKRs before committing
-- Templates for every company stage (startup → enterprise)
-- Department-specific examples (engineering, sales, marketing, CS)
+Gives your AI agent a complete strategy execution framework:
+- **Annual planning** with vision → pillars → goals hierarchy
+- **OKR writing** with quality rubrics, anti-patterns, and YAML templates
+- **Alignment cascading** from company → team → individual
+- **KPI dashboards** with health/growth/quality/velocity metrics
+- **Review cadences** — weekly, monthly, quarterly rituals with agendas
+- **Scoring & accountability** — honest grading culture, not bureaucracy
+- **5 ready scenarios** — first-time OKRs, solo founder, mid-quarter pivot, remote teams, performance reviews
 
 ## Install
 
@@ -23,31 +22,42 @@ clawhub install afrexai-okr-engine
 ## Quick Start
 
 Tell your agent:
-- "Set company OKRs for Q2"
-- "Cascade this objective to my engineering team"
-- "Score our OKRs — are they good enough?"
-- "Weekly check-in for the product team"
+- "Set OKRs for Q2" — generates structured OKR template with scoring
+- "Grade this OKR" — runs 7-dimension quality rubric (0-100)
+- "Run quarterly planning" — full retro + planning ritual agenda
+- "Create KPI dashboard" — health/growth/quality metrics YAML
+- "Weekly OKR update" — confidence tracking template
 
 ## What Makes This Different
 
-Most OKR resources give you the theory. This gives you:
-- **Fill-in YAML templates** for every phase
-- **Scoring rubrics** so you know if your OKRs are actually good
-- **Anti-pattern diagnosis** — the 12 ways OKRs fail and how to fix each
-- **Stage-appropriate templates** — pre-PMF startup ≠ 500-person company
-- **Execution bridge** — how OKRs connect to what you do on Monday morning
+The existing OKR skill on ClawHub is a 6KB solopreneur guide. This is a 30KB complete system covering:
+- North star metric selection by business type
+- Strategic pillar architecture
+- OKR quality checklist (every KR must pass 7 tests)
+- Scoring methodology (0.0-1.0) with healthy range benchmarks
+- Alignment maps with cross-team dependency contracts
+- 4 review cadence templates with exact agendas
+- Advanced patterns: stretch vs committed, leading indicators, Agile integration
+- Works for solo founders AND 50+ person organizations
 
-Zero dependencies. Pure methodology. Works with any agent.
+## ⚡ Level Up
 
----
+Want a complete business operating system for your vertical?
 
-⚡ **Level Up: [AfrexAI SaaS Context Pack ($47)](https://afrexai-cto.github.io/context-packs/)** — Complete operator context for SaaS businesses including strategic planning, metrics, and growth frameworks.
+**[AfrexAI Context Packs — $47](https://afrexai-cto.github.io/context-packs/)**
 
-🔗 **More free skills by AfrexAI:**
-- [afrexai-founder-os](https://clawhub.com/skills/afrexai-founder-os) — Startup operating system
-- [afrexai-growth-engine](https://clawhub.com/skills/afrexai-growth-engine) — Growth system with AARRR + experiments
-- [afrexai-engineering-manager](https://clawhub.com/skills/afrexai-engineering-manager) — EM operating system
+Industry-specific agent configurations with OKR templates, KPIs, and playbooks tailored to your business:
+- SaaS metrics + growth OKRs
+- Professional Services utilization + delivery OKRs
+- Manufacturing efficiency + quality OKRs
+- And 7 more verticals
+
+## 🔗 More Free Skills by AfrexAI
+
+- [afrexai-founder-os](https://clawhub.com/skills/afrexai-founder-os) — Complete startup operating system
 - [afrexai-sales-playbook](https://clawhub.com/skills/afrexai-sales-playbook) — B2B sales methodology
-- [afrexai-pricing-strategy](https://clawhub.com/skills/afrexai-pricing-strategy) — Complete pricing system
+- [afrexai-pricing-strategy](https://clawhub.com/skills/afrexai-pricing-strategy) — Value-based pricing framework
+- [afrexai-customer-success](https://clawhub.com/skills/afrexai-customer-success) — Retention & expansion engine
+- [afrexai-fpa-engine](https://clawhub.com/skills/afrexai-fpa-engine) — Financial planning & analysis
 
-🛒 **[Browse all AfrexAI skills & context packs →](https://afrexai-cto.github.io/context-packs/)**
+**Browse all AfrexAI skills:** [clawhub.com/publishers/afrexai-cto](https://clawhub.com/publishers/afrexai-cto)
