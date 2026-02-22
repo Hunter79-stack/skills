@@ -1,0 +1,11 @@
+{
+  "owner": "jk-0001",
+  "slug": "product-launch",
+  "displayName": "Product Launch",
+  "latest": {
+    "version": "0.1.0",
+    "publishedAt": 1771613632917,
+    "commit": null
+  },
+  "history": []
+}
