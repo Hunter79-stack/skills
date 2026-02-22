@@ -1,12 +1,12 @@
 ---
 name: clawd-zero-trust
-version: "1.1.4"
+version: "1.1.7"
 author: stanistolberg
 homepage: https://github.com/stanistolberg/clawd-zero-trust
 description: "Zero Trust security hardening for OpenClaw deployments. Use when asked to audit, harden, or apply Zero Trust architecture to an OpenClaw instance — including NHI identity scoping, Principle of Least Privilege (PLP), Plan-First protocol, DNS-based egress filtering, plugin allowlisting, and SSH/network lockdown. Also triggers on security audit requests, vulnerability analysis, SecureClaw installation, firewall hardening, and post-deployment security reviews."
 ---
 
-# clawd-zero-trust (v1.1.4)
+# clawd-zero-trust (v1.1.7)
 
 Zero Trust hardening framework for OpenClaw. Built by Blocksoft.
 
@@ -65,7 +65,7 @@ bash /home/claw/.openclaw/workspace/skills/clawd-zero-trust/scripts/egress-filte
 bash /home/claw/.openclaw/workspace/skills/clawd-zero-trust/scripts/egress-filter.sh --reset
 ```
 
-### 4) Release Gate (v1.1.4)
+### 4) Release Gate (v1.1.7)
 ```bash
 bash scripts/release-gate.sh
 ```

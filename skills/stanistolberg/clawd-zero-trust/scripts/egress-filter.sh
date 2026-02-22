@@ -37,7 +37,7 @@ CANARY_MODE=0
 FORCE_MODE=0
 TRUST_MODE=0   # --trust: explicit first-run acknowledgment (replaces silent TOFU)
 
-PROFILE_VERSION="1.1.4"
+PROFILE_VERSION="1.1.7"
 SCRIPT_PATH="$(readlink -f "$0")"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 SKILL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -98,6 +98,13 @@ check_dep python3 python3
 mkdir -p "$(dirname "$LOG_FILE")" "$STATE_DIR"
 touch "$LOG_FILE"
 chmod 600 "$LOG_FILE"
+
+# Verify state directory is writable before proceeding
+if ! touch "$STATE_DIR/.write-test" 2>/dev/null; then
+  echo -e "${RED}[FATAL]${NC} Cannot write to state directory: $STATE_DIR (permission denied)" >&2
+  exit 1
+fi
+rm -f "$STATE_DIR/.write-test"
 
 log() { echo -e "[$(date -u '+%Y-%m-%d %H:%M:%S UTC')] $1" | tee -a "$LOG_FILE"; }
 
@@ -250,6 +257,61 @@ declare -A PROVIDERS=(
   ["api.agentsandbox.co"]="443"
 )
 
+GITHUB_SSH_CIDRS=(
+  "140.82.112.0/20"
+  "143.55.64.0/20"
+  "192.30.252.0/22"
+  "185.199.108.0/22"
+)
+
+tailscale_derp_needs_port80() {
+  # Returns 0 if evidence suggests DERP fallback over :80 may be needed.
+  # Returns 1 otherwise.
+  if ! command -v tailscale >/dev/null 2>&1; then
+    log "WARN: tailscale CLI not found; skipping outbound 80/tcp DERP fallback rule"
+    return 1
+  fi
+
+  local netcheck_out
+  netcheck_out="$(tailscale netcheck 2>/dev/null || true)"
+
+  # netcheck output may contain lines like "* DERP ...:80" or "... port 80".
+  if echo "$netcheck_out" | grep -Eiq 'DERP.*(:80|port[[:space:]]*80)|:[[:space:]]*80'; then
+    return 0
+  fi
+
+  return 1
+}
+
+check_github_ssh_cidrs_drift() {
+  local hardcoded joined
+  hardcoded="$(printf '%s\n' "${GITHUB_SSH_CIDRS[@]}" | sort)"
+
+  local api_cidrs
+  api_cidrs="$(curl -fsSL --max-time 10 https://api.github.com/meta 2>/dev/null | \
+    python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+    g = d.get("git", [])
+    print("\n".join(sorted(set(g))))
+except Exception:
+    pass
+' || true)"
+
+  if [ -z "$api_cidrs" ]; then
+    log "WARN: Could not fetch GitHub meta CIDRs (https://api.github.com/meta). Using hardcoded SSH CIDRs."
+    return 0
+  fi
+
+  if [ "$hardcoded" != "$api_cidrs" ]; then
+    log "WARN: GitHub SSH CIDR drift detected between hardcoded list and api.github.com/meta (field: git)."
+    log "WARN: Hardcoded: $(printf '%s ' "${GITHUB_SSH_CIDRS[@]}")"
+    joined="$(echo "$api_cidrs" | tr '\n' ' ')"
+    log "WARN: API git : ${joined}"
+  fi
+}
+
 # [FIX-6] snapshot_ips now counts resolved providers and returns 1 if none
 # resolved. This prevents apply_policy from proceeding to "default deny
 # outgoing" with zero IP rules — which would lock out ALL traffic.
@@ -262,9 +324,9 @@ snapshot_ips() {
   for domain in "${!PROVIDERS[@]}"; do
     local ips_v4 ips_v6
     ips_v4="$(dig +short +time=5 +tries=2 "$domain" A 2>/dev/null \
-      | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | tr '\n' ' ' | sed 's/ $//')"
+      | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | tr '\n' ' ' | sed 's/ $//' || true)"
     ips_v6="$(dig +short +time=5 +tries=2 "$domain" AAAA 2>/dev/null \
-      | grep -E '^[0-9a-fA-F:]+$' | tr '\n' ' ' | sed 's/ $//')"
+      | grep -E '^[0-9a-fA-F:]+$' | tr '\n' ' ' | sed 's/ $//' || true)"
     IP_SNAPSHOT_V4["$domain"]="$ips_v4"
     IP_SNAPSHOT_V6["$domain"]="$ips_v6"
     if [ -z "$ips_v4" ] && [ -z "$ips_v6" ]; then
@@ -363,10 +425,21 @@ apply_policy() {
   cmd sudo ufw allow out on lo                                          || return 1
   cmd sudo ufw allow out 53/tcp                                         || return 1
   cmd sudo ufw allow out 53/udp                                         || return 1
-  cmd sudo ufw allow out 22/tcp                                         || return 1
+
+  check_github_ssh_cidrs_drift
+  local gh_cidr
+  for gh_cidr in "${GITHUB_SSH_CIDRS[@]}"; do
+    cmd sudo ufw allow out to "$gh_cidr" port 22 proto tcp comment "GitHub SSH" || return 1
+  done
+
   cmd sudo ufw allow out 41641/udp                                      || return 1
   cmd sudo ufw allow out 3478/udp comment "Tailscale STUN"              || return 1
-  cmd sudo ufw allow out 80/tcp comment "Tailscale DERP fallback"       || return 1
+  if tailscale_derp_needs_port80; then
+    log "WARN: Tailscale DERP fallback appears to require outbound 80/tcp; allowing with caution."
+    cmd sudo ufw allow out 80/tcp comment "Tailscale DERP fallback"     || return 1
+  else
+    log "INFO: Tailscale DERP fallback over 80/tcp not detected; skipping outbound 80/tcp rule."
+  fi
   cmd sudo ufw allow out 443/tcp comment "Tailscale DERP fallback / HTTPS" || return 1
 
   log "Step 2: Applying provider IP rules from snapshot"

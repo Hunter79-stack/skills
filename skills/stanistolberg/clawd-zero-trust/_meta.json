@@ -3,9 +3,15 @@
   "slug": "clawd-zero-trust",
   "displayName": "Clawd Zero Trust",
   "latest": {
-    "version": "1.1.6",
-    "publishedAt": 1771610909287,
-    "commit": "https://github.com/openclaw/skills/commit/310a5fdeea5ea92cf555b1158c8c737bf8d282a5"
+    "version": "1.1.8",
+    "publishedAt": 1771779099170,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.1.6",
+      "publishedAt": 1771610909287,
+      "commit": "https://github.com/openclaw/skills/commit/310a5fdeea5ea92cf555b1158c8c737bf8d282a5"
+    }
+  ]
 }

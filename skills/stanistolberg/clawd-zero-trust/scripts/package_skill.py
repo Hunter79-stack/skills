@@ -2,6 +2,7 @@
 import os
 import sys
 import zipfile
+import hashlib
 
 
 def package(skill_dir: str, out_file: str) -> None:
@@ -19,14 +20,23 @@ def package(skill_dir: str, out_file: str) -> None:
                 rel = os.path.relpath(full, skill_dir)
                 arc = os.path.join(root_name, rel)
                 zf.write(full, arc)
+    
+    # Calculate and output SHA256 checksum for integrity verification
+    sha256_hash = hashlib.sha256()
+    with open(out_file, 'rb') as f:
+        for chunk in iter(lambda: f.read(4096), b''):
+            sha256_hash.update(chunk)
+    
+    return sha256_hash.hexdigest()
 
 
 def main() -> int:
     if len(sys.argv) != 3:
         print('Usage: package_skill.py <skill_dir> <out_file>', file=sys.stderr)
         return 2
-    package(sys.argv[1], sys.argv[2])
+    checksum = package(sys.argv[1], sys.argv[2])
     print(f'packaged: {sys.argv[2]}')
+    print(f'sha256: {checksum}')
     return 0
 
 

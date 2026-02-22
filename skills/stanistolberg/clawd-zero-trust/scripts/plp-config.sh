@@ -560,6 +560,12 @@ if ! command -v python3 &>/dev/null; then
   exit 1
 fi
 
+# Verify Python3 json module is available
+if ! python3 -c "import json" 2>/dev/null; then
+  fail "python3 json module is required but not available"
+  exit 1
+fi
+
 # --- Dispatch ---
 case "$ACTION" in
   show)          action_show ;;

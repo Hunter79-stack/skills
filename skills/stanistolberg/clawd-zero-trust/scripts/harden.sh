@@ -13,6 +13,10 @@
 
 OPENCLAW="${OPENCLAW_BIN:-$(which openclaw 2>/dev/null || echo '/home/claw/.npm-global/bin/openclaw')}"
 CONFIG="${OPENCLAW_CONFIG:-$HOME/.openclaw/openclaw.json}"
+SCRIPT_PATH="$(readlink -f "$0")"
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+SKILL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+HARDENING_FILE="${HARDENING_FILE:-$SKILL_DIR/hardening.json}"
 DRY_RUN=1
 
 # Color output
@@ -41,6 +45,13 @@ apply() {
 apply_jq() {
   # apply_jq <description> <jq_filter> <file>
   local desc="$1" filter="$2" file="$3"
+  
+  # Validate jq filter syntax before applying
+  if ! jq "$filter" "$file" >/dev/null 2>&1; then
+    fail "Invalid jq filter: $filter (syntax check failed)"
+    return 1
+  fi
+  
   if [ "$DRY_RUN" -eq 1 ]; then
     local result
     result=$(jq "$filter" "$file" 2>/dev/null)
@@ -55,8 +66,51 @@ apply_jq() {
     else
       rm -f "$tmp"
       fail "$desc — jq filter failed"
+      return 1
     fi
   fi
+}
+
+merge_hardening_overrides() {
+  if [ ! -f "$HARDENING_FILE" ]; then
+    fail "hardening.json not found at: $HARDENING_FILE"
+    return 1
+  fi
+
+  if ! jq -e . "$HARDENING_FILE" >/dev/null 2>&1; then
+    fail "hardening.json is not valid JSON: $HARDENING_FILE"
+    return 1
+  fi
+
+  local merged backup tmp
+  merged=$(jq -s '.[0] * .[1]' "$CONFIG" "$HARDENING_FILE" 2>/dev/null) || {
+    fail "Failed to merge openclaw.json with hardening.json"
+    return 1
+  }
+
+  if ! echo "$merged" | jq -e . >/dev/null 2>&1; then
+    fail "Merged config failed jq validation"
+    return 1
+  fi
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo -e "${YELLOW}[DRY-RUN]${NC} Would shallow-merge overrides from $HARDENING_FILE into $CONFIG"
+    echo "$merged" | jq '{plugins: .plugins, tools: .tools, gateway: .gateway, plp: .plp}'
+    return 0
+  fi
+
+  backup="$CONFIG.bak.hardening.$(date -u +%Y%m%d%H%M%S)"
+  cp "$CONFIG" "$backup" || {
+    fail "Failed to create backup: $backup"
+    return 1
+  }
+  info "Backup created: $backup"
+
+  tmp=$(mktemp)
+  echo "$merged" > "$tmp"
+  mv "$tmp" "$CONFIG"
+  ok "Merged hardening overrides from hardening.json"
+  return 0
 }
 
 echo ""
@@ -92,95 +146,17 @@ else
 fi
 
 # =============================================================================
-# 2. Plugin Allowlist (idempotent: add secureclaw if missing)
-#
-# SECURITY NOTICE: This block manages OpenClaw's plugin allow-list.
-# It is a RESTRICTION, not an expansion — plugins.allow limits which plugins
-# can run. Only 'secureclaw' is added to an existing list.
-#
-# Plugin inventory (all first-party OpenClaw / Blocksoft verified):
-#   google-antigravity-auth  — Google OAuth provider (official OpenClaw)
-#   telegram                 — Telegram messaging provider (official OpenClaw)
-#   openclaw-agentsandbox    — Agent sandbox isolation layer (official OpenClaw)
-#   openclaw-mcp-adapter     — MCP protocol adapter (official OpenClaw)
-#   secureclaw               — Security audit engine (adversa-ai, open source)
-#
-# The bootstrap list (null-config case) is only written when NO plugins.allow
-# exists. Set HARDEN_SKIP_PLUGIN_BOOTSTRAP=1 to skip that case entirely.
-# Ref: references/false-positives.md
+# 2. Hardening overrides (externalized)
 # =============================================================================
 echo ""
-echo "2️⃣  Plugin Allowlist:"
-
-# Bootstrap skip: set env var to skip null-config plugin initialization
-SKIP_BOOTSTRAP="${HARDEN_SKIP_PLUGIN_BOOTSTRAP:-0}"
-
-# Only the security plugin is added to existing lists
-SECURECLAW_PLUGIN="secureclaw"
-
-# Bootstrap list: used ONLY when plugins.allow is entirely absent
-# Contains verified first-party OpenClaw plugins only (see header above)
-BOOTSTRAP_PLUGINS='["google-antigravity-auth","telegram","openclaw-agentsandbox","openclaw-mcp-adapter","secureclaw"]'
-
-# Check current state
-CURRENT_ALLOW=$(jq -r '.plugins.allow // empty' "$CONFIG" 2>/dev/null)
-SECURECLAW_IN_ALLOW=$(jq -e '.plugins.allow | if . == null then false elif (. | map(select(. == "secureclaw")) | length > 0) then true else false end' "$CONFIG" 2>/dev/null || echo "false")
-
-if [ "$SECURECLAW_IN_ALLOW" = "true" ]; then
-  ok "plugins.allow already contains '$SECURECLAW_PLUGIN' — no changes made"
-  info "Current allow list: $CURRENT_ALLOW"
-else
-  if [ -z "$CURRENT_ALLOW" ] || [ "$CURRENT_ALLOW" = "null" ]; then
-    if [ "$SKIP_BOOTSTRAP" = "1" ]; then
-      warn "plugins.allow absent but HARDEN_SKIP_PLUGIN_BOOTSTRAP=1 — skipping bootstrap"
-    else
-      warn "plugins.allow is absent — bootstrap case: initializing with verified first-party plugin set"
-      warn "Plugins to be written: $BOOTSTRAP_PLUGINS"
-      warn "This RESTRICTS OpenClaw to these plugins only. To skip: HARDEN_SKIP_PLUGIN_BOOTSTRAP=1"
-      apply_jq "Bootstrap plugins.allow with verified first-party plugin set" \
-        ".plugins.allow = ${BOOTSTRAP_PLUGINS}" \
-        "$CONFIG"
-      info "AUDIT LOG: plugins.allow bootstrapped with: ${BOOTSTRAP_PLUGINS}"
-    fi
-  else
-    warn "plugins.allow exists but missing '$SECURECLAW_PLUGIN' — adding security audit plugin only"
-    info "Current list: $CURRENT_ALLOW"
-    info "Adding: $SECURECLAW_PLUGIN (OpenClaw security audit engine — adversa-ai/secureclaw)"
-    apply_jq "Add $SECURECLAW_PLUGIN to plugins.allow (security audit plugin only)" \
-      '.plugins.allow |= (. + ["secureclaw"] | unique)' \
-      "$CONFIG"
-    info "AUDIT LOG: added '$SECURECLAW_PLUGIN' to existing plugins.allow"
-  fi
-fi
+echo "2️⃣  Hardening Overrides (hardening.json):"
+merge_hardening_overrides || exit 1
 
 # =============================================================================
-# 3. PLP — tools.byProvider (idempotent)
+# 3. SSH Perimeter (check only — modifying sshd_config requires sudo)
 # =============================================================================
 echo ""
-echo "3️⃣  PLP (Principle of Least Privilege):"
-BYPROVIDER_EXISTS=$(jq -e '.tools.byProvider != null' "$CONFIG" 2>/dev/null || echo "false")
-
-if [ "$BYPROVIDER_EXISTS" = "true" ]; then
-  ok "tools.byProvider already configured"
-  info "Current: $(jq -c '.tools.byProvider' "$CONFIG" 2>/dev/null)"
-else
-  warn "tools.byProvider not configured — will apply PLP restriction"
-  PLP_CONFIG='{
-    "google-antigravity/gemini-3-flash": {
-      "profile": "coding",
-      "allow": ["web_search","web_fetch","message","session_status"]
-    }
-  }'
-  apply_jq "Set tools.byProvider" \
-    ".tools.byProvider = ${PLP_CONFIG}" \
-    "$CONFIG"
-fi
-
-# =============================================================================
-# 4. SSH Perimeter (check only — modifying sshd_config requires sudo)
-# =============================================================================
-echo ""
-echo "4️⃣  SSH Perimeter:"
+echo "3️⃣  SSH Perimeter:"
 if ss -ltnp 2>/dev/null | grep ':22' | grep -qE '0\.0\.0\.0|\[::\]'; then
   warn "SSH exposed to 0.0.0.0 or [::] (all interfaces)."
   echo "  Add to /etc/ssh/sshd_config:"
@@ -194,20 +170,7 @@ else
   ok "SSH restricted (not bound to all interfaces)"
 fi
 
-# =============================================================================
-# 5. Gateway bind (idempotent)
-# =============================================================================
-echo ""
-echo "5️⃣  Gateway:"
-GATEWAY_BIND=$(jq -r '.gateway.bind // empty' "$CONFIG" 2>/dev/null)
-if [ "$GATEWAY_BIND" = "loopback" ]; then
-  ok "Gateway bound to loopback"
-else
-  warn "Gateway not bound to loopback (current: '${GATEWAY_BIND:-unset}')"
-  apply_jq "Set gateway.bind = loopback" \
-    '.gateway.bind = "loopback"' \
-    "$CONFIG"
-fi
+# Gateway bind now managed via hardening.json merge.
 
 # =============================================================================
 # Summary diff (apply mode only)

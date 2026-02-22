@@ -137,3 +137,9 @@ echo ""
 echo "Run 'bash scripts/harden.sh' to review and apply hardening fixes."
 echo "False positive log: $FP_LOG_FILE"
 log "=== Audit complete ==="
+
+# Exit with error if critical issues were found (SSH exposed, missing dependencies)
+if [ "$SSH_EXPOSED" -eq 1 ]; then
+  exit 1
+fi
+exit 0
