@@ -1,8 +1,8 @@
 ---
 name: feed-diet
-version: 0.1.2
+version: 0.1.1
 description: Audit your information diet across HN and RSS feeds — beautiful reports with category breakdowns, ASCII charts, and personalized recommendations.
-author: CacheForge
+author: Anvil AI
 tags: [productivity, reading, analysis, hacker-news, rss, information-diet, discord, discord-v2]
 ---
 
