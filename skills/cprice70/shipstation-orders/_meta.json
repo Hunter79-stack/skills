@@ -3,9 +3,15 @@
   "slug": "shipstation-orders",
   "displayName": "ShipStation Orders",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1771690629000,
-    "commit": "https://github.com/openclaw/skills/commit/6d56d1cb8149769220b9a9a90d643f0164f80168"
+    "version": "1.1.0",
+    "publishedAt": 1771849002107,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1771690629000,
+      "commit": "https://github.com/openclaw/skills/commit/6d56d1cb8149769220b9a9a90d643f0164f80168"
+    }
+  ]
 }

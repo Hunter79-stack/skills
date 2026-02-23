@@ -22,7 +22,13 @@ See [SKILL.md](SKILL.md) for full documentation.
 - Alerts you about new orders
 - Flags orders stuck in processing (>48h)
 - Detects orders on hold
+- Alerts on expedited / second-day / priority orders
 - Tracks state to avoid duplicate notifications
+
+## Scripts
+
+- `check-orders.js` → order intake + issue detection
+- `check-shipping.js` → expedited shipping alert detection
 
 ## Install via ClawHub
 

@@ -21,6 +21,7 @@ Monitor ShipStation for new orders and issues. Perfect for e-commerce businesses
 - ✅ New order notifications
 - ⚠️ Alert for orders stuck in processing (>48h)
 - 🛑 Flag orders on hold
+- 🚚 Immediate alert for expedited/2-day/priority orders
 - 📊 Daily summary reports
 - 🔄 Automatic state tracking (avoids duplicate alerts)
 
@@ -180,8 +181,10 @@ Uses [ShipStation API V1](https://www.shipstation.com/docs/api/)
 
 ## Files
 
-- `check-orders.js` - Main monitoring script
-- `state.json` - Auto-generated state tracking
+- `check-orders.js` - Main order monitoring script
+- `check-shipping.js` - Expedited shipping alert monitor
+- `state.json` - Auto-generated order state tracking
+- `shipping-state.json` - Auto-generated shipping state tracking
 - `.env` - Your credentials (add to .gitignore!)
 
 ## License
