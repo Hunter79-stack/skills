@@ -36,6 +36,18 @@ Result:
 - `folder`: `cascadeflow`
 - `slug`: `cascadeflow`
 - `display_name`: `CascadeFlow: Cost + Latency Reduction`
+- `source_url`: `https://github.com/lemony-ai/cascadeflow`
+- `homepage_url`: `https://github.com/lemony-ai/cascadeflow/blob/main/docs/guides/openclaw_provider.md`
+
+## Credentials To Declare In Listing
+
+- `OPENAI_API_KEY` (required when using OpenAI models/preset)
+- `ANTHROPIC_API_KEY` (required when using Anthropic models/preset)
+- `CASCADEFLOW_AUTH_TOKEN` (recommended in production; maps to server `--auth-token`)
+- `CASCADEFLOW_STATS_AUTH_TOKEN` (optional separate stats token; maps to server `--stats-auth-token`)
+
+Do not leave credential requirements empty in listing metadata.
+Use strong random token values in production (examples in this file are placeholders).
 
 ## Upload Folder
 
@@ -57,20 +69,23 @@ Fastest base setup (OpenClaw integration extras):
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install "cascadeflow[openclaw]"
+python -m pip install --upgrade "cascadeflow[openclaw]>=0.7,<0.8"
+python -m pip show cascadeflow
+python -m pip download --no-deps "cascadeflow[openclaw]>=0.7,<0.8" -d /tmp/cascadeflow_pkg
+python -m pip hash /tmp/cascadeflow_pkg/cascadeflow-*.whl
 ```
 
 Quick provider variants:
 
 ```bash
 # Anthropic-only preset users
-pip install "cascadeflow[openclaw,anthropic]"
+python -m pip install --upgrade "cascadeflow[openclaw,anthropic]>=0.7,<0.8"
 
 # OpenAI-only preset users
-pip install "cascadeflow[openclaw,openai]"
+python -m pip install --upgrade "cascadeflow[openclaw,openai]>=0.7,<0.8"
 
 # Mixed preset users (OpenAI + Anthropic + common providers)
-pip install "cascadeflow[openclaw,providers]"
+python -m pip install --upgrade "cascadeflow[openclaw,providers]>=0.7,<0.8"
 ```
 
 ## 2) Pick A Preset Config (All 3)
@@ -135,7 +150,7 @@ nohup cascadeflow-gateway --port 8084 --mode agent --config examples/configs/ant
     "mode": "merge",
     "providers": {
       "cascadeflow": {
-        "baseUrl": "http://127.0.0.1:8084/v1",
+        "baseUrl": "http://<cascadeflow-host>:8084/v1",
         "apiKey": "local-openclaw-token",
         "api": "openai-completions",
         "models": [
@@ -155,8 +170,13 @@ nohup cascadeflow-gateway --port 8084 --mode agent --config examples/configs/ant
 }
 ```
 
+Host notes:
+- If OpenClaw and CascadeFlow run on the same machine, keep `127.0.0.1`.
+- If CascadeFlow runs on another machine, use that server IP or domain.
+
 If server runs elsewhere, users should replace it with their host/IP, e.g.:
 - `http://<server-ip>:8084/v1` or `https://<domain>/v1` (behind proxy/TLS).
+- Keep `apiKey` equal to the server auth token value.
 
 ## 6) Create OpenClaw Agent
 
@@ -220,7 +240,7 @@ User commands:
 Stats example:
 
 ```bash
-curl -s http://127.0.0.1:8084/stats -H "Authorization: Bearer local-stats-token"
+curl -s http://<cascadeflow-host>:8084/stats -H "Authorization: Bearer local-stats-token"
 ```
 
 ## Streaming And Compatibility Notes
