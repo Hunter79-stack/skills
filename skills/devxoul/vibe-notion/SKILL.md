@@ -1,7 +1,7 @@
 ---
 name: vibe-notion
 description: Interact with Notion using the unofficial private API - pages, databases, blocks, search, users, comments
-version: 0.5.2
+version: 0.6.0
 allowed-tools: Bash(vibe-notion:*)
 metadata:
   openclaw:
@@ -19,6 +19,29 @@ metadata:
 A TypeScript CLI tool that enables AI agents and humans to interact with Notion workspaces through the unofficial private API. Supports full CRUD operations on pages, databases, blocks, search, and user management.
 
 > **Note**: This skill uses Notion's internal/private API (`/api/v3/`), which is separate from the official public API. For official API access, use `vibe-notionbot`.
+
+
+## Which CLI to Use
+
+This package ships two CLIs. Pick the right one based on your situation:
+
+| | `vibe-notion` (this CLI) | `vibe-notionbot` |
+|---|---|---|
+| API | Unofficial private API | Official Notion API |
+| Auth | `token_v2` auto-extracted from Notion desktop app | `NOTION_TOKEN` env var (Integration token) |
+| Identity | Acts as the user | Acts as a bot |
+| Setup | Zero — credentials extracted automatically | Manual — create Integration at notion.so/my-integrations |
+| Database rows | `add-row`, `update-row` | Create via `page create --database` |
+| View management | `view-get`, `view-update` | Not supported |
+| Workspace listing | Supported | Not supported |
+| Stability | Private API — may break on Notion changes | Official versioned API — stable |
+
+**Decision flow:**
+
+1. If the Notion desktop app is installed → use `vibe-notion` (this CLI)
+2. If `NOTION_TOKEN` is set but no desktop app → use `vibe-notionbot`
+3. If both are available → prefer `vibe-notion` (broader capabilities, zero setup)
+4. If neither → ask the user to set up one of the two
 
 ## Important: CLI Only
 
@@ -435,6 +458,14 @@ Pass 2: Update A.predecessor=B, C.related=A (using real IDs from Pass 1)
 ```
 
 This is the same result as a script, but without writing any code. Just two batch calls.
+
+### Rate Limits
+
+Notion enforces rate limits on its API. Batch operations run sequentially, so a large batch (30+ operations) can trigger **429 Too Many Requests** errors. To avoid this:
+
+ **Split large batches into chunks of ~25-30 operations** per batch call
+ If a batch fails mid-way with a 429, re-run with only the remaining (unprocessed) operations
+ The `batch` output shows which operations succeeded before the failure — use the `index` field to determine where to resume
 
 ### Search Command
 
