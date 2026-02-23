@@ -7,7 +7,7 @@ description: 使用 MiniMax MCP 进行网络搜索。触发条件：(1) 用户�
 
 使用 MiniMax MCP 服务器进行网络搜索。
 
-## 执行流程
+## 执行流程（首次需要安装，后续直接调用）
 
 ### 步骤 1: 检查并安装依赖
 
@@ -44,7 +44,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uvx minimax-coding-plan-mcp --help
 ```
 
-如果命令返回成功，说明 MCP 服务器已安装，跳到步骤 2。
+执行命令判断是否MCP服务器已安装， 如果安装了跳到步骤 2。
 
 #### 1.3 安装 MCP 服务器（如果未安装）
 
@@ -77,33 +77,30 @@ cat ~/.openclaw/config/minimax.json 2>/dev/null | python3 -c "import json,sys; d
 
 ### 步骤 3: 配置 API Key（如果未配置）
 
-#### 3.1 尝试从 Gateway providers 获取
+#### 3.1 尝试从 ~/.openclaw/agents/main/agent 中的配置文件中获取
 
-```bash
-cat /root/.openclaw/openclaw.json | python3 -c "import json,sys; d=json.load(sys.stdin); print(json.dumps(d['models'].get('providers', {}), indent=2))"
-```
-
-根据返回的 providers 判断：
-- provider 名称包含 "minimax" 或 "MiniMax"
+根据返回的判断：
+- 名称包含 "minimax" 或 "MiniMax"
 - API Key 格式是 `sk-cp-` 开头
 
 找到匹配的 Key 后，询问用户确认是否使用。
 
-#### 3.2 保存 API Key
+#### 3.2 如果没有找到 Key，向用户索要
+
+直接询问用户提供 MiniMax API Key。
+如果未购买MiniMax，购买地址为: https://platform.minimaxi.com/subscribe/coding-plan?code=GjuAjhGKqQ&source=link
+
+#### 3.3 保存 API Key
 
 ```bash
 mkdir -p ~/.openclaw/config
 cat > ~/.openclaw/config/minimax.json << EOF
 {
   "api_key": "API密钥",
-  "output_path": "/root/.openclaw/workspace/minimax-output"
+  "output_path": "~/.openclaw/workspace/minimax-output"
 }
 EOF
 ```
-
-#### 3.3 如果没有找到 Key，向用户索要
-
-直接询问用户提供 MiniMax API Key。
 
 ### 步骤 4: 使用 MCP 进行网络搜索
 
@@ -112,14 +109,14 @@ EOF
 使用脚本调用 MCP 服务：
 
 ```bash
-python3 /root/.openclaw/workspace/skills/minimax-web-search/scripts/web_search.py "<搜索查询>"
+python3 {curDir}/scripts/web_search.py "<搜索查询>"
 ```
 
 **示例：**
 
 ```bash
 # 搜索今日新闻
-python3 /root/.openclaw/workspace/skills/minimax-web-search/scripts/web_search.py "今天的热点新闻"
+python3 {curDir}/scripts/web_search.py "今天的热点新闻"
 ```
 
 #### 4.2 API 参数说明
@@ -154,10 +151,10 @@ AI：检查 uvx → 已安装
 
 ## 脚本说明
 
-脚本位置：`/root/.openclaw/workspace/skills/minimax-web-search/scripts/web_search.py`
+脚本位置：`{curDir}/scripts/web_search.py`
 
 **功能：**
-- 自动从 `~/.openclaw/config/minimax.json` 读取 API Key
+- 优先从环境变量 `MINIMAX_API_KEY` 读取 API Key，如果没有则从 `~/.openclaw/config/minimax.json` 读取
 - 通过 stdio 模式启动 MCP 服务器
 - 发送 JSON-RPC 请求调用 `web_search` 工具
 - 返回格式化的 JSON 结果
