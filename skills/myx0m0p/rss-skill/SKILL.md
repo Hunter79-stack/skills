@@ -1,7 +1,8 @@
 ---
 name: feed-to-md
-title: feed-to-md
+title: Feed to Markdown
 description: Convert RSS or Atom feed URLs into Markdown using feed2md. Use this when a user asks to turn a feed URL into readable Markdown, optionally limiting items or writing to a file.
+metadata: {"clawdbot":{"emoji":"📰","requires":{"bins":["feed2md","npm"]},"install":[{"id":"node","kind":"node","package":"feed2md-cli@0.1.0","bins":["feed2md"],"label":"Install feed2md-cli (npm)"}]}}
 ---
 
 # RSS/Atom to Markdown
@@ -21,27 +22,19 @@ Use this skill when the task is to convert an RSS/Atom feed URL into Markdown.
   - output path
   - max item count
   - template preset (`short` or `full`)
-  - custom template file
-  - summary options
 
-## Command workflow
+## Usage
 
-1. Prefer direct CLI if installed:
+Install once (recommended):
+
+```bash
+npm install -g feed2md-cli@0.1.0
+```
+
+Run with the installed CLI:
 
 ```bash
 feed2md "<feed_url>"
-```
-
-2. If CLI is not installed globally, run with `npx`:
-
-```bash
-npx -y feed2md-cli "<feed_url>"
-```
-
-3. For repeatable execution, use this skill's wrapper script:
-
-```bash
-./scripts/feed-to-markdown.sh "<feed_url>" [output_file]
 ```
 
 ## Common examples
@@ -58,22 +51,10 @@ Write to file:
 feed2md "https://example.com/feed.xml" --output feed.md
 ```
 
-Limit to 10 items with full template:
+Limit to 10 items:
 
 ```bash
-feed2md "https://example.com/feed.xml" --limit 10 --template full
-```
-
-Skip summaries:
-
-```bash
-feed2md "https://example.com/feed.xml" --no-summary
-```
-
-Use custom template:
-
-```bash
-feed2md "https://example.com/feed.xml" --template-file ./template.eta
+feed2md "https://example.com/feed.xml" --limit 10
 ```
 
 ## CLI options
@@ -83,16 +64,15 @@ feed2md "https://example.com/feed.xml" --template-file ./template.eta
 - `--no-summary`: exclude summaries
 - `--summary-max-length <number>`: truncate summary length
 - `--template <preset>`: `short` (default) or `full`
-- `--template-file <path>`: custom Eta template
 
-## Error handling
-
-- If `feed2md` is missing, install/use via:
+## Install (optional)
 
 ```bash
-npm install -g feed2md-cli
-# or
-npx -y feed2md-cli "<feed_url>"
+npm install -g feed2md-cli@0.1.0
 ```
 
-- If URL fetch fails, verify URL is publicly reachable and points to RSS/Atom XML.
+Then use directly:
+
+```bash
+feed2md "https://example.com/feed.xml"
+```

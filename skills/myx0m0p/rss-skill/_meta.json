@@ -3,9 +3,15 @@
   "slug": "rss-skill",
   "displayName": "Rss Skill",
   "latest": {
-    "version": "1.0.5",
-    "publishedAt": 1771849733905,
-    "commit": "https://github.com/openclaw/skills/commit/3ef41728ccebdca29e28e03ed06e389518ca72ac"
+    "version": "1.1.1",
+    "publishedAt": 1771858097283,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.5",
+      "publishedAt": 1771849733905,
+      "commit": "https://github.com/openclaw/skills/commit/3ef41728ccebdca29e28e03ed06e389518ca72ac"
+    }
+  ]
 }
