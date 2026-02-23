@@ -3,11 +3,16 @@
   "slug": "jarvis-voice",
   "displayName": "Jarvis Voice",
   "latest": {
-    "version": "2.3.0",
-    "publishedAt": 1771626721182,
-    "commit": "https://github.com/openclaw/skills/commit/1834b899d3d6eb9e4e01955528ef5243e7f5f659"
+    "version": "3.1.1",
+    "publishedAt": 1771795703476,
+    "commit": null
   },
   "history": [
+    {
+      "version": "2.3.0",
+      "publishedAt": 1771626721182,
+      "commit": "https://github.com/openclaw/skills/commit/1834b899d3d6eb9e4e01955528ef5243e7f5f659"
+    },
     {
       "version": "1.0.2",
       "publishedAt": 1771020741248,

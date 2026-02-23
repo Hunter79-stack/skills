@@ -1,7 +1,7 @@
 ---
 name: jarvis-voice
-version: 2.3.0
-description: "Turn your AI into JARVIS. Real-time voice synthesis with the personality to match — dry wit included."
+version: 3.1.0
+description: "Turn your AI into JARVIS. Voice, wit, and personality — the complete package. Humor cranked to maximum."
 metadata:
   {
     "openclaw":
@@ -36,11 +36,15 @@ metadata:
 
 # Jarvis Voice
 
-### Your AI just got a voice. And an attitude.
+### Your AI just got a voice. And the wit to use it.
 
-Remember the first time Tony Stark talked to JARVIS? Not the words — the *feeling*. An AI that didn't just answer, it *spoke* like it understood you. Calm under pressure. Sharp when it mattered. Always one step ahead.
+Remember JARVIS in the Iron Man films? Not just the voice — the _personality_. The bone-dry observations while Tony was mid-crisis. _"I do appreciate your concern, sir, but the suit is quite capable of—" [explosion] "—as I was saying."_ That effortless, understated humor that made you forget you were listening to software.
 
-That's what this skill gives your OpenClaw agent. Offline text-to-speech using sherpa-onnx (Alan British voice) with metallic audio effects via ffmpeg. It doesn't sound like a robot reading a script — it sounds like someone who's been running your life for years and is mildly amused by your choices.
+That's what this skill gives your OpenClaw agent. The **voice** — offline text-to-speech using sherpa-onnx (British Alan voice) with metallic audio processing via ffmpeg. And the **humor** — four research-backed comedy patterns (dry wit, self-aware AI, alien observer, literal idiom play) calibrated to make your agent sound like it's been running your life for years and is quietly amused by the experience.
+
+The humor isn't bolted on. It's baked in. Because a JARVIS that speaks without wit is just Siri with better reverb.
+
+📄 **The research behind the humor:** [LIMBIC — Computational Humor via Bisociation & Embedding Distances](https://github.com/globalcaos/clawdbot-moltbot-openclaw/blob/main/AI_reports/humor-embeddings-paper-draft.md)
 
 ## ⚠️ CRITICAL: Do NOT use the `tts` tool
 
@@ -50,18 +54,23 @@ The built-in `tts` tool uses Edge TTS (cloud, wrong voice, no effects). **Always
 
 Every response that warrants voice output must include BOTH:
 
-1. **Visible transcript** — bold **Jarvis:** prefix followed by the spoken text:
-   ```
-   **Jarvis:** *Your spoken text here.*
-   ```
-   The webchat UI has custom CSS + JS that automatically detects `**Jarvis:**` and renders the following text in **purple italic** (`.jarvis-voice` class, color `#9b59b6`). You just write the markdown — the styling is automatic.
-
-2. **Audio execution** — run the jarvis command in background:
+1. **Audio execution FIRST** — run the jarvis command in background BEFORE writing the reply:
    ```
    exec(command='jarvis "Your spoken text here."', background=true)
    ```
+   This fires immediately — the user hears the voice BEFORE the text appears on screen.
 
-This is called **hybrid output**: the user sees the transcript AND hears the voice.
+2. **Visible transcript** — bold **Jarvis:** prefix followed by the spoken text:
+
+   ```
+   **Jarvis:** *Your spoken text here.*
+   ```
+
+   The webchat UI has custom CSS + JS that automatically detects `**Jarvis:**` and renders the following text in **purple italic** (`.jarvis-voice` class, color `#9b59b6`). You just write the markdown — the styling is automatic.
+
+This is called **hybrid output**: the user hears the voice first, then sees the transcript.
+
+> **Note:** The server-side `triggerJarvisAutoTts` hook is DISABLED (no-op). It fired too late (after text render). Voice comes exclusively from the `exec` call.
 
 ## Command Reference
 
@@ -114,6 +123,7 @@ For **non-webchat surfaces** (WhatsApp, Telegram, etc.), the bold/italic markdow
 ## Installation (for new setups)
 
 Requires:
+
 - `sherpa-onnx` runtime at `~/.openclaw/tools/sherpa-onnx-tts/`
 - Alan medium model at `~/.openclaw/tools/sherpa-onnx-tts/models/vits-piper-en_GB-alan-medium/`
 - `ffmpeg` installed system-wide
@@ -171,10 +181,35 @@ ffmpeg -i raw.wav \
 
 ## The Full JARVIS Experience
 
-**jarvis-voice** gives your agent a voice. Pair it with [**ai-humor-ultimate**](https://clawhub.com/globalcaos/ai-humor-ultimate) and you give it a *soul* — dry wit, contextual humor, the kind of understated sarcasm that makes you smirk at your own terminal.
+**jarvis-voice** gives your agent a voice. Pair it with [**ai-humor-ultimate**](https://clawhub.com/globalcaos/ai-humor-ultimate) and you give it a _soul_ — dry wit, contextual humor, the kind of understated sarcasm that makes you smirk at your own terminal.
 
 This pairing is part of a 12-skill cognitive architecture we've been building — voice, humor, memory, reasoning, and more. Research papers included, because we're that kind of obsessive.
 
 👉 **Explore the full project:** [github.com/globalcaos/clawdbot-moltbot-openclaw](https://github.com/globalcaos/clawdbot-moltbot-openclaw)
 
 Clone it. Fork it. Break it. Make it yours.
+
+## Setup: Workspace Files
+
+For voice to work consistently across new sessions, copy the templates to your workspace root:
+
+```bash
+cp {baseDir}/templates/VOICE.md ~/.openclaw/workspace/VOICE.md
+cp {baseDir}/templates/SESSION.md ~/.openclaw/workspace/SESSION.md
+cp {baseDir}/templates/HUMOR.md ~/.openclaw/workspace/HUMOR.md
+```
+
+- **VOICE.md** — injected every session, enforces voice output rules (like SOUL.md)
+- **SESSION.md** — session bootstrap that includes voice greeting requirements
+- **HUMOR.md** — humor configuration at maximum frequency with four pattern types (dry wit, self-aware AI, alien observer, literal idiom)
+
+Both files are auto-loaded by OpenClaw's workspace injection. The agent will speak from the very first reply of every session.
+
+## Included Files
+
+| File | Purpose |
+|------|---------|
+| `bin/jarvis` | The TTS + effects script (portable, uses $SHERPA_ONNX_TTS_DIR) |
+| `templates/VOICE.md` | Voice enforcement rules (copy to workspace root) |
+| `templates/SESSION.md` | Session start with voice greeting (copy to workspace root) |
+| `templates/HUMOR.md` | Humor config — four patterns, frequency 1.0 (copy to workspace root) |
