@@ -9,7 +9,7 @@ importers:
   .:
     dependencies:
       canvas:
-        specifier: ^2.11.2
+        specifier: ^3.2.1
         version: 3.2.1
       chalk:
         specifier: ^5.3.0
@@ -18,8 +18,8 @@ importers:
         specifier: ^12.1.0
         version: 12.1.0
       declare-render:
-        specifier: ^1.1.0
-        version: 1.1.0(canvas@3.2.1)
+        specifier: ^1.1.5
+        version: 1.1.5(canvas@3.2.1)
       dotenv:
         specifier: ^16.4.5
         version: 16.6.1
@@ -29,9 +29,6 @@ importers:
       materials-agents:
         specifier: file:../materials-agents
         version: file:../materials-agents(canvas@3.2.1)
-      node-canvas:
-        specifier: ^2.9.0
-        version: 2.9.0
       openai:
         specifier: ^4.77.0
         version: 4.104.0
@@ -323,16 +320,8 @@ packages:
     resolution: {integrity: sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA==}
     engines: {node: '>=18'}
 
-  declare-render@1.1.0:
-    resolution: {integrity: sha512-QfwoemeUeklN99YvsW/N5Asrfy7/8rf16pO8IcMbyJNAI9DikKwep69nmqb4CugpSLQ7C6jUF5RaI8aG5CdtZw==}
-    peerDependencies:
-      canvas: ^3.2.1
-    peerDependenciesMeta:
-      canvas:
-        optional: true
-
-  declare-render@file:../declare-renderer:
-    resolution: {directory: ../declare-renderer, type: directory}
+  declare-render@1.1.5:
+    resolution: {integrity: sha512-EQfyvA8icvOpAeHNTkSJ+7zpnTl0to9+l2s54XqA6zSiDaOMUkAk1OeOvmQb22iNXzL4nhwQ+O1iFG0NztiQrw==}
     peerDependencies:
       canvas: ^3.2.1
     peerDependenciesMeta:
@@ -541,10 +530,6 @@ packages:
 
   node-addon-api@7.1.1:
     resolution: {integrity: sha512-5m3bsyrjFWE1xf7nz7YXdN4udnVtXK6/Yfgn5qnahL6bCkf2yKt4k3nuTKAtT4r3IG8JNR2ncsIMdZuAzJjHQQ==}
-
-  node-canvas@2.9.0:
-    resolution: {integrity: sha512-QYqBq9vm+hWrPyqRUyIRYlrWCWL8IysaDuvM79ZLx694ojctbpHQ4Iu45SZZYSBgiGtSuP2oil9ae1xQloeC9Q==}
-    engines: {node: '>=6'}
 
   node-domexception@1.0.0:
     resolution: {integrity: sha512-/jKZoMpw0F8GRwl4/eLROPA3cfcXtLApP0QzLmUT/HuPCZWyB7IY9ZrMeKw2O/nFIqPQB3PVM9aYm0F312AXDQ==}
@@ -902,13 +887,7 @@ snapshots:
 
   commander@12.1.0: {}
 
-  declare-render@1.1.0(canvas@3.2.1):
-    dependencies:
-      lodash-es: 4.17.23
-    optionalDependencies:
-      canvas: 3.2.1
-
-  declare-render@file:../declare-renderer(canvas@3.2.1):
+  declare-render@1.1.5(canvas@3.2.1):
     dependencies:
       lodash-es: 4.17.23
     optionalDependencies:
@@ -1096,7 +1075,7 @@ snapshots:
 
   materials-agents@file:../materials-agents(canvas@3.2.1):
     dependencies:
-      declare-render: file:../declare-renderer(canvas@3.2.1)
+      declare-render: 1.1.5(canvas@3.2.1)
       openai: 4.104.0
     transitivePeerDependencies:
       - canvas
@@ -1131,8 +1110,6 @@ snapshots:
       semver: 7.7.4
 
   node-addon-api@7.1.1: {}
-
-  node-canvas@2.9.0: {}
 
   node-domexception@1.0.0: {}
 

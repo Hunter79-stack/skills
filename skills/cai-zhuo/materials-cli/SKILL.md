@@ -1,9 +1,9 @@
 ---
 name: materials-cli
 description: Render JSON schemas to images and generate schemas from prompts using declare-render and AI.
-version: 1.0.5
+version: 1.0.6
 metadata:
-  openclaw:
+  clawdbot:
     requires:
       env:
         - OPENAI_API_KEY

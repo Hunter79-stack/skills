@@ -37,10 +37,10 @@ async function loadDeclareRender(): Promise<RenderFunction> {
     if (errMsg.includes('canvas') || errMsg.includes('Cannot find module') ||
         errMsg.includes('MODULE_NOT_FOUND') || errMsg.includes('node-canvas')) {
       const help =
-        `Failed to load declare-render with node-canvas.\n\n` +
+        `Failed to load declare-render (requires the canvas package).\n\n` +
         `Original error: ${errMsg}\n\n` +
-        `This is likely because node-canvas is not properly installed.\n` +
-        `Please visit the node-canvas installation guide for help:\n` +
+        `This is likely because the canvas package is not properly installed.\n` +
+        `Please visit the canvas (node-canvas) installation guide for help:\n` +
         `  https://github.com/Automattic/node-canvas#installation\n\n` +
         `Common solutions:\n` +
         `- macOS: brew install pkg-config cairo pango jpeg giflib librsvg pixman\n` +
