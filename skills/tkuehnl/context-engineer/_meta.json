@@ -1,11 +1,17 @@
 {
   "owner": "tkuehnl",
   "slug": "context-engineer",
-  "displayName": "Context Engineer",
+  "displayName": "context-engineer",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1771538639886,
-    "commit": "https://github.com/openclaw/skills/commit/ba98d513541474b8f5ee3cfa548b758ce3a78176"
+    "version": "1.0.2",
+    "publishedAt": 1771717037934,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1771538639886,
+      "commit": "https://github.com/openclaw/skills/commit/ba98d513541474b8f5ee3cfa548b758ce3a78176"
+    }
+  ]
 }
