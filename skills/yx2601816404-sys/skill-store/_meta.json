@@ -1,11 +1,17 @@
 {
   "owner": "yx2601816404-sys",
   "slug": "skill-store",
-  "displayName": "Skill Store",
+  "displayName": "Skill",
   "latest": {
-    "version": "1.1.0",
-    "publishedAt": 1771677381166,
-    "commit": "https://github.com/openclaw/skills/commit/9e54cf0d92fc3a0154aafbf3189ab338105c9298"
+    "version": "1.6.0",
+    "publishedAt": 1771880161430,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.1.0",
+      "publishedAt": 1771677381166,
+      "commit": "https://github.com/openclaw/skills/commit/9e54cf0d92fc3a0154aafbf3189ab338105c9298"
+    }
+  ]
 }
