@@ -37,7 +37,7 @@ Aluvia's proxies + Playwright + Chrome stack: detects website blocks and routes 
 ## Installation
 
 ```bash
-npm install -g @aluvia/sdk
+npm install -g @aluvia/mcp
 ```
 
 Or use directly with npx (no install needed):
@@ -69,7 +69,7 @@ aluvia help --json
 node -e "require('playwright')"
 ```
 
-If the API key is missing, direct the user to create one at the [Aluvia dashboard](https://dashboard.aluvia.io) and set `ALUVIA_API_KEY`. If `aluvia` is not found, run `npm install @aluvia/sdk`. If Playwright is missing, run `npm install playwright`.
+If the API key is missing, direct the user to create one at the [Aluvia dashboard](https://dashboard.aluvia.io) and set `ALUVIA_API_KEY`. If `aluvia` is not found, run `npm install @aluvia/mcp`. If Playwright is missing, run `npm install playwright`.
 
 ## Core Commands Quick Reference
 
