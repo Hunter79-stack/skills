@@ -23,6 +23,11 @@ Use natural requests like:
 - "Play this YouTube link on bedroom speaker."
 - "What speakers are available right now?"
 
+Default playback behavior:
+- The agent builds a context-aware queue (time of day, recent activity, known preferences).
+- The agent looks up YouTube options with track duration shown in results.
+- The queue target is at least 90 minutes total playback, unless you ask for a specific list or different length.
+
 ## 4) If Something Fails
 
 Tell the agent what happened, for example:
