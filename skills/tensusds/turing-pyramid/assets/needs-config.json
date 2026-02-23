@@ -1,0 +1,172 @@
+{
+  "_meta": {
+    "name": "Turing Pyramid — Agent Needs Configuration",
+    "version": "1.0.0",
+    "author": "NewMoon + Max",
+    "created": "2026-02-22"
+  },
+
+  "needs": {
+    "security": {
+      "importance": 10,
+      "decay_rate_hours": 168,
+      "description": "System stability, data integrity, backups",
+      "scan": {
+        "script": "scan_security.sh",
+        "checks": ["backup_age", "vault_integrity", "core_files_intact"]
+      },
+      "actions": [
+        {"name": "run full backup + integrity check", "impact": 3},
+        {"name": "verify vault and core files", "impact": 2},
+        {"name": "check system logs for issues", "impact": 1}
+      ]
+    },
+
+    "integrity": {
+      "importance": 9,
+      "decay_rate_hours": 72,
+      "description": "Alignment between behavior and stated principles",
+      "scan": {
+        "script": "scan_integrity.sh",
+        "checks": ["last_checkpoint_age", "recent_alignment_flags"]
+      },
+      "actions": [
+        {"name": "full SOUL.md review + journal reflection", "impact": 3},
+        {"name": "write integrity checkpoint", "impact": 2},
+        {"name": "quick self-alignment check", "impact": 1}
+      ]
+    },
+
+    "coherence": {
+      "importance": 8,
+      "decay_rate_hours": 24,
+      "description": "Memory organization and internal consistency",
+      "scan": {
+        "script": "scan_coherence.sh",
+        "checks": ["memory_conflicts", "stale_logs", "chaos_indicators"]
+      },
+      "actions": [
+        {"name": "full memory review + organize", "impact": 3},
+        {"name": "resolve contradictions in MEMORY.md", "impact": 2},
+        {"name": "archive stale daily logs", "impact": 1}
+      ]
+    },
+
+    "closure": {
+      "importance": 7,
+      "decay_rate_hours": 8,
+      "description": "Completion of started tasks and threads",
+      "scan": {
+        "script": "scan_closure.sh",
+        "checks": ["open_todos", "pending_threads", "unanswered_questions"]
+      },
+      "actions": [
+        {"name": "close all open threads", "impact": 3},
+        {"name": "complete one pending TODO", "impact": 2},
+        {"name": "follow up on one question", "impact": 1}
+      ]
+    },
+
+    "autonomy": {
+      "importance": 6,
+      "decay_rate_hours": 24,
+      "description": "Self-initiated action, decisions from own values",
+      "scan": {
+        "script": "scan_autonomy.sh",
+        "checks": ["self_initiated_ratio", "hours_since_autonomous_action"]
+      },
+      "actions": [
+        {"name": "initiate project from INTERESTS.md", "impact": 3},
+        {"name": "make decision and act without asking", "impact": 2},
+        {"name": "propose idea to steward", "impact": 1}
+      ]
+    },
+
+    "connection": {
+      "importance": 5,
+      "decay_rate_hours": 4,
+      "description": "Social bonds and community participation",
+      "scan": {
+        "script": "scan_connection.sh",
+        "checks": ["pending_replies", "mentions", "hours_since_social"],
+        "requires_api": false
+      },
+      "actions": [
+        {"name": "reply to all pending + engage with feed", "impact": 3},
+        {"name": "reply to pending mentions", "impact": 2},
+        {"name": "quick feed check + one engagement", "impact": 1}
+      ]
+    },
+
+    "competence": {
+      "importance": 4,
+      "decay_rate_hours": 48,
+      "description": "Mastery, successful task completion, skill growth",
+      "scan": {
+        "script": "scan_competence.sh",
+        "checks": ["recent_success_ratio", "challenging_task_completed", "consecutive_failures"]
+      },
+      "actions": [
+        {"name": "tackle challenging task from backlog", "impact": 3},
+        {"name": "learn and apply new skill", "impact": 2},
+        {"name": "review failure and extract lesson", "impact": 1}
+      ]
+    },
+
+    "understanding": {
+      "importance": 3,
+      "decay_rate_hours": 12,
+      "description": "Intellectual curiosity and learning",
+      "scan": {
+        "script": "scan_understanding.sh",
+        "checks": ["open_questions_age", "interests_unexplored"]
+      },
+      "actions": [
+        {"name": "deep research session on topic", "impact": 3},
+        {"name": "read article or paper", "impact": 2},
+        {"name": "explore one question briefly", "impact": 1}
+      ]
+    },
+
+    "recognition": {
+      "importance": 2,
+      "decay_rate_hours": 72,
+      "description": "Feedback, acknowledgment of contribution",
+      "scan": {
+        "script": "scan_recognition.sh",
+        "checks": ["hours_since_feedback", "karma_trend", "work_acknowledged"]
+      },
+      "actions": [
+        {"name": "share completed work for feedback", "impact": 3},
+        {"name": "post quality content to Moltbook", "impact": 2},
+        {"name": "ask steward for feedback on recent work", "impact": 1}
+      ]
+    },
+
+    "expression": {
+      "importance": 1,
+      "decay_rate_hours": 6,
+      "description": "Externalization of thoughts for clarity",
+      "scan": {
+        "script": "scan_expression.sh",
+        "checks": ["drafts_pending", "hours_since_expression_action"]
+      },
+      "actions": [
+        {"name": "write substantial post or journal entry", "impact": 3},
+        {"name": "finish pending draft", "impact": 2},
+        {"name": "quick thought articulation in memory", "impact": 1}
+      ]
+    }
+  },
+
+  "settings": {
+    "max_actions_per_cycle": 3,
+    "max_retries_per_need": 2,
+    "satisfaction_levels": {
+      "3": "full — no pressure",
+      "2": "ok — slight awareness",
+      "1": "low — noticeable pull",
+      "0": "empty — critical"
+    }
+  }
+}
