@@ -1,6 +1,6 @@
 {
   "name": "materials-cli",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "CLI tool for rendering JSON schemas to images using declare-render",
   "type": "module",
   "main": "./src/index.ts",
@@ -12,7 +12,7 @@
     "dev": "tsx src/index.ts",
     "start": "node ./bin/materials-cli.js",
     "materials": "node bin/materials-cli.js",
-    "publish:clawhub": "clawhub publish \"$(pwd)\" --slug materials-cli --name \"Materials CLI\" --version 1.0.6 --tags latest"
+    "publish:clawhub": "clawhub publish \"$(pwd)\" --slug materials-cli --name \"Materials CLI\" --version 1.0.7 --tags latest"
   },
   "keywords": [
     "cli",

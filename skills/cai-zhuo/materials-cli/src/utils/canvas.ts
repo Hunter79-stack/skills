@@ -16,6 +16,8 @@ async function loadDeclareRender(): Promise<RenderFunction> {
     if (Renderer) {
       // declare-render/node exports Renderer(schema) only; it uses NodeCanvasEngine internally.
       // Schema must have width, height; output.type controls png/jpg.
+      // Type assertion: package types point at base Renderer(schema, engine); node entry uses Renderer(schema).
+      const NodeRenderer = Renderer as unknown as new (schema: object) => { draw: () => Promise<Buffer | Blob> };
       renderFn = async (schema: any, options: any) => {
         const schemaWithOptions = {
           ...schema,
@@ -23,7 +25,7 @@ async function loadDeclareRender(): Promise<RenderFunction> {
           height: options.height ?? schema.height ?? 600,
           output: { type: (options.format === 'jpg' ? 'jpg' : 'png') as 'png' | 'jpg' },
         };
-        const renderer = new Renderer(schemaWithOptions);
+        const renderer = new NodeRenderer(schemaWithOptions);
         const buffer = await renderer.draw();
         return Buffer.isBuffer(buffer) ? buffer : Buffer.from(await (buffer as Blob).arrayBuffer());
       };

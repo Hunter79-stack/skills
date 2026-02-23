@@ -1,7 +1,7 @@
 ---
 name: materials-cli
 description: Render JSON schemas to images and generate schemas from prompts using declare-render and AI.
-version: 1.0.6
+version: 1.0.7
 metadata:
   clawdbot:
     requires:

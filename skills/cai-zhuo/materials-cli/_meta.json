@@ -3,11 +3,16 @@
   "slug": "materials-cli",
   "displayName": "Materials CLI",
   "latest": {
-    "version": "1.0.6",
-    "publishedAt": 1771831954861,
-    "commit": "https://github.com/openclaw/skills/commit/2d9749486497d33fbedae39ec6dde00a1f630c66"
+    "version": "1.0.7",
+    "publishedAt": 1771832346215,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.6",
+      "publishedAt": 1771831954861,
+      "commit": "https://github.com/openclaw/skills/commit/2d9749486497d33fbedae39ec6dde00a1f630c66"
+    },
     {
       "version": "1.0.5",
       "publishedAt": 1771570054368,
