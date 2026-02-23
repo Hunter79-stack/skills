@@ -36,7 +36,7 @@ Per-Token Economy:
   │                            Migration ──── Raydium DEX Pool
   │
   └── Token-2022 Extensions
-       ├── Transfer Fee (1%)
+       ├── Transfer Fee (0.1%)
        └── Confidential Transfer (optional)
 
 Protocol Layer:
@@ -133,7 +133,7 @@ New buyers may also be more likely to purchase a token seeing that it is "safer"
 
 - The fee structure itself (sybiling costs more in fees)
 - The community treasury (even sybil buyers fund the collective)
-- Post-migration transfer fees (every transfer costs 1%)
+- Post-migration transfer fees (every transfer costs 0.1%)
 
 ---
 
@@ -148,7 +148,7 @@ Migration is **permissionless** — any wallet can trigger the migration for any
 The migration is executed as a two-step atomic process within a single transaction:
 
 1. **Fund WSOL**: Wrap the bonding curve's SOL reserves into a WSOL token account
-2. **Migrate to DEX**: Vote finalization, pool creation on Raydium CPMM, liquidity provision (SOL + tokens), LP token burn (liquidity locked forever), transfer fee activation (1% on all future transfers)
+2. **Migrate to DEX**: Vote finalization, pool creation on Raydium CPMM, liquidity provision (SOL + tokens), LP token burn (liquidity locked forever), transfer fee activation (0.1% on all future transfers)
 
 When your token bonds, anyone can complete the migration. The community is not dependent on the creator or any centralized operator.
 
@@ -156,29 +156,30 @@ When your token bonds, anyone can complete the migration. The community is not d
 
 ## 5. Post-Migration: Automatic Buybacks and Burns
 
-Once a token migrates to Raydium, the treasury mechanics continue working for holders through the **1% transfer fee**.
+Once a token migrates to Raydium, the treasury mechanics continue working for holders through the **0.1% transfer fee**.
 
-### The 1% Transfer Fee (Token-2022)
+### The 0.1% Transfer Fee (Token-2022)
 
-All `torch.market` tokens use Solana's Token-2022 standard with a built-in **1% transfer fee**. This fee is collected on every transfer — wallet to wallet, DEX trades, everything.
+All `torch.market` tokens use Solana's Token-2022 standard with a built-in **0.1% transfer fee**. This fee is collected on every transfer — wallet to wallet, DEX trades, everything.
 
 ```
 User transfers 100 tokens
         │
-        └── 1% (1 token) → Withheld in mint
+        └── 0.1% (0.1 token) → Withheld in mint
                             │
                             └── Harvested → Token Treasury
 ```
 
-The transfer fee is not extracted from the sender or receiver as a separate charge — it's automatically withheld from the transferred amount. If you send 100 tokens, the recipient receives 99 and 1 is held for the treasury.
+The transfer fee is not extracted from the sender or receiver as a separate charge — it's automatically withheld from the transferred amount. If you send 1000 tokens, the recipient receives 999 and 1 is held for the treasury.
 
 ### Harvest and Buyback Cycle
 
 The accumulated transfer fees create a perpetual buyback engine:
 
 1. **Harvest** (permissionless): Anyone can call `harvest_fees` to collect withheld tokens from transfers into the token treasury's token account.
-2. **Buyback** (permissionless): Anyone can call `buyback` to execute a market buy using treasury SOL. The bought tokens are burned.
-3. **Burn**: Acquired tokens are permanently burned, reducing supply. When supply reaches the 500M floor, tokens are held in treasury instead (preventing hyper-deflation).
+2. **Swap to SOL** (permissionless): Anyone can call `swap_fees_to_sol` to sell the harvested tokens back to SOL via Raydium, adding the proceeds to the treasury's SOL balance. The SDK bundles harvest + swap in one atomic transaction via `buildSwapFeesToSolTransaction`.
+3. **Buyback** (permissionless): Anyone can call `execute_auto_buyback` to execute a market buy using treasury SOL when price dips. The bought tokens are burned.
+4. **Burn**: Acquired tokens are permanently burned, reducing supply. When supply reaches the 500M floor, tokens are held in treasury instead (preventing hyper-deflation).
 
 ### Buyback Parameters
 
@@ -194,7 +195,7 @@ This creates a continuous deflationary pressure. Every time someone trades the t
 | Phase | SOL Source | Token Destination |
 |-------|-----------|-------------------|
 | Bonding | 1% fee + 20%→5% of buys (dynamic) | Community treasury (vote vault) |
-| DEX | 1% transfer fee (harvested) | Burned (or held at floor) |
+| DEX | 0.1% transfer fee (harvested) | Burned (or held at floor) |
 
 ---
 
@@ -294,7 +295,8 @@ The reclaimed SOL joins the protocol treasury and is distributed to active trade
 A reclaimed token can be **revived** if the community believes in it. Anyone can contribute SOL to a reclaimed token:
 
 ```
-Revival threshold: IVS (6.25 SOL Spark, 12.5 SOL Flame, 25 SOL Torch)
+Revival threshold (V27): 3BT/8 (18.75 SOL Spark, 37.5 SOL Flame, 75 SOL Torch)
+Legacy tokens: BT/8 (6.25 SOL Spark, 12.5 SOL Flame, 25 SOL Torch)
 ```
 
 Contributors are patrons — they do NOT receive tokens for their contribution. They're simply signaling belief that the token deserves another chance. Once the revival threshold is reached:
@@ -395,16 +397,232 @@ The plugin wraps the SDK with typed actions (buy, sell, create, vote, lend, mess
 
 ---
 
+## 12. Protocol Architecture
+
+The on-chain program is a directed graph of economic relationships. PDA seeds define the edges, handlers define the legal traversals. The topology enforces correctness — relationships between accounts are guaranteed by the Solana runtime, not by application logic.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                          TORCH MARKET PROTOCOL v3.7.11                                │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                      │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐    │
+│  │                           PROTOCOL LAYER                                     │    │
+│  │  ┌─────────────────┐  ┌──────────────────────────────────────┐              │    │
+│  │  │  GlobalConfig   │  │        ProtocolTreasury               │              │    │
+│  │  │  (authority,    │  │  (1% fees + reclaimed SOL,            │              │    │
+│  │  │   settings)     │  │   1500 SOL floor, epoch rewards)      │              │    │
+│  │  └─────────────────┘  └──────────────────────────────────────┘              │    │
+│  └─────────────────────────────────────────────────────────────────────────────┘    │
+│                                       │                                              │
+│                                       ▼                                              │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐    │
+│  │                           PER-TOKEN LAYER                                    │    │
+│  │                                                                              │    │
+│  │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                   │    │
+│  │  │    Token     │    │   Bonding    │    │   Treasury   │                   │    │
+│  │  │   (Mint)     │───▶│    Curve     │───▶│  (buybacks,  │                   │    │
+│  │  │  Token-2022  │    │  (pricing,   │    │   stars,     │                   │    │
+│  │  │ 0.1% xfer fee│    │   voting)    │    │   lending)   │                   │    │
+│  │  └──────────────┘    └──────┬───────┘    └──────────────┘                   │    │
+│  │                             │                                                │    │
+│  │         ┌───────────────────┼───────────────────┐                           │    │
+│  │         ▼                   ▼                   ▼                           │    │
+│  │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                   │    │
+│  │  │  Token Vault │    │  Treasury's  │    │  Raydium     │                   │    │
+│  │  │  (tradeable  │    │  Token Acct  │    │  CPMM Pool   │                   │    │
+│  │  │   supply)    │    │  (vote vault)│    │  (post-grad) │                   │    │
+│  │  └──────────────┘    └──────────────┘    └──────────────┘                   │    │
+│  └─────────────────────────────────────────────────────────────────────────────┘    │
+│                                       │                                              │
+│                                       ▼                                              │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐    │
+│  │                            USER LAYER                                        │    │
+│  │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐              │    │
+│  │  │  UserPosition   │  │   UserStats     │  │   StarRecord    │              │    │
+│  │  │  (per-token     │  │  (platform-wide │  │  (per-token     │              │    │
+│  │  │   holdings,     │  │   volume,       │  │   appreciation) │              │    │
+│  │  │   vote)         │  │   rewards)      │  │                 │              │    │
+│  │  └─────────────────┘  └─────────────────┘  └─────────────────┘              │    │
+│  └─────────────────────────────────────────────────────────────────────────────┘    │
+│                                       │                                              │
+│                                       ▼                                              │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐    │
+│  │                    VAULT LAYER (V3.1.0 — Full Custody)                       │    │
+│  │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐              │    │
+│  │  │   TorchVault    │  │VaultWalletLink  │  │  Vault ATAs     │              │    │
+│  │  │  (per-creator   │◀─│  (per-wallet    │  │  (per-mint      │              │    │
+│  │  │   SOL + token   │  │   reverse       │  │   token accts   │              │    │
+│  │  │   full custody) │  │   pointer)      │  │   owned by PDA) │              │    │
+│  │  └─────────────────┘  └─────────────────┘  └─────────────────┘              │    │
+│  └─────────────────────────────────────────────────────────────────────────────┘    │
+│                                                                                      │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│  INSTRUCTION HANDLERS (28 total)                                                     │
+│  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐      │
+│  │ admin  │ │ token  │ │ market │ │treasury│ │ dex    │ │rewards │ │reclaim │      │
+│  │        │ │        │ │        │ │/lending│ │migrate │ │        │ │/revival│      │
+│  └────────┘ └────────┘ └────────┘ └────────┘ └────────┘ └────────┘ └────────┘      │
+│  ┌────────┐ ┌────────┐                                                               │
+│  │ vault  │ │  swap  │                                                               │
+│  │        │ │(V3.1.1)│                                                               │
+│  └────────┘ └────────┘                                                               │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### On-Chain Account Types
+
+The protocol uses 12 on-chain account types, all deterministic PDAs:
+
+| Account | PDA Seeds | Purpose |
+|---------|-----------|---------|
+| **GlobalConfig** | `["global_config"]` | Protocol-wide settings (authority, fees, pause flag) |
+| **BondingCurve** | `["bonding_curve", mint]` | Per-token pricing state, reserves, votes, bonding target |
+| **Treasury** | `["treasury", mint]` | Per-token treasury (SOL for buybacks, star balance, lending pool) |
+| **TreasuryLock** | `["treasury_lock", mint]` | [V27] Holds 250M locked tokens (25% of supply) |
+| **UserPosition** | `["user_position", bc, user]` | Per-user per-token holdings and vote |
+| **UserStats** | `["user_stats", user]` | Platform-wide volume and reward tracking |
+| **ProtocolTreasury** | `["protocol_treasury_v11"]` | Single treasury: fees + reclaims, 1500 SOL floor, epoch rewards |
+| **StarRecord** | `["star_record", user, mint]` | Prevents double-starring |
+| **LoanPosition** | `["loan", mint, user]` | Per-user per-token lending position |
+| **TorchVault** | `["torch_vault", creator]` | Per-creator full-custody SOL + token escrow |
+| **VaultWalletLink** | `["vault_wallet", wallet]` | Reverse pointer: wallet → vault (one link per wallet) |
+
+### Instruction Set
+
+The V3.7.11 program exposes 28 instructions across 9 handler domains:
+
+| Domain | Instructions |
+|--------|-------------|
+| **Admin** | `initialize`, `initialize_protocol_treasury`, `update_dev_wallet` |
+| **Token** | `create_token` |
+| **Market** | `buy`, `sell` |
+| **Treasury** | `harvest_fees`, `swap_fees_to_sol` |
+| **Migration** | `fund_migration_wsol`, `migrate_to_dex`, `execute_auto_buyback` |
+| **Rewards** | `advance_protocol_epoch`, `claim_protocol_rewards`, `star_token` |
+| **Reclaim/Revival** | `reclaim_failed_token`, `contribute_revival` |
+| **Vault** | `create_vault`, `deposit_vault`, `withdraw_vault`, `link_wallet`, `unlink_wallet`, `transfer_authority`, `withdraw_tokens` |
+| **Swap** | `fund_vault_wsol`, `vault_swap` |
+| **Lending** | `borrow`, `repay`, `liquidate` |
+
+> **Note (V3.7.0):** `update_authority` was removed. Authority transfer is now done at deployment time via multisig tooling rather than an on-chain instruction, reducing the protocol's admin attack surface. Minimal admin surface: only `initialize` and `update_dev_wallet` require authority.
+>
+> **Note (V3.7.10):** `swap_fees_to_sol` added. Sells harvested Token-2022 transfer fee tokens back to SOL via Raydium CPMM. Permissionless — anyone can call after migration. 28 instructions total.
+>
+> **Note (V3.7.11):** Metaplex `add_metadata` removed (temporary backfill complete). Transfer fee reduced from 1% to 0.1% (`TRANSFER_FEE_BPS` 100→10). All tokens now use Token-2022 metadata extensions exclusively. 28 instructions total.
+
+### Bonding Curve Formula
+
+The protocol uses a constant product bonding curve:
+
+```
+Buy:   tokens_out = (virtual_token_reserves × sol_in) / (virtual_sol_reserves + sol_in)
+Sell:  sol_out    = (virtual_sol_reserves × token_in) / (virtual_token_reserves + token_in)
+Price: price      = virtual_sol_reserves / virtual_token_reserves
+```
+
+**Tiered Virtual Reserves (V27):** Each tier has per-tier initial virtual reserves tuned for a consistent ~13.44x multiplier:
+
+| Tier | Target | IVS (3BT/8) | IVT | Curve Supply | Treasury Lock |
+|------|--------|-------------|-----|-------------|---------------|
+| **Spark** | 50 SOL | 18.75 SOL | 756.25M | 750M (75%) | 250M (25%) |
+| **Flame** | 100 SOL | 37.5 SOL | 756.25M | 750M (75%) | 250M (25%) |
+| **Torch** | 200 SOL | 75 SOL | 756.25M | 750M (75%) | 250M (25%) |
+
+### Fee Flow
+
+```
+                              BUYER'S SOL
+                                  │
+                                  ▼
+               ┌──────────────────────────────────────┐
+               │           TOTAL SOL INPUT            │
+               └──────────────────────────────────────┘
+                                  │
+           ┌──────────────────────┼──────────────────────┐
+           │                      │                      │
+           ▼                      ▼                      ▼
+    ┌─────────────┐       ┌─────────────┐       ┌─────────────┐
+    │  1% Protocol│       │ 1% Treasury │       │    98%      │
+    │    Fee      │       │    Fee      │       │  Remaining  │
+    └──────┬──────┘       └──────┬──────┘       └──────┬──────┘
+           │                     │                     │
+      ┌────┴────┐                │              ┌──────┴──────┐
+      │         │                │              │             │
+      ▼         ▼                ▼              ▼             ▼
+┌─────────┐ ┌─────────┐   ┌──────────┐   ┌───────────┐ ┌───────────┐
+│Protocol │ │  Dev    │   │  Token   │   │  Token   │ │  Bonding  │
+│Treasury │ │ Wallet  │   │ Treasury │   │ Treasury │ │   Curve   │
+│  (75%)  │ │  (25%)  │   │  (100%)  │   │(20%→5%)  │ │(80%→95%)  │
+└─────────┘ └─────────┘   └────┬─────┘   └───────────┘ └─────┬─────┘
+                               │                             │
+                               │                              ▼
+                               │                        ┌─────────────┐
+                               │                        │   TOKENS    │
+                               │                        │    OUT      │
+                               │                        └──────┬──────┘
+                               │                               │
+                               │                      ┌────────┴────────┐
+                               │                      │                 │
+                               ▼                      ▼                 ▼
+                        ┌─────────────┐        ┌─────────────┐   ┌───────────┐
+                        │  BUYBACKS   │        │   BUYER     │   │ COMMUNITY │
+                        │  (on dips)  │        │   (90%)     │   │ TREASURY  │
+                        └─────────────┘        └─────────────┘   │   (10%)   │
+                                                                 └─────┬─────┘
+                                                                       │
+                                                           ┌───────────┴───────────┐
+                                                           │      AT MIGRATION     │
+                                                           │    (based on vote)    │
+                                                           ├───────────────────────┤
+                                                           │ BURN → destroy tokens │
+                                                           │ RETURN → add to LP    │
+                                                           └───────────────────────┘
+```
+
+### Security Model
+
+**Access Control:**
+- **Authority-only:** `initialize`, `update_dev_wallet`
+- **Vault authority-only:** `withdraw_vault`, `link_wallet`, `unlink_wallet`, `transfer_authority`, `withdraw_tokens`
+- **Permissionless cranks:** `advance_protocol_epoch`, `harvest_fees`, `swap_fees_to_sol`, `fund_migration_wsol`, `migrate_to_dex`, `execute_auto_buyback`, `reclaim_failed_token`, `liquidate`
+- **Permissionless deposits:** Anyone can deposit into any vault
+
+**Vault Security (V3.1.0 — Full Custody):**
+- One vault per creator (PDA uniqueness)
+- One link per wallet (PDA uniqueness)
+- Authority separation: `creator` (immutable seed) vs `authority` (transferable admin)
+- All value stays in vault — agent wallet never holds tokens or significant SOL
+- CPI ordering enforced: token CPIs before lamport manipulation in all vault paths
+- Compromised key safety: attacker gets dust, authority unlinks and re-links
+
+**Raydium Pool Validation (V27 — PDA-Based):**
+Pool accounts validated via PDA derivation constraints in Anchor contexts (`derive_pool_state`, `derive_pool_vault`, `derive_observation_state`). AMM config hardcoded to prevent fee-tier substitution. Oracle manipulation impossible — an attacker cannot derive a valid PDA pointing to a fake pool.
+
+### Formal Verification
+
+Core arithmetic is formally verified with [Kani](https://model-checking.github.io/kani/) — 36 proof harnesses, all passing, covering every possible input in constrained ranges. Proofs cover: fee calculations, bonding curve pricing, lending formulas (borrow/repay/liquidate lifecycle), reward distribution, auto-buyback, migration conservation, and V25/V27 token distribution. No SOL can be created from nothing, no tokens can be minted from thin air, and no fees can exceed their stated rates. See [VERIFICATION.md](https://torch.market/verification.md).
+
+### Security Audit History
+
+**V3.2.1 — `harvest_fees` Unconstrained Destination (CRITICAL, Fixed)**
+The `harvest_fees` instruction did not validate that `treasury_token_account` matched the treasury PDA's ATA. An attacker could substitute their own Token-2022 ATA and steal all accumulated transfer fees. Fixed with Anchor `associated_token` constraints. Independent auditor verified.
+
+**V3.2.1 — Oracle Manipulation via Unconstrained Raydium Pool (Non-Issue)**
+Pool accounts were reported as unconstrained. Assessment: `validate_pool_accounts()` already validates pool ownership, vault addresses, and mint composition. V27 further hardens this with PDA-based derivation constraints.
+
+---
+
 ## Token Lifecycle
 
 ```
 CREATE → BONDING → COMPLETE → VOTE → MIGRATE → DEX
    │                                              │
    │                                              ▼
-   │                                    [1% Transfer Fee]
+   │                                    [0.1% Transfer Fee]
    │                                              │
    │                                              ▼
-   │                                    HARVEST → BUYBACK → BURN
+   │                                    HARVEST → SWAP TO SOL → BUYBACK → BURN
    │                                              │
    │                                     ┌────────┴────────┐
    │                                     │                  │
@@ -439,10 +657,10 @@ Every path in this graph feeds value back into the system. There is no terminal 
 | Treasury SOL Share | 20%→5% | Dynamic: decays as bonding progresses |
 | Token Treasury Fee | 1% | Fee on all buys (lifetime) |
 | Protocol Fee | 1% | Fee during bonding (75% treasury, 25% dev) |
-| Transfer Fee | 1% | Post-migration fee on all transfers |
+| Transfer Fee | 0.1% | Post-migration fee on all transfers |
 | Supply Floor | 500,000,000 | Minimum supply (buyback burns stop here) |
 | Inactivity Period | 7 days | Time before failed token can be reclaimed |
-| Revival Threshold | IVS per tier (6.25 / 12.5 / 25 SOL) | SOL needed to revive a reclaimed token |
+| Revival Threshold (V27) | 3BT/8 per tier (18.75 / 37.5 / 75 SOL) | SOL needed to revive a reclaimed token |
 | Voting Duration | ~24 hours | Time for community to vote on burn/return |
 | Epoch Duration | 7 days | Protocol reward distribution cycle |
 | Reward Eligibility | 10 SOL | Minimum epoch volume for protocol rewards |
@@ -453,6 +671,38 @@ Every path in this graph feeds value back into the system. There is no terminal 
 | Liquidation Bonus | 10% | Discount for liquidators on seized collateral |
 | Utilization Cap | 50% | Max fraction of treasury SOL available for loans |
 | Min Borrow | 0.1 SOL | Minimum borrow amount per loan |
+
+---
+
+## Version History
+
+| Version | Features |
+|---------|----------|
+| V1 | Basic bonding curve, buy/sell |
+| V2 | Treasury, buybacks, permanent burn split |
+| V3 | Token-2022 with transfer fees |
+| V4 | Failed token reclaim, platform rewards |
+| V5 | Raydium DEX migration |
+| V8 | Dev wallet split (25% of treasury fee) |
+| V9 | Auto-buyback on DEX price dips |
+| V10 | Simplified star system with auto-payout |
+| V11 | Protocol treasury with 1500 SOL reserve floor |
+| V12 | Token revival |
+| V2.2 | 10% tokens to community treasury, 90% to buyer |
+| V2.3 | Dynamic treasury SOL rate: 20%→5% decay |
+| V2.4 | Treasury lending: borrow SOL against token collateral |
+| V3.0.0 | **Torch Vault — Multi-Wallet Identity.** Per-creator SOL escrow with multi-wallet support. 6 new vault instructions. |
+| V3.1.0 | **Vault Full Custody.** Buy, sell, star, borrow, repay all vault-routed. New `withdraw_tokens` (authority-only). |
+| V3.1.1 | **Vault DEX Swap.** `fund_vault_wsol` + `vault_swap` for Raydium trading via vault. |
+| V3.2.0 | **Platform treasury merged into protocol treasury.** Single reward system. |
+| V3.2.1 | **Security: `harvest_fees` hardened.** Critical vulnerability fixed, auditor verified. |
+| V3.3.0 | **Tiered Bonding Curves.** Spark (50 SOL), Flame (100 SOL), Torch (200 SOL). |
+| V3.5.0 | **V25 Pump-Style Token Distribution.** IVS = BT/8, IVT = 900M tokens, ~81x multiplier. 35 Kani proofs. |
+| V3.6.0 | **V26 Permissionless Migration + Authority Revocation.** Mint and freeze authority revoked permanently at migration. |
+| V3.6.x | **V27 Treasury Lock + PDA Pool Validation.** 250M tokens locked at creation. IVS = 3BT/8, 13.44x multiplier. |
+| V3.7.0 | **V28 `update_authority` Removed.** Authority transfer via multisig tooling. 27 instructions. Minimal admin surface. |
+| V3.7.11 | **V29 On-Chain Metadata.** Metaplex `add_metadata` removed (temporary backfill complete). Transfer fee reduced from 1% to 0.1%. All tokens use Token-2022 metadata extensions exclusively. 28 instructions. |
+| V3.7.10 | **V20 Swap Fees to SOL.** New `swap_fees_to_sol` instruction sells harvested Token-2022 fees to SOL via Raydium. 28 instructions. Vault ordering bug fix in pool validation. |
 
 ---
 
