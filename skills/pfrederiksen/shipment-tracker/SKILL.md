@@ -1,6 +1,6 @@
 ---
 name: shipment-tracker
-description: "Track packages across carriers (USPS, UPS, FedEx, DHL, Amazon, OnTrac, LaserShip). Use when: user asks about package status, adds a tracking number, wants delivery updates, or mentions shipments. Reads a markdown shipments file, auto-detects carrier from tracking number patterns, and checks status. Hybrid approach: tries direct HTTP first, recommends browser-use for JS-heavy carrier pages."
+description: "Track packages across carriers (USPS, UPS, FedEx, DHL, Amazon, OnTrac, LaserShip). Use when: user asks about package status, adds a tracking number, wants delivery updates, or mentions shipments. Reads a markdown shipments file, auto-detects carrier from tracking number patterns, and checks status. Hybrid approach: tries direct HTTP first, recommends browser-use for JS-heavy carrier pages. ⚠️ Privacy: browser-use fallback sends tracking data to cloud services."
 ---
 
 # Shipment Tracker
@@ -87,14 +87,27 @@ This ensures reliable tracking across all carriers, even those with aggressive b
 1. User provides a tracking number → run `--detect` to identify carrier
 2. Add to `memory/shipments.md` with order details
 3. Morning briefing or on-demand: run the script to check all shipments
-4. For shipments needing browser: use browser-use with the tracking URL
+4. For shipments needing browser-use:
+   - **Non-sensitive packages:** Use the provided browser-use command
+   - **Privacy-sensitive packages:** Manual browser check instead (data stays local)
 5. When delivered: remove from the shipments file
+
+**Privacy guidance:** For medical supplies, personal items, or confidential orders, consider manual tracking to avoid sending shipment details to cloud services.
 
 ## System Access
 
+**Direct skill execution:**
 - **File reads:** One markdown file (path provided as argument)
 - **Network:** HTTPS GET to carrier tracking pages (e.g., `tools.usps.com`) — read-only, no authentication
 - **No file writes, no subprocess calls, no shell execution**
+
+**Browser-use fallback (privacy implications):**
+When the skill recommends browser-use commands, **external data transmission occurs**:
+- **Tracking numbers** and **order information** sent to cloud browser service
+- **Package details** processed by external LLM (ChatBrowserUse)
+- **Carrier tracking URLs** accessed via cloud infrastructure
+
+**Privacy consideration:** Browser-use fallback involves third-party services that may log or process shipment data. For sensitive packages, consider manual browser tracking instead of the provided browser-use commands.
 
 ## Requirements
 
