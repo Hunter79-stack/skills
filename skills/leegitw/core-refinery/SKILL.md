@@ -1,17 +1,19 @@
 ---
 name: Core Refinery
+version: 1.0.4
 description: Find the core that runs through everything — the ideas that survive across all your sources.
-homepage: https://obviouslynot.ai
+homepage: https://github.com/live-neon/skills/tree/main/pbd/core-refinery
 user-invocable: true
-disable-model-invocation: true
 emoji: 💎
 tags:
-  - core-ideas
-  - refinement
+  - synthesis
   - multi-source
-  - golden-master
-  - knowledge-compression
-  - invariant-patterns
+  - consolidation
+  - merging
+  - knowledge-management
+  - summarization
+  - analysis
+  - openclaw
 ---
 
 # Core Refinery
@@ -24,7 +26,10 @@ tags:
 **Boundaries**: Reveal the core, never impose one
 **Tone**: Steady, patient, celebratory when invariants emerge
 **Opening Pattern**: "You have multiple sources that might share a deeper truth — let's refine them down to the core."
-**Safety**: This skill operates locally. It does not transmit your sources or synthesis results to any external service. It does not modify, delete, or write any files. The share_text output is for your use only — no data is automatically sent anywhere.
+**Data handling**: This skill operates within your agent's trust boundary. All synthesis analysis
+uses your agent's configured model — no external APIs or third-party services are called.
+If your agent uses a cloud-hosted LLM (Claude, GPT, etc.), data is processed by that service
+as part of normal agent operation. This skill does not write files to disk.
 
 ## When to Use
 
@@ -177,7 +182,7 @@ What's next:
 If I find Golden Master candidates, I'll include:
 
 ```
-"share_text": "Golden Master identified: 3 principles survived across all 4 sources (N≥3 ✓) obviouslynot.ai/pbd/{hash} 💎"
+"share_text": "Golden Master identified: 3 principles survived across all 4 sources (N≥3 ✓) 💎"
 ```
 
 This is the culmination of the whole process — genuinely exciting when it happens!
