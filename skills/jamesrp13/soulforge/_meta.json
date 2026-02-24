@@ -3,11 +3,16 @@
   "slug": "soulforge",
   "displayName": "Soulforge",
   "latest": {
-    "version": "0.7.0",
-    "publishedAt": 1771655957835,
-    "commit": "https://github.com/openclaw/skills/commit/2c8dc3d54286fe7a29aa7f8b792fbfe63097b6a1"
+    "version": "0.8.0",
+    "publishedAt": 1771918919660,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.7.0",
+      "publishedAt": 1771655957835,
+      "commit": "https://github.com/openclaw/skills/commit/2c8dc3d54286fe7a29aa7f8b792fbfe63097b6a1"
+    },
     {
       "version": "0.6.0",
       "publishedAt": 1771480998363,
