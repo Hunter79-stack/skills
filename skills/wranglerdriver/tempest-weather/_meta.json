@@ -3,9 +3,15 @@
   "slug": "tempest-weather",
   "displayName": "Tempest Weather",
   "latest": {
-    "version": "1.0.6",
-    "publishedAt": 1770940326468,
-    "commit": "https://github.com/openclaw/skills/commit/5969279f62fdd1589d88f97f1320fe20879166d2"
+    "version": "1.1.0",
+    "publishedAt": 1771881612782,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.6",
+      "publishedAt": 1770940326468,
+      "commit": "https://github.com/openclaw/skills/commit/5969279f62fdd1589d88f97f1320fe20879166d2"
+    }
+  ]
 }
