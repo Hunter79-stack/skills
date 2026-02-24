@@ -23,16 +23,9 @@ def normalize_text(value: str) -> str:
     return " ".join(text.split()).strip()
 
 
-def validate_feed_url(raw_url: str) -> str:
-    parsed = urllib.parse.urlparse(raw_url)
-    if parsed.scheme not in {"http", "https"}:
-        raise ValueError("URL must use http or https")
-    if not parsed.hostname:
-        raise ValueError("URL must include a hostname")
-
-    hostname = parsed.hostname.strip().lower()
+def validate_public_hostname(hostname: str, label: str) -> None:
     if hostname in {"localhost", "localhost.localdomain"}:
-        raise ValueError("localhost feeds are not allowed")
+        raise ValueError(f"{label} uses localhost, which is not allowed")
 
     try:
         addr_info = socket.getaddrinfo(hostname, None)
@@ -50,7 +43,18 @@ def validate_feed_url(raw_url: str) -> str:
             or ip.is_reserved
             or ip.is_unspecified
         ):
-            raise ValueError("Feed host resolves to a non-public IP address")
+            raise ValueError(f"{label} resolves to a non-public IP address")
+
+
+def validate_feed_url(raw_url: str, label: str = "Feed URL") -> str:
+    parsed = urllib.parse.urlparse(raw_url)
+    if parsed.scheme not in {"http", "https"}:
+        raise ValueError(f"{label} must use http or https")
+    if not parsed.hostname:
+        raise ValueError(f"{label} must include a hostname")
+
+    hostname = parsed.hostname.strip().lower()
+    validate_public_hostname(hostname, f"{label} host")
 
     return parsed.geturl()
 
@@ -73,6 +77,13 @@ def validate_output_path(raw_path: str) -> pathlib.Path:
     return target
 
 
+class PublicOnlyRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: D401
+        redirected_url = urllib.parse.urljoin(req.full_url, newurl)
+        validate_feed_url(redirected_url, "Redirect URL")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
 def fetch_xml(url: str, timeout: int = 15) -> bytes:
     request = urllib.request.Request(
         url,
@@ -81,7 +92,10 @@ def fetch_xml(url: str, timeout: int = 15) -> bytes:
             "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml",
         },
     )
-    with urllib.request.urlopen(request, timeout=timeout) as response:
+    opener = urllib.request.build_opener(PublicOnlyRedirectHandler())
+    with opener.open(request, timeout=timeout) as response:
+        final_url = response.geturl()
+        validate_feed_url(final_url, "Final URL")
         return response.read()
 
 

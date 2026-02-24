@@ -40,6 +40,22 @@ run_expect_fail() {
   fi
 }
 
+run_expect_success() {
+  local name="$1"
+  shift
+
+  local output=""
+  if output="$("$@" 2>&1)"; then
+    echo "PASS: $name"
+    ((pass_count += 1))
+  else
+    local status=$?
+    echo "FAIL: $name (expected success, got exit=$status)"
+    echo "  output: $output"
+    ((fail_count += 1))
+  fi
+}
+
 run_expect_fail \
   "reject non-http(s) URL" \
   "URL must use http or https" \
@@ -47,7 +63,7 @@ run_expect_fail \
 
 run_expect_fail \
   "reject localhost URL" \
-  "localhost feeds are not allowed" \
+  "uses localhost, which is not allowed" \
   "$PYTHON_BIN" "$TARGET_SCRIPT" "http://localhost/feed.xml"
 
 run_expect_fail \
@@ -70,6 +86,30 @@ run_expect_fail \
   "reject non-markdown output extension" \
   "Output path must end with .md" \
   "$PYTHON_BIN" "$TARGET_SCRIPT" "https://1.1.1.1/feed.xml" --output "feed.txt"
+
+run_expect_success \
+  "reject redirect to private host (handler-level)" \
+  "$PYTHON_BIN" - <<'PY'
+import importlib.util
+import urllib.request
+
+spec = importlib.util.spec_from_file_location("feed_to_md", "scripts/feed_to_md.py")
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+handler = module.PublicOnlyRedirectHandler()
+request = urllib.request.Request("https://example.com/feed.xml")
+
+try:
+    handler.redirect_request(request, None, 302, "Found", {}, "http://127.0.0.1/feed.xml")
+except ValueError as exc:
+    text = str(exc)
+    if "Redirect URL host resolves to a non-public IP address" in text:
+        raise SystemExit(0)
+    raise SystemExit(f"unexpected error text: {text}")
+
+raise SystemExit("redirect was unexpectedly allowed")
+PY
 
 echo
 echo "Regression tests complete: pass=$pass_count fail=$fail_count"

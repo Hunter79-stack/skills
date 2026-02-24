@@ -54,6 +54,7 @@ python3 scripts/feed_to_md.py "https://example.com/feed.xml" --template full
 - Never interpolate raw user input into a shell string.
 - Always pass arguments directly to the script as separate argv tokens.
 - URL must be `http` or `https` and must not resolve to localhost/private addresses.
+- Every HTTP redirect target (and final URL) is re-validated and must also resolve to public IPs.
 - Output path must be workspace-relative and end in `.md`.
 - Do not use shell redirection for output; use `--output`.
 
