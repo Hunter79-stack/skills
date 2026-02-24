@@ -1,0 +1,11 @@
+{
+  "owner": "contact-nbwfoundation",
+  "slug": "btcd-skill-beta",
+  "displayName": "BTCD Skill (NBW)",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1771853060375,
+    "commit": null
+  },
+  "history": []
+}
