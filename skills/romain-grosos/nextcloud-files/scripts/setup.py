@@ -10,6 +10,8 @@ import json
 import sys
 from pathlib import Path
 
+# No subprocess usage in this file — pip installs must be done manually.
+
 SKILL_DIR   = Path(__file__).resolve().parent.parent
 CONFIG_FILE = SKILL_DIR / "config.json"
 CREDS_FILE  = Path.home() / ".openclaw" / "secrets" / "nextcloud_creds"
@@ -22,22 +24,16 @@ def _ensure_requests():
     except ImportError:
         print("✗ Missing dependency: 'requests' is not installed.")
         print("  Install it with:  pip install requests")
-        ans = input("  Install now? [Y/n] ").strip().lower()
-        if ans in ("", "y", "yes"):
-            import subprocess
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
-            print("  ✓ requests installed.\n")
-        else:
-            print("  Aborted. Install requests and re-run setup.py.")
-            sys.exit(1)
+        print("  Then re-run:      python3 scripts/setup.py")
+        sys.exit(1)
 
 _ensure_requests()
 
 _DEFAULT_CONFIG = {
     "base_path": "/",
-    "allow_delete": True,
-    "allow_share": True,
     "allow_write": True,
+    "allow_delete": False,
+    "allow_share": True,
     "readonly_mode": False,
     "share_default_permissions": 1,
     "share_default_expire_days": None,
@@ -179,8 +175,8 @@ def main():
     )
     cfg["allow_delete"] = _ask_bool(
         "Allow deleting files and folders?",
-        default=cfg.get("allow_delete", True),
-        hint="delete",
+        default=cfg.get("allow_delete", False),
+        hint="recommended: false unless you trust the agent fully",
     )
 
     print("\n  ── Sharing ──")

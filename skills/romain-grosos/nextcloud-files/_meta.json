@@ -3,9 +3,15 @@
   "slug": "nextcloud-files",
   "displayName": "Nextcloud Files",
   "latest": {
-    "version": "1.0.3",
-    "publishedAt": 1771797483679,
-    "commit": "https://github.com/openclaw/skills/commit/0f57f33a1becbaa0b7c13fe9c5dacfa2aa4fa16d"
+    "version": "1.0.6",
+    "publishedAt": 1771839563238,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.3",
+      "publishedAt": 1771797483679,
+      "commit": "https://github.com/openclaw/skills/commit/0f57f33a1becbaa0b7c13fe9c5dacfa2aa4fa16d"
+    }
+  ]
 }
