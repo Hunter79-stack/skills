@@ -3,6 +3,10 @@
 # ClawdTalk Client Update Script
 # Downloads and installs the latest version from GitHub
 #
+# Env vars: none
+# Endpoints: https://raw.githubusercontent.com, https://api.github.com
+# Reads: package.json
+# Writes: skill files (overwrites on update)
 
 set -e
 

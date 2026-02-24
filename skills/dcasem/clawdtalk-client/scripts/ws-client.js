@@ -1,9 +1,16 @@
 #!/usr/bin/env node
 /**
- * ClawdTalk WebSocket Client v1.2.9
- * 
+ * ClawdTalk WebSocket Client v1.3.0
+ *
  * Connects to ClawdTalk server and routes voice calls to your Clawdbot gateway.
  * Phone → STT → Gateway Agent → TTS → Phone
+ *
+ * v1.3.0: Instant approval via WebSocket (no more polling delay)
+ *
+ * Env vars: OPENCLAW_GATEWAY_URL, CLAWDBOT_GATEWAY_URL, OPENCLAW_GATEWAY_TOKEN, CLAWDBOT_GATEWAY_TOKEN
+ * Endpoints: https://clawdtalk.com (WebSocket), http://127.0.0.1:<port> (local gateway)
+ * Reads: skill-config.json
+ * Writes: none
  */
 
 const WebSocket = require('ws');
@@ -32,21 +39,9 @@ const RECONNECT_DELAY_MIN = 5000;
 const RECONNECT_DELAY_MAX = 180000;
 const DEFAULT_GREETING = "Hey, what's up?";
 
-// Transcription filtering and debouncing
-const MIN_TRANSCRIPT_LENGTH = 2;
-const TRANSCRIPT_DEBOUNCE_MS = 300;
-
-// Tool execution limits
-const MAX_TOOL_LOOPS = 10;
-const TOOL_TIMEOUT_MS = 30000;
-
-// Gateway config paths
-const CLAWDBOT_CONFIG_PATHS = [
-  path.join(process.env.HOME || '/home/node', '.clawdbot', 'clawdbot.json'),
-  path.join(process.env.HOME || '/home/node', '.openclaw', 'openclaw.json'),
-  '/home/node/.clawdbot/clawdbot.json',
-  '/home/node/.openclaw/openclaw.json',
-];
+// Gateway defaults (overridden by skill-config.json values set during setup)
+const DEFAULT_GATEWAY_URL = 'http://127.0.0.1:18789';
+const DEFAULT_AGENT_ID = 'main';
 
 // Default voice context with drip progress updates
 const DEFAULT_VOICE_CONTEXT = `[VOICE CALL ACTIVE] Voice call in progress. Speech is transcribed to text. Your response is converted to speech via TTS.
@@ -65,57 +60,23 @@ DRIP PROGRESS UPDATES:
 - After each tool call or significant step, respond with a SHORT update: "Checking Slack now...", "Found 3 messages, reading through them...", "Pulling up the PR details..."
 - Be specific about what you're doing, not generic. "Looking at your calendar" not "Processing..."
 - These updates are spoken aloud immediately, so they fill silence while you work.
-- Don't wait until the end to summarize — drip information as you find it.`;
+- Don't wait until the end to summarize — drip information as you find it.
 
-function loadGatewayConfig() {
-  // Collect config from all paths, prioritizing ones with valid tokens
-  var bestConfig = null;
-  var configWithToken = null;
-  
-  for (var i = 0; i < CLAWDBOT_CONFIG_PATHS.length; i++) {
-    try {
-      if (fs.existsSync(CLAWDBOT_CONFIG_PATHS[i])) {
-        var config = JSON.parse(fs.readFileSync(CLAWDBOT_CONFIG_PATHS[i], 'utf8'));
-        var port = (config.gateway && config.gateway.port) || 18789;
-        var token = resolveEnvVar((config.gateway && config.gateway.auth && config.gateway.auth.token) || '');
-        
-        // Find the main agent ID (first agent or one marked default)
-        var mainAgentId = 'main';
-        if (config.agents && config.agents.list && config.agents.list.length > 0) {
-          var defaultAgent = config.agents.list.find(function(a) { return a.default; });
-          mainAgentId = defaultAgent ? defaultAgent.id : config.agents.list[0].id;
-        }
-        
-        var result = { 
-          chatUrl: 'http://127.0.0.1:' + port + '/v1/chat/completions',
-          toolsUrl: 'http://127.0.0.1:' + port + '/tools/invoke',
-          token: token,
-          mainAgentId: mainAgentId
-        };
-        
-        // Keep first config as fallback
-        if (!bestConfig) bestConfig = result;
-        
-        // If this config has a token, use it immediately
-        if (token) {
-          configWithToken = result;
-          break;
-        }
-      }
-    } catch (e) {}
-  }
-  
-  // Return config with token, or best available, or defaults
-  if (configWithToken) return configWithToken;
-  if (bestConfig) return bestConfig;
-  var defaultPort = 18789;
-  return {
-    chatUrl: process.env.CLAWDBOT_GATEWAY_URL || 'http://127.0.0.1:' + defaultPort + '/v1/chat/completions',
-    toolsUrl: 'http://127.0.0.1:' + defaultPort + '/tools/invoke',
-    token: process.env.CLAWDBOT_GATEWAY_TOKEN || '',
-    mainAgentId: 'main'
-  };
-}
+APPROVAL REQUESTS (IMPORTANT):
+- Before performing any SENSITIVE or DESTRUCTIVE action, you MUST request approval first.
+- This sends a push notification to the user's phone. They approve or deny from the app.
+- Actions that REQUIRE approval: deleting repos/files/data, sending messages on behalf of the user (Slack, email, tweets), making purchases, posting to social media, any irreversible action.
+- To request approval, use the approval.sh script: exec approval.sh request "<description of action>"
+- Add --biometric for high-security actions (financial, destructive).
+- Tell the caller EXPLICITLY: "I'm sending a notification to your phone now for you to approve." Then wait for the result.
+- Result handling:
+  - "approved" → proceed with the action and confirm completion
+  - "denied" → say "No problem, I won't do that" and move on
+  - "timeout" → say "The notification timed out. Would you like me to try again, or would you like to confirm by voice instead? Just say approve or deny."
+  - "no_devices" → say "You don't have any devices registered for notifications. Would you like to confirm by voice? Say approve or deny."
+  - "no_devices_reached" → say "The notification couldn't be delivered to your phone. Would you like to confirm by voice instead? Say approve or deny."
+- If the user confirms by voice (says "approve", "yes", "go ahead"), treat it as approved and proceed.
+- Actions that do NOT need approval: reading data, searching, checking status, answering questions, looking things up.`;
 
 // Parse command line args for server override
 function parseArgs() {
@@ -138,9 +99,6 @@ class ClawdTalkClient {
     this.pingTimer = null;
     this.pongTimeout = null;
     this.conversations = new Map();
-    this.pendingRequests = new Map();
-    this.transcriptionDebounce = new Map();
-    this.queuedTranscriptions = new Map();
     this.args = parseArgs();
 
     // Exponential backoff for reconnection
@@ -148,13 +106,10 @@ class ClawdTalkClient {
     this.currentReconnectDelay = RECONNECT_DELAY_MIN;
 
     // Gateway
-    this.gatewayChatUrl = null;
     this.gatewayToolsUrl = null;
     this.gatewayToken = null;
-    this.gatewayAgent = 'main';
     this.mainAgentId = 'main';
     this.voiceContext = DEFAULT_VOICE_CONTEXT;
-    this.maxConversationTurns = 20;
     this.greeting = DEFAULT_GREETING;
     
     // Personalization
@@ -215,15 +170,12 @@ class ClawdTalkClient {
   }
 
   loadSkillConfig() {
-    var gwConfig = loadGatewayConfig();
-    this.gatewayChatUrl = gwConfig.chatUrl;
-    this.gatewayToolsUrl = gwConfig.toolsUrl;
-    this.gatewayToken = gwConfig.token;
-    this.mainAgentId = gwConfig.mainAgentId;
+    // Gateway config from skill-config.json (set during setup.sh) with env var fallbacks
+    var gatewayUrl = resolveEnvVar(this.config.gateway_url || '') || process.env.OPENCLAW_GATEWAY_URL || process.env.CLAWDBOT_GATEWAY_URL || DEFAULT_GATEWAY_URL;
+    this.gatewayToolsUrl = gatewayUrl.replace(/\/$/, '') + '/tools/invoke';
+    this.gatewayToken = resolveEnvVar(this.config.gateway_token || '') || process.env.OPENCLAW_GATEWAY_TOKEN || process.env.CLAWDBOT_GATEWAY_TOKEN || '';
+    this.mainAgentId = this.config.agent_id || DEFAULT_AGENT_ID;
 
-    if (this.config.max_conversation_turns) {
-      this.maxConversationTurns = this.config.max_conversation_turns;
-    }
     this.greeting = this.config.greeting || DEFAULT_GREETING;
     
     // Load names for voice context
@@ -240,7 +192,7 @@ class ClawdTalkClient {
 
     if (this.ownerName) this.log('INFO', 'Owner: ' + this.ownerName);
     if (this.agentName) this.log('INFO', 'Agent: ' + this.agentName);
-    this.log('INFO', 'Gateway: ' + this.gatewayChatUrl);
+    this.log('INFO', 'Gateway tools: ' + this.gatewayToolsUrl);
     this.log('INFO', 'Main agent: ' + this.mainAgentId);
   }
 
@@ -294,7 +246,7 @@ class ClawdTalkClient {
     }
 
     if (msg.type === 'auth_ok') {
-      this.log('INFO', 'Authenticated (v1.2.9 agentic mode)');
+      this.log('INFO', 'Authenticated (v1.3.0 agentic mode)');
       this.reconnectAttempts = 0;
       this.currentReconnectDelay = RECONNECT_DELAY_MIN;
       this.startPing();
@@ -359,35 +311,10 @@ class ClawdTalkClient {
 
     if (event === 'call.ended') {
       this.conversations.delete(callId);
-      var debounce = this.transcriptionDebounce.get(callId);
-      if (debounce) {
-        clearTimeout(debounce.timer);
-        this.transcriptionDebounce.delete(callId);
-      }
       this.log('INFO', 'Call ended: ' + callId);
       
       // Report call outcome to user
       this.reportCallOutcome(msg);
-      return;
-    }
-
-    // Handle transcription events (could be 'message', 'transcription', or 'transcript')
-    if ((event === 'message' || event === 'transcription' || event === 'transcript') && callId) {
-      var text = (msg.text || msg.transcript || '').trim();
-      if (!text || text.replace(/\s/g, '').length < MIN_TRANSCRIPT_LENGTH) {
-        return;
-      }
-
-      this.log('INFO', 'STT [' + callId + ']: ' + text);
-
-      var pending = this.pendingRequests.get(callId);
-      if (!pending) {
-        this.debounceTranscription(callId, text);
-      } else {
-        this.log('INFO', 'Request in-flight, queuing: ' + text);
-        var existing = this.queuedTranscriptions.get(callId);
-        this.queuedTranscriptions.set(callId, existing ? existing + ' ' + text : text);
-      }
       return;
     }
 
@@ -414,6 +341,31 @@ class ClawdTalkClient {
       return;
     }
 
+    // Handle approval response (instant WebSocket notification)
+    if (event === 'approval.responded') {
+      var approvalRequestId = msg.request_id;
+      var decision = msg.decision;
+      this.log('INFO', 'Approval response via WS: ' + approvalRequestId + ' -> ' + decision);
+      
+      var pending = this.pendingApprovals.get(approvalRequestId);
+      if (pending) {
+        clearTimeout(pending.timeout);
+        this.pendingApprovals.delete(approvalRequestId);
+        pending.resolve(decision);
+      }
+      return;
+    }
+
+    // Handle walkie_request (Clawdie-Talkie push-to-talk)
+    if (event === 'walkie_request') {
+      var walkieRequestId = msg.request_id;
+      var walkieTranscript = msg.transcript || '';
+      var walkieSessionKey = msg.session_key || 'agent:main:main';
+      this.log('INFO', 'Walkie request [' + walkieRequestId + ']: ' + walkieTranscript.substring(0, 100));
+      this.handleWalkieRequest(walkieRequestId, walkieTranscript, walkieSessionKey);
+      return;
+    }
+
     // Log unhandled events for debugging
     if (process.env.DEBUG) {
       this.log('DEBUG', 'Unhandled event: ' + event);
@@ -422,13 +374,76 @@ class ClawdTalkClient {
 
   // ── Deep Tool Handler ───────────────────────────────────────
 
+  // Keywords that indicate a sensitive/destructive action needing approval
+  isSensitiveRequest(query) {
+    var lower = query.toLowerCase();
+    var sensitivePatterns = [
+      'delete', 'remove', 'destroy', 'drop',
+      'send message', 'send email', 'send slack', 'send sms', 'send text',
+      'post to', 'tweet', 'publish',
+      'create repo', 'create a repo', 'create repository',
+      'push to', 'merge', 'deploy',
+      'transfer', 'payment', 'purchase', 'buy',
+      'update repo', 'update the repo', 'edit repo',
+      'add file', 'add a file', 'modify', 'change',
+      'commit', 'write to',
+    ];
+    return sensitivePatterns.some(function(p) { return lower.includes(p); });
+  }
+
   async handleDeepToolRequest(callId, requestId, query, context) {
     try {
-      // Route to main session via tools/invoke sessions_send - uses full agent context/memory
-      var voicePrefix = '[VOICE CALL] Respond concisely for speech. No markdown, no lists, no URLs. ';
+      // TEST PHRASE: "send test push" or "test notification" triggers approval directly
+      var lowerQuery = query.toLowerCase();
+      if (lowerQuery.includes('test push') || lowerQuery.includes('test notification') || lowerQuery.includes('send a test')) {
+        this.log('INFO', 'Test phrase detected - triggering approval push');
+        var approvalResult = await this.triggerTestApproval();
+        var responseText = approvalResult;
+        if (approvalResult === 'approved') {
+          responseText = 'You approved the test notification. The push system is working correctly.';
+        } else if (approvalResult === 'denied') {
+          responseText = 'You denied the test notification. The push system is working, you just said no.';
+        }
+        this.sendDeepToolResult(requestId, responseText);
+        this.log('INFO', 'Deep tool complete [' + requestId + ']: ' + responseText.substring(0, 100));
+        return;
+      }
+
+      // Check if this is a sensitive action that needs approval
+      if (this.isSensitiveRequest(query)) {
+        this.log('INFO', 'Sensitive request detected, requesting approval: ' + query.substring(0, 80));
+        
+        // Tell the caller we're sending a notification
+        this.sendDeepToolProgress(requestId, 'Sending you a notification for approval.');
+        
+        var approvalDecision = await this.requestApproval(query.substring(0, 200));
+        
+        if (approvalDecision === 'approved') {
+          this.sendDeepToolProgress(requestId, 'I see you approved that. Let me take care of it now.');
+          this.log('INFO', 'Approval granted, routing to agent');
+          // Fall through to route to agent below
+        } else if (approvalDecision === 'denied') {
+          this.sendDeepToolProgress(requestId, 'I see you denied that request.');
+          this.sendDeepToolResult(requestId, 'No problem, I won\'t do that.');
+          this.log('INFO', 'Approval denied by user');
+          return;
+        } else if (approvalDecision === 'no_devices' || approvalDecision === 'no_devices_reached') {
+          this.log('INFO', 'No devices for approval, skipping approval and routing directly');
+          // No devices — skip approval entirely and route to agent
+        } else if (approvalDecision === 'timeout') {
+          this.sendDeepToolResult(requestId, 'The approval request timed out. Would you like to try again?');
+          this.log('INFO', 'Approval timed out');
+          return;
+        }
+      }
       
-      // Use the main agent session - format: agent:{agentId}:main
-      var mainSessionKey = 'agent:' + this.mainAgentId + ':main';
+      // Route to main session via tools/invoke sessions_send - uses full agent context/memory
+      var voicePrefix = '[VOICE CALL] Respond concisely for speech. No markdown, no lists, no URLs. Do NOT request approval — it has already been handled. Just perform the action directly. ';
+      
+      // Use the main agent session - always route to main session
+      var mainSessionKey = 'agent:main:main';
+      
+      this.log('DEBUG', 'Deep tool calling Gateway: url=' + this.gatewayToolsUrl + ' session=' + mainSessionKey + ' hasToken=' + !!this.gatewayToken);
       
       var response = await fetch(this.gatewayToolsUrl, {
         method: 'POST',
@@ -455,6 +470,7 @@ class ClawdTalkClient {
       }
       
       var result = await response.json();
+      this.log('DEBUG', 'Gateway response: ' + JSON.stringify(result).substring(0, 500));
       
       // Extract reply from the nested response structure
       var reply = '';
@@ -491,6 +507,218 @@ class ClawdTalkClient {
         this.sendDeepToolResult(requestId, 'Sorry, I had trouble with that request.');
       }
     }
+  }
+
+  // ── Walkie-Talkie Handler ──────────────────────────────────
+
+  async handleWalkieRequest(requestId, transcript, sessionKey) {
+    try {
+      var voicePrefix = '[WALKIE-TALKIE] Push-to-talk message. Respond concisely for speech (1-3 sentences). No markdown, no lists, no URLs. ';
+
+      this.log('DEBUG', 'Walkie calling Gateway: url=' + this.gatewayToolsUrl + ' session=' + sessionKey);
+
+      var response = await fetch(this.gatewayToolsUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + this.gatewayToken
+        },
+        body: JSON.stringify({
+          tool: 'sessions_send',
+          args: {
+            sessionKey: sessionKey,
+            message: voicePrefix + transcript,
+            timeoutSeconds: 90
+          }
+        }),
+        signal: AbortSignal.timeout(120000)
+      });
+
+      if (!response.ok) {
+        var errText = await response.text();
+        this.log('ERROR', 'Walkie sessions_send failed: ' + response.status + ' ' + errText);
+        this.sendWalkieResponse(requestId, null, 'Failed to reach the agent.');
+        return;
+      }
+
+      var result = await response.json();
+
+      // Extract reply (same logic as deep tool)
+      var reply = '';
+      if (result.result && result.result.details && result.result.details.reply) {
+        reply = result.result.details.reply;
+      } else if (result.result && result.result.content) {
+        var content = result.result.content;
+        if (Array.isArray(content) && content[0] && content[0].text) {
+          try {
+            var parsed = JSON.parse(content[0].text);
+            reply = parsed.reply || '';
+          } catch (e) {
+            reply = content[0].text;
+          }
+        }
+      }
+
+      if (!reply || reply === 'HEARTBEAT_OK') {
+        reply = 'Done.';
+      }
+
+      var cleanedReply = this.cleanForVoice(reply);
+      this.sendWalkieResponse(requestId, cleanedReply, null);
+      this.log('INFO', 'Walkie complete [' + requestId + ']: ' + cleanedReply.substring(0, 100));
+
+    } catch (err) {
+      this.log('ERROR', 'Walkie request failed: ' + err.message);
+      this.sendWalkieResponse(requestId, null, 'Request failed: ' + err.message);
+    }
+  }
+
+  sendWalkieResponse(requestId, reply, error) {
+    if (this.ws && this.ws.readyState === 1) {
+      this.ws.send(JSON.stringify({
+        type: 'walkie_response',
+        request_id: requestId,
+        reply: reply,
+        error: error || undefined
+      }));
+    }
+  }
+
+  async triggerTestApproval() {
+    return this.requestApproval('Test notification from voice call', { timeout: 60 });
+  }
+
+  /**
+   * Request approval via HTTP and wait for WebSocket response (instant)
+   * Falls back to polling if WebSocket notification doesn't arrive
+   */
+  async requestApproval(action, options = {}) {
+    const timeout = options.timeout || 60;
+    const details = options.details || null;
+    const biometric = options.biometric || false;
+    
+    try {
+      this.log('INFO', 'Requesting approval: ' + action);
+      
+      // Create approval request via HTTP
+      const response = await fetch(this.baseUrl + '/v1/approvals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + this.apiKey
+        },
+        body: JSON.stringify({
+          action: action,
+          details: details,
+          require_biometric: biometric,
+          expires_in: timeout
+        })
+      });
+      
+      if (!response.ok) {
+        const errText = await response.text();
+        this.log('ERROR', 'Approval request failed: ' + response.status + ' ' + errText);
+        return 'Failed to send approval request.';
+      }
+      
+      const result = await response.json();
+      const requestId = result.request_id;
+      const devicesNotified = result.devices_notified || 0;
+      
+      const devicesFailed = result.devices_failed || 0;
+      
+      this.log('INFO', 'Approval created: ' + requestId + ' (notified: ' + devicesNotified + ', failed: ' + devicesFailed + ')');
+      
+      if (devicesNotified === 0) {
+        if (devicesFailed > 0) {
+          return 'no_devices_reached';
+        }
+        return 'no_devices';
+      }
+      
+      // Wait for WebSocket notification (with timeout fallback)
+      const decision = await this.waitForApproval(requestId, timeout * 1000);
+      
+      this.log('INFO', 'Approval result: ' + decision);
+      
+      if (decision === 'approved') {
+        return 'approved';
+      } else if (decision === 'denied') {
+        return 'denied';
+      } else if (decision === 'timeout' || decision === 'expired') {
+        return 'timeout';
+      } else {
+        return 'Approval result: ' + decision;
+      }
+    } catch (err) {
+      this.log('ERROR', 'Approval request failed: ' + err.message);
+      return 'Failed to send approval request. Error: ' + err.message;
+    }
+  }
+
+  /**
+   * Wait for approval response via WebSocket (instant) or polling (fallback)
+   */
+  waitForApproval(requestId, timeoutMs) {
+    var self = this;
+    
+    return new Promise(function(resolve) {
+      // Set up timeout
+      var timeoutId = setTimeout(function() {
+        self.pendingApprovals.delete(requestId);
+        resolve('timeout');
+      }, timeoutMs);
+      
+      // Register pending approval for WebSocket notification
+      self.pendingApprovals.set(requestId, {
+        resolve: resolve,
+        timeout: timeoutId
+      });
+      
+      // Also poll as fallback (WebSocket might miss it)
+      self.pollApprovalStatus(requestId, resolve, timeoutId);
+    });
+  }
+
+  /**
+   * Poll approval status as fallback (in case WebSocket misses the event)
+   */
+  async pollApprovalStatus(requestId, resolve, timeoutId) {
+    const pollInterval = 1000; // 1 second
+    
+    const poll = async () => {
+      // Check if already resolved via WebSocket
+      if (!this.pendingApprovals.has(requestId)) {
+        return; // Already resolved
+      }
+      
+      try {
+        const response = await fetch(this.baseUrl + '/v1/approvals/' + requestId, {
+          headers: { 'Authorization': 'Bearer ' + this.apiKey }
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.status !== 'pending') {
+            // Resolved! Clear and return
+            clearTimeout(timeoutId);
+            this.pendingApprovals.delete(requestId);
+            resolve(result.status);
+            return;
+          }
+        }
+      } catch (err) {
+        this.log('WARN', 'Approval poll failed: ' + err.message);
+      }
+      
+      // Still pending, poll again
+      if (this.pendingApprovals.has(requestId)) {
+        setTimeout(() => poll(), pollInterval);
+      }
+    };
+    
+    // Start polling after a short delay (give WebSocket a chance first)
+    setTimeout(() => poll(), 500);
   }
 
   sendDeepToolProgress(requestId, text) {
@@ -593,243 +821,6 @@ class ClawdTalkClient {
     }
   }
 
-  debounceTranscription(callId, text) {
-    var existing = this.transcriptionDebounce.get(callId);
-
-    if (existing) {
-      clearTimeout(existing.timer);
-      existing.text += ' ' + text;
-    } else {
-      existing = { text: text, timer: null };
-      this.transcriptionDebounce.set(callId, existing);
-    }
-
-    var self = this;
-    existing.timer = setTimeout(function() {
-      var debounce = self.transcriptionDebounce.get(callId);
-      if (debounce) {
-        var finalText = debounce.text;
-        self.transcriptionDebounce.delete(callId);
-        self.log('INFO', 'Processing [' + callId + ']: ' + finalText);
-        self.runAgentLoop(callId, finalText);
-      }
-    }, TRANSCRIPT_DEBOUNCE_MS);
-  }
-
-  // ── Agent Loop with Tool Execution ──────────────────────────
-
-  async runAgentLoop(callId, userText) {
-    if (!this.conversations.has(callId)) {
-      this.conversations.set(callId, [
-        { role: 'system', content: this.voiceContext }
-      ]);
-    }
-
-    var history = this.conversations.get(callId);
-    history.push({ role: 'user', content: userText });
-
-    // Trim history
-    while (history.length > this.maxConversationTurns * 2 + 1) {
-      history.splice(1, 1); // Keep system message
-    }
-
-    var startTime = Date.now();
-    this.pendingRequests.set(callId, true);
-
-    // "One moment" fallback timer
-    var self = this;
-    var fallbackSent = false;
-    var fallbackTimer = setTimeout(async function() {
-      if (self.conversations.has(callId) && !fallbackSent) {
-        fallbackSent = true;
-        await self.sendResponse(callId, 'One moment...');
-        self.log('INFO', 'Sent fallback for slow response');
-      }
-    }, 5000);
-
-    try {
-      var loopCount = 0;
-      var finalContent = null;
-
-      while (loopCount < MAX_TOOL_LOOPS) {
-        loopCount++;
-        
-        // Make chat completion request (non-streaming for tool handling)
-        var response = await this.chatCompletion(callId, history);
-        
-        if (!response) {
-          this.log('ERROR', 'No response from gateway');
-          finalContent = "Sorry, I couldn't process that.";
-          break;
-        }
-
-        var choice = response.choices && response.choices[0];
-        if (!choice) {
-          this.log('ERROR', 'No choice in response');
-          finalContent = "Sorry, something went wrong.";
-          break;
-        }
-
-        var message = choice.message;
-        
-        // Check for tool calls
-        if (message.tool_calls && message.tool_calls.length > 0) {
-          this.log('INFO', 'Tool calls detected: ' + message.tool_calls.length);
-          
-          // Add assistant message with tool calls to history
-          history.push({
-            role: 'assistant',
-            content: message.content || null,
-            tool_calls: message.tool_calls
-          });
-
-          // Execute each tool call
-          for (var i = 0; i < message.tool_calls.length; i++) {
-            var toolCall = message.tool_calls[i];
-            var toolResult = await this.executeTool(toolCall);
-            
-            // Add tool result to history
-            history.push({
-              role: 'tool',
-              tool_call_id: toolCall.id,
-              content: JSON.stringify(toolResult)
-            });
-          }
-          
-          // Continue loop to get final response
-          continue;
-        }
-
-        // No tool calls - we have final content
-        finalContent = message.content || '';
-        
-        // Add to history
-        if (finalContent) {
-          history.push({ role: 'assistant', content: finalContent });
-        }
-        
-        break;
-      }
-
-      if (loopCount >= MAX_TOOL_LOOPS) {
-        this.log('WARN', 'Max tool loops reached');
-        finalContent = finalContent || "Sorry, that took too long to process.";
-      }
-
-      // Send final response as TTS
-      clearTimeout(fallbackTimer);
-      var cleanedResponse = this.cleanForVoice(finalContent || '');
-      
-      if (cleanedResponse && cleanedResponse.length > 2 && this.conversations.has(callId)) {
-        await this.sendResponse(callId, cleanedResponse);
-      } else if (!cleanedResponse || cleanedResponse.length <= 2) {
-        this.log('WARN', 'Empty response');
-        if (this.conversations.has(callId) && !fallbackSent) {
-          await this.sendResponse(callId, "Sorry, I got an empty response.");
-        }
-      }
-
-      var elapsed = Date.now() - startTime;
-      this.log('INFO', 'Response complete (' + elapsed + 'ms, ' + loopCount + ' loop(s)) [' + callId + ']');
-
-    } catch (err) {
-      clearTimeout(fallbackTimer);
-      this.log('ERROR', 'Agent loop failed: ' + err.message);
-      if (this.conversations.has(callId)) {
-        await this.sendResponse(callId, 'Sorry, I had trouble with that request.');
-      }
-    } finally {
-      this.pendingRequests.delete(callId);
-
-      // Process queued transcriptions
-      if (this.queuedTranscriptions.has(callId)) {
-        var queuedText = this.queuedTranscriptions.get(callId);
-        this.queuedTranscriptions.delete(callId);
-        if (this.conversations.has(callId)) {
-          this.log('INFO', 'Processing queued: ' + queuedText);
-          this.runAgentLoop(callId, queuedText);
-        }
-      }
-    }
-  }
-
-  // ── Chat Completion (non-streaming) ─────────────────────────
-
-  async chatCompletion(callId, messages) {
-    try {
-      var response = await fetch(this.gatewayChatUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + this.gatewayToken,
-          'x-clawdbot-agent-id': this.gatewayAgent,
-          'x-clawdbot-session-key': 'voice-call-' + callId,
-        },
-        body: JSON.stringify({
-          messages: messages,
-          max_tokens: 500,
-          stream: false,
-        }),
-        signal: AbortSignal.timeout(60000),
-      });
-
-      if (!response.ok) {
-        var errBody = await response.text().catch(function() { return ''; });
-        this.log('ERROR', 'Gateway HTTP ' + response.status + ': ' + errBody.substring(0, 200));
-        return null;
-      }
-
-      return await response.json();
-    } catch (err) {
-      this.log('ERROR', 'Chat completion failed: ' + err.message);
-      return null;
-    }
-  }
-
-  // ── Tool Execution via /tools/invoke ────────────────────────
-
-  async executeTool(toolCall) {
-    var toolName = toolCall.function.name;
-    var toolArgs = {};
-    
-    try {
-      toolArgs = JSON.parse(toolCall.function.arguments || '{}');
-    } catch (e) {
-      this.log('WARN', 'Failed to parse tool args: ' + e.message);
-    }
-
-    this.log('INFO', 'Executing tool: ' + toolName + ' args=' + JSON.stringify(toolArgs).substring(0, 100));
-
-    try {
-      var response = await fetch(this.gatewayToolsUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + this.gatewayToken,
-        },
-        body: JSON.stringify({
-          tool: toolName,
-          args: toolArgs,
-          sessionKey: 'voice',
-        }),
-        signal: AbortSignal.timeout(TOOL_TIMEOUT_MS),
-      });
-
-      if (!response.ok) {
-        var errBody = await response.text().catch(function() { return ''; });
-        this.log('ERROR', 'Tool invoke HTTP ' + response.status + ': ' + errBody.substring(0, 200));
-        return { ok: false, error: 'Tool execution failed: HTTP ' + response.status };
-      }
-
-      var result = await response.json();
-      this.log('INFO', 'Tool result: ' + JSON.stringify(result).substring(0, 200));
-      return result;
-    } catch (err) {
-      this.log('ERROR', 'Tool execution failed: ' + err.message);
-      return { ok: false, error: 'Tool execution failed: ' + err.message };
-    }
-  }
-
   // ── TTS Helpers ─────────────────────────────────────────────
 
   cleanForVoice(text) {
@@ -923,14 +914,8 @@ class ClawdTalkClient {
       summary = emoji + ' Call ended: ' + reason;
     }
     
-    // Use /tools/invoke to call sessions_send tool
-    // Derive tools endpoint from chat URL (replace /v1/chat/completions with /tools/invoke)
-    var toolsInvokeUrl = this.gatewayChatUrl ? 
-      this.gatewayChatUrl.replace('/v1/chat/completions', '/tools/invoke') :
-      'http://localhost:18789/tools/invoke';
-    
     try {
-      var response = await fetch(toolsInvokeUrl, {
+      var response = await fetch(this.gatewayToolsUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1045,12 +1030,11 @@ class ClawdTalkClient {
 
   start() {
     this.log('INFO', '═══════════════════════════════════════════════');
-    this.log('INFO', 'ClawdTalk WebSocket Client v1.2.9');
+    this.log('INFO', 'ClawdTalk WebSocket Client v1.3.0');
     this.log('INFO', 'Full agentic mode with main session routing');
     this.log('INFO', '═══════════════════════════════════════════════');
-    this.log('INFO', 'Chat endpoint: ' + this.gatewayChatUrl);
     this.log('INFO', 'Tools endpoint: ' + this.gatewayToolsUrl);
-    this.log('INFO', 'Agent: ' + this.gatewayAgent);
+    this.log('INFO', 'Main agent: ' + this.mainAgentId);
     this.connect();
   }
 }

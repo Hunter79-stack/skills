@@ -11,6 +11,10 @@
 #   ./scripts/call.sh status <call_id>                       # Check call status
 #   ./scripts/call.sh end <call_id>                          # End an active call
 #
+# Env vars: none
+# Endpoints: https://clawdtalk.com
+# Reads: skill-config.json
+# Writes: none
 
 set -euo pipefail
 

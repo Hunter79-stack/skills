@@ -6,6 +6,10 @@
 #
 # Usage: ./status.sh
 #
+# Env vars: none
+# Endpoints: none
+# Reads: skill-config.json, .connect.log, .connect.pid
+# Writes: none
 
 set -e
 

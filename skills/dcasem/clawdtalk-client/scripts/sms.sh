@@ -8,6 +8,10 @@
 #   sms.sh list [--limit 20] [--contact +1234567890]
 #   sms.sh conversations
 #
+# Env vars: none
+# Endpoints: https://clawdtalk.com
+# Reads: skill-config.json
+# Writes: none
 
 set -euo pipefail
 

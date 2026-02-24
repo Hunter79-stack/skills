@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.5.0
+- **New**: Approval requests — request user confirmation for sensitive actions
+- `./scripts/approval.sh` to send push notifications and wait for approve/deny
+- Supports biometric verification requirement for high-security actions
+- Configurable timeout and details field
+- Perfect for voice call flows: "I've sent the flight details to your phone for approval"
+
+## 1.4.0
+- `./scripts/missions.sh` remove this
+- Missions are now supported over Telnyx Missions API
+
+## 1.4.0
+- **New**: Re-enabled missions — AI-powered outreach via voice calls and SMS
+- `./scripts/missions.sh` restored with create, list, get, events, status, and cancel commands
+- Supports voice, SMS, and combined (both) channels
+- Scheduling options: immediate, business hours, or custom datetime
+- Fixed shell syntax bug in missions script (broken SERVER fallback)
+
+## 1.3.0
+- **New**: Log `call_control_id` from deep tool requests when present
+- Enables asking your agent "what was the call control ID of my last call?"
+- Backwards-compatible: works with servers that don't yet send the field
+
 ## 1.2.9
 - **Fix**: Use correct `/tools/invoke` endpoint for sessions_send
 - Previous version used non-existent `/v1/sessions/send` (405 error)
