@@ -1,0 +1,11 @@
+{
+  "owner": "2233admin",
+  "slug": "swarm-task",
+  "displayName": "swarm-task",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1771895359124,
+    "commit": null
+  },
+  "history": []
+}
