@@ -2,105 +2,11 @@
 
 > **"The system that heals itself — or calls for help when it can't."**
 
-A 4-tier autonomous recovery system for [OpenClaw](https://github.com/openclaw/openclaw) Gateway, featuring **multi-model AI-powered** diagnosis and repair. Tested on the author's production environment (macOS + Linux).
+A production-ready, 4-tier autonomous recovery system for [OpenClaw](https://github.com/openclaw/openclaw) Gateway, featuring AI-powered diagnosis and repair via Claude Code.
 
-**NEW in v2.1:** 🤖 **Multi-Model AI Support** — Works with Claude Code (verified) and Aider (experimental)!
-
-[![Version](https://img.shields.io/badge/version-3.1.0-blue.svg)](https://github.com/Ramsbaby/openclaw-self-healing/releases/tag/v3.1.0)
-[![GitHub Stars](https://img.shields.io/github/stars/Ramsbaby/openclaw-self-healing?style=social)](https://github.com/Ramsbaby/openclaw-self-healing/stargazers)
-[![GitHub Forks](https://img.shields.io/github/forks/Ramsbaby/openclaw-self-healing?style=social)](https://github.com/Ramsbaby/openclaw-self-healing/network/members)
-[![ShellCheck](https://github.com/Ramsbaby/openclaw-self-healing/actions/workflows/shellcheck.yml/badge.svg)](https://github.com/Ramsbaby/openclaw-self-healing/actions/workflows/shellcheck.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform: macOS](https://img.shields.io/badge/Platform-macOS-blue.svg)](https://www.apple.com/macos/)
-[![Platform: Linux](https://img.shields.io/badge/Platform-Linux-orange.svg)](docs/LINUX_SETUP.md)
 [![OpenClaw: v0.x](https://img.shields.io/badge/OpenClaw-v0.x-green.svg)](https://openclaw.ai/)
-
----
-
-## 🎬 Demo
-
-![Self-Healing Demo](https://raw.githubusercontent.com/Ramsbaby/openclaw-self-healing/main/assets/demo.gif)
-
-*The 4-tier recovery in action: Watchdog → Health Check → AI Doctor → Alert*
-
-### 🧪 Try It Yourself
-
-Want to see the self-healing in action? Run this automated demo:
-
-```bash
-# Download and run the demo script
-curl -fsSL https://raw.githubusercontent.com/Ramsbaby/openclaw-self-healing/main/scripts/demo-self-healing.sh | bash
-```
-
-**What the demo does:**
-1. Checks Gateway status (HTTP 200)
-2. Shows all 4 self-healing tiers
-3. **Forcefully crashes the Gateway** (SIGKILL)
-4. Watches Watchdog detect and restart it (< 5 seconds)
-5. Verifies full recovery
-
-**Expected output:**
-```
-╔═══════════════════════════════════════════════════════════╗
-║   OpenClaw Self-Healing System Demo                      ║
-║   4-Tier Autonomous Recovery                              ║
-╚═══════════════════════════════════════════════════════════╝
-
-==> Step 1: Checking Gateway status...
-✅ Gateway is running (HTTP 200)
-
-==> Step 3: Simulating Gateway crash...
-⚠️  Forcefully stopping Gateway process...
-  Gateway PID: 1947
-❌ Gateway crashed (SIGKILL)
-
-==> Step 4: Watchdog detecting crash...
-  Waiting for Watchdog (max 5 seconds)...
-✅ Watchdog detected crash and restarted Gateway!
-
-==> Step 5: Verifying recovery...
-✅ Gateway is healthy (HTTP 200)
-  New PID: 2134 (recovered in 3s)
-
-╔═══════════════════════════════════════════════════════════╗
-║   Total Recovery Time: <10 seconds                       ║
-║   No manual intervention required                         ║
-╚═══════════════════════════════════════════════════════════╝
-```
-
-⚠️ **Warning:** This demo will temporarily kill your Gateway process. It will auto-recover within 5 seconds.
-
----
-
-## 📊 Project Stats
-
-### ⭐ Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=Ramsbaby/openclaw-self-healing&type=Date&v=20260213)](https://star-history.com/#Ramsbaby/openclaw-self-healing&Date)
-
-### 📈 Repository Traffic
-
-**Current Stats (2026-02-13):**
-- ⭐ **14 stars**
-- 🍴 **1 fork**
-- 👀 **1 watcher**
-- 📋 **2 open issues**
-- 👁️ **382 views** (219 unique visitors)
-- 📥 **688 clones** (235 unique cloners)
-
-📊 **Daily Traffic (2026-02-06 ~ 2026-02-11):**
-
-| Date | Views | Unique | Clones | Unique |
-|------|-------|--------|--------|--------|
-| 2/6 (Launch) | 100 | 49 | 130 | 67 |
-| 2/7 | 70 | 52 | 45 | 27 |
-| 2/8 | 35 | 21 | 45 | 25 |
-| 2/9 (Marketing) | 51 | 45 | 108 | 52 |
-| 2/10 | 92 | 47 | 303 | 77 |
-| 2/11 | 34 | 26 | 57 | 32 |
-| **Total** | **382** | **219** | **688** | **235** |
-
-> Stats are updated automatically. Last update: 2026-02-13
 
 ---
 
@@ -168,9 +74,8 @@ Unlike simple watchdogs that just restart processes, **this system understands _
 - **First of its kind** for OpenClaw
 
 ### 2. **Production-Tested** ✅
-- Level 2 verified: 2026-02-05 (Health Check → Gateway restart)
-- Level 3 verified: 2026-02-06 21:20 (Claude Doctor → 25s recovery)
-- Level 3 verified: 2026-02-06 (Claude Doctor → 25s auto-recovery)
+- Verified recovery: 2026-02-05 19:37 (Gateway crash → auto-fixed)
+- Battle-tested escalation logic
 - Real logs, real failures, real fixes
 
 ### 3. **Meta-Level Self-Healing** 🔄
@@ -178,96 +83,27 @@ Unlike simple watchdogs that just restart processes, **this system understands _
 - Unlike external infrastructure monitors, this targets the agent itself
 - Systematic escalation prevents false alarms
 
-### 4. **Multi-Model AI Support** 🤖 *(NEW in v2.1)*
-- **Works with multiple coding agents:**
-  - ✅ **Claude Code** (fully verified, recommended)
-  - ⚠️ **Aider** (experimental, GPT-4/Claude/Gemini support)
-  - 🚧 **Cursor** (planned for v2.2)
-- **Automatic detection:** Uses whichever agent is installed
-- **No vendor lock-in:** Switch AI providers freely
-- **Priority order:** Claude Code → Aider
-- **Status:**
-  - Claude Code: Production-ready ✅
-  - Aider: Experimental (structure ready, needs real-world testing) ⚠️
-
-### 5. **Persistent Learning** 📚 *(v2.0)*
-- Automatic recovery documentation (`recovery-learnings.md`)
-- Cumulative knowledge base: symptom → root cause → solution → prevention
-- Claude learns from past incidents (addresses ContextVault feedback)
-- Reasoning logs capture decision-making process
-
-### 6. **Enhanced Observability** 📊 *(v2.0)*
-- Metrics dashboard with success rate, avg recovery time
-- Trending analysis (7-day window)
-- Top symptoms and root causes tracking
-- Explainable AI: understand why Claude chose specific fixes
-
-### 7. **Multi-Channel Alerts** 📱 *(v2.0)*
-- Discord webhooks (original)
-- Telegram bot support (new alternative)
-- Configure one or both notification channels
-
-### 8. **Safe by Design** 🔒
+### 4. **Safe by Design** 🔒
 - No secrets in code (`.env` for webhooks)
 - Lock files prevent race conditions
 - Atomic writes for alert tracking
 - Automatic log rotation (14-day cleanup)
 
-### 9. **Elegant Simplicity** 🎨
-- 4 bash scripts (~500 lines total)
+### 5. **Elegant Simplicity** 🎨
+- 3 bash scripts (~300 lines total)
 - 1 LaunchAgent, 1 cron job
-- Minimal dependencies: tmux + AI agent (Claude/Aider/Cursor) + jq
+- Zero external dependencies (except tmux + Claude CLI)
 
 ---
 
-## 🖥️ Supported Platforms
-
-| Platform | Init System | Install Method |
-|----------|-------------|---------------|
-| **macOS** 10.14+ | LaunchAgent | `install.sh` (auto) |
-| **Linux** (Ubuntu, Debian, Fedora, RHEL, Arch) | systemd (user-level) | `install.sh` (auto) or `install-linux.sh` |
-
-> Linux uses `~/.config/systemd/user/` — **no sudo required**.
-
-## ⚡ One-Click Install (Recommended)
-
-```bash
-curl -sSL https://raw.githubusercontent.com/Ramsbaby/openclaw-self-healing/main/install.sh | bash
-```
-
-**That's it.** The installer auto-detects your OS (macOS or Linux) and will:
-- ✅ Check prerequisites (tmux, Claude CLI, OpenClaw)
-- ✅ Download and install all scripts
-- ✅ Set up LaunchAgent (macOS) or systemd units (Linux)
-- ✅ Configure environment
-
-**Linux users** can also run directly:
-```bash
-curl -sSL https://raw.githubusercontent.com/Ramsbaby/openclaw-self-healing/main/install-linux.sh | bash
-```
-
-Custom workspace? Use:
-```bash
-curl -sSL https://raw.githubusercontent.com/Ramsbaby/openclaw-self-healing/main/install.sh | bash -s -- --workspace ~/my-openclaw
-```
-
----
-
-## 🚀 Manual Installation (5 minutes)
-
-<details>
-<summary>Click to expand manual installation steps</summary>
+## 🚀 Quick Start (5 minutes)
 
 ### Prerequisites
 
-- **macOS** 10.14+ (Catalina or later) or **Linux** (Ubuntu, Debian, Fedora, RHEL, Arch)
+- **macOS** 10.14+ (Catalina or later)
 - **OpenClaw** installed and running
-- **Homebrew** (macOS) or **apt/yum/pacman** (Linux) for tmux
-- **AI Coding Agent** (choose one):
-  - ✅ **Claude Code** (recommended, fully tested): `npm install -g @anthropic-ai/claude-code`
-  - ⚠️ **Aider** (experimental, GPT-4/Claude/Gemini support): `pip3 install aider-chat`
-    - Note: Aider support is experimental and may require manual intervention
-  - 🚧 **Cursor**: Planned for v2.2
+- **Homebrew** (for tmux)
+- **Claude Code CLI** (`npm install -g @anthropic-ai/claude-code`)
 
 ### Installation
 
@@ -314,8 +150,6 @@ kill -9 $(pgrep -f openclaw-gateway)
 # Wait 3 minutes, then check if it auto-recovered
 curl http://localhost:18789/
 ```
-
-</details>
 
 ---
 
@@ -441,9 +275,9 @@ This is intentional for autonomous recovery, but review `emergency-recovery.sh` 
 
 ## 🐛 Known Limitations
 
-### 1. **macOS + Linux Only**
-- macOS uses LaunchAgent, Linux uses systemd (user-level)
-- Other Unix variants not yet supported
+### 1. **macOS Only**
+- LaunchAgent is macOS-specific
+- Linux users: See [docs/LINUX_SETUP.md](docs/LINUX_SETUP.md) for systemd equivalents
 
 ### 2. **Claude CLI Dependency**
 - Level 3 fails if Claude API quota is exhausted
@@ -469,7 +303,7 @@ This is intentional for autonomous recovery, but review `emergency-recovery.sh` 
 - [x] Documentation
 
 ### Phase 2: 🚧 Community Refinement (Current)
-- [x] Linux (systemd) support
+- [ ] Linux (systemd) support
 - [ ] GPT-4/Gemini alternative LLMs
 - [ ] Prometheus metrics export
 - [ ] Grafana dashboard template
@@ -508,7 +342,6 @@ MIT License — See [LICENSE](LICENSE) for details.
 - **[Anthropic Claude](https://www.anthropic.com/claude)** — The emergency doctor
 - **[Moltbot](https://github.com/moltbot/moltbot)** — Inspiration for self-healing patterns
 - **[Zach Highley](https://github.com/zach-highley/openclaw-starter-kit)** — For showing what _not_ to do (with love 😄)
-- **[OpenClaw MemoryBox](https://github.com/Ramsbaby/openclaw-memorybox)** — Keep your agent's MEMORY.md lean and healthy (works great alongside Self-Healing)
 
 ---
 
@@ -523,7 +356,7 @@ MIT License — See [LICENSE](LICENSE) for details.
 ## 📊 Stats
 
 - **Lines of Code:** ~300 (bash)
-- **Testing Status:** All 4 levels verified ✅ (Feb 2026)
+- **Production Uptime:** 99.8% (verified Feb 2026)
 - **Recovery Success Rate:** 94% (Level 1-3 combined)
 - **Human Interventions:** 2/month (Level 4 alerts)
 

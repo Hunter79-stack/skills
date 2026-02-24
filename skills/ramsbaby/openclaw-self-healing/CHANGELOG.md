@@ -5,6 +5,46 @@ All notable changes to OpenClaw Self-Healing System will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2026-02-12
+
+### Fixed
+- **Cursor removed:** Cursor support was not implemented, removed to avoid confusion
+- **Aider execution:** PTY-based execution with `--yes` flag (not `--message`)
+- **python3 -m aider support:** Added fallback for systems where `aider` command is not in PATH
+- **Honest documentation:** Clearly marked Aider as "experimental" (needs real-world testing)
+
+### Changed
+- Log file naming: `claude-session-*.log` → `ai-session-*.log` (agent-agnostic)
+- Aider startup wait: 3s (vs Claude's 5s)
+- Priority order simplified: Claude Code → Aider (Cursor removed)
+- Metrics now include agent name for tracking
+
+### Improved
+- **Code quality:** Removed unimplemented features (Cursor)
+- **Transparency:** Clear status indicators (✅ verified, ⚠️ experimental, 🚧 planned)
+- **Testability:** Aider detection verified on macOS
+
+## [2.1.0] - 2026-02-12
+
+### Added
+- **Multi-Model AI Support** 🤖 (#1 Feature Request from User Feedback)
+  - AI agent abstraction layer in `emergency-recovery.sh`
+  - Automatic detection: Claude Code → Aider
+  - No vendor lock-in: use GPT-4, Claude, Gemini via Aider
+- **Agent-specific prompts:** Tailored diagnostic instructions per AI agent
+- **Graceful degradation:** Works without AI agent (Levels 1, 2, 4 only)
+
+### Changed
+- `emergency-recovery.sh` refactored with `detect_ai_agent()` function
+- `check_dependencies()` now accepts Claude or Aider
+- README updated with multi-model installation instructions
+- Version badge updated to v2.1.0
+
+### Improved
+- **Accessibility:** No longer Claude-only, works with Aider (GPT-4/Gemini users)
+- **Flexibility:** Choose your preferred AI model/provider
+- **Transparency:** Logs which AI agent is being used
+
 ## [2.0.1] - 2026-02-07
 
 ### Fixed

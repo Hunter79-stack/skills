@@ -149,10 +149,12 @@ escalate_to_level3() {
   # Discord 알림 (Level 3 시작)
   send_discord_notification "🚨 **Level 3 Emergency Recovery 시작**\n\n${ESCALATION_WAIT}초 대기 후에도 Gateway 복구 안 됨.\nClaude가 자동으로 진단 및 복구를 시도합니다.\n\n예상 소요 시간: 30분\n현재 시각: $(date '+%Y-%m-%d %H:%M:%S')"
 
-  local emergency_script="$HOME/openclaw/scripts/emergency-recovery.sh"
-  
+  # v3.1: Updated to emergency-recovery-v2.sh
+  local emergency_script="$HOME/.openclaw/skills/openclaw-self-healing/scripts/emergency-recovery-v2.sh"
+
   if [ -f "$emergency_script" ]; then
-    bash "$emergency_script"
+    bash "$emergency_script" &
+    log "✅ Emergency recovery v2 started (background)"
   else
     log "❌ Emergency recovery script not found: $emergency_script"
     send_discord_notification "🚨 **Level 3 실행 실패**\n\nEmergency recovery script not found:\n\`$emergency_script\`\n\n수동 개입 필요."

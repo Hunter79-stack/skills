@@ -15,7 +15,8 @@ cleanup() {
     if [ -n "${TMUX_SESSION:-}" ]; then
         tmux kill-session -t "$TMUX_SESSION" 2>/dev/null || true
     fi
-    rm -f "${LOCKFILE:-$HOME/openclaw/memory/.emergency-recovery.lock}" 2>/dev/null || true
+    # v2.1: 공용 락 파일 삭제
+    rm -f "/tmp/openclaw-emergency-recovery.lock" 2>/dev/null || true
     exit "$exit_code"
 }
 trap cleanup EXIT INT TERM
@@ -47,20 +48,28 @@ chmod 700 "$LOG_DIR" 2>/dev/null || true
 touch "$SESSION_LOG"
 chmod 600 "$SESSION_LOG"
 
-LOCKFILE="$LOG_DIR/.emergency-recovery.lock"
+# v2.1: 공용 락 파일 (Watchdog와 공유)
+LOCKFILE="/tmp/openclaw-emergency-recovery.lock"
 METRICS_FILE="$LOG_DIR/.emergency-recovery-metrics.json"
 
-# Load environment variables
-if [ -f "$HOME/openclaw/.env" ]; then
-  source "$HOME/openclaw/.env"
-elif [ -f "$HOME/.openclaw/.env" ]; then
+# Load environment variables (v3.1: improved path detection)
+if [ -f "$HOME/.openclaw/.env" ]; then
+  # shellcheck source=/dev/null
   source "$HOME/.openclaw/.env"
+elif [ -f "$HOME/openclaw/.env" ]; then
+  # shellcheck source=/dev/null
+  source "$HOME/openclaw/.env"
 fi
 
-# Notification webhooks
+# Notification webhooks (optional - script continues without them)
 DISCORD_WEBHOOK_URL="${DISCORD_WEBHOOK_URL:-}"
 TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-}"
 TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-}"
+
+# Log notification status
+if [ -z "$DISCORD_WEBHOOK_URL" ] && [ -z "$TELEGRAM_BOT_TOKEN" ]; then
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] INFO: No notification webhooks configured. Recovery will proceed silently." | tee -a "$LOG_FILE"
+fi
 
 # ============================================
 # Functions
@@ -119,8 +128,10 @@ check_dependencies() {
     missing_deps+=("tmux")
   fi
   
-  if ! command -v claude &> /dev/null; then
-    missing_deps+=("claude")
+  # v2.1: 절대 경로 사용 (LaunchAgent PATH 문제 해결)
+  CLAUDE_BIN="/opt/homebrew/bin/claude"
+  if [[ ! -x "$CLAUDE_BIN" ]]; then
+    missing_deps+=("claude (not found at $CLAUDE_BIN)")
   fi
   
   if [ ${#missing_deps[@]} -gt 0 ]; then
@@ -286,7 +297,8 @@ main() {
   # 2. Claude Code PTY 세션 시작
   log "Starting Claude Code session in tmux..."
   
-  if ! tmux new-session -d -s "$TMUX_SESSION" "claude" 2>> "$LOG_FILE"; then
+  # v2.1: 절대 경로 사용
+  if ! tmux new-session -d -s "$TMUX_SESSION" "/opt/homebrew/bin/claude" 2>> "$LOG_FILE"; then
     log "❌ Failed to start tmux session"
     send_notification "🚨 **Level 3 실패**\n\ntmux 세션 시작 실패.\n\n수동 개입 필요:\n\`$LOG_FILE\`"
     record_metric "emergency_recovery" "tmux_failed" 0
