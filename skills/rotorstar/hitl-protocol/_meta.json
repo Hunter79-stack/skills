@@ -1,0 +1,11 @@
+{
+  "owner": "rotorstar",
+  "slug": "hitl-protocol",
+  "displayName": "HITL Protocol — Workflows and Human Decisions for Autonomous Agents",
+  "latest": {
+    "version": "0.6.0",
+    "publishedAt": 1771880151235,
+    "commit": null
+  },
+  "history": []
+}
