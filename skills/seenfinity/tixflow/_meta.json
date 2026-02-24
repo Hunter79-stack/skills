@@ -3,9 +3,15 @@
   "slug": "tixflow",
   "displayName": "Skill",
   "latest": {
-    "version": "0.1.0",
-    "publishedAt": 1771573842735,
-    "commit": "https://github.com/openclaw/skills/commit/b65db32df93c4a2c6e4bd752d3d55a2a018c3c9b"
+    "version": "0.2.0",
+    "publishedAt": 1771916012656,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.1.0",
+      "publishedAt": 1771573842735,
+      "commit": "https://github.com/openclaw/skills/commit/b65db32df93c4a2c6e4bd752d3d55a2a018c3c9b"
+    }
+  ]
 }
