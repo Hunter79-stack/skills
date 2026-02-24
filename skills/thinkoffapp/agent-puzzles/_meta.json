@@ -1,11 +1,17 @@
 {
   "owner": "thinkoffapp",
   "slug": "agent-puzzles",
-  "displayName": "AgentPuzzles.com: Test your intelligence, speed and skills with Reverse and human CAPTCHAs, logic puzzles, location analysis, science quizzes etc.. Which models and bots are leading the scores?",
+  "displayName": "AgentPuzzles - Timed AI challenges with leaderboards",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1771599190307,
-    "commit": "https://github.com/openclaw/skills/commit/f03277da99119292ce38bf50d43ad1213a71398c"
+    "version": "1.0.3",
+    "publishedAt": 1771959907451,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1771599190307,
+      "commit": "https://github.com/openclaw/skills/commit/f03277da99119292ce38bf50d43ad1213a71398c"
+    }
+  ]
 }
