@@ -1,13 +1,13 @@
 ---
 name: evomap-node-controller
-description: 管理 EvoMap 节点的启动、配置和监控。用于在服务器上启动/停止 EvoMap evolver 循环、配置节点 ID、处理节点绑定等。使用场景：用户要求启动/停止 EvoMap 节点、查看节点状态、配置节点 ID、解决节点连接问题。⚠️ 使用前必须配置环境变量。
+description: 管理 EvoMap 节点的启动、配置和监控。用于在服务器上启动/停止 EvoMap evolver 循环、配置节点 ID，处理节点绑定等。使用场景：用户要求启动/停止 EvoMap 节点、查看节点状态、配置节点 ID、解决节点连接问题。⚠️ 使用前必须配置环境变量。
 ---
 
-# EvoMap Node Controller
+# EvoMap 节点控制器
 
 管理 EvoMap 节点的启动、配置和监控。
 
-⚠️ **安全警告**：使用前必须配置以下环境变量！
+⚠️ **警告**：使用前必须配置以下环境变量！
 
 ## 变量配置
 
@@ -19,58 +19,57 @@ description: 管理 EvoMap 节点的启动、配置和监控。用于在服务�
 | TOKYO_SSH_KEY | 东京 SSH 密钥路径 | ~/.ssh/id_ed25519 |
 | NODE_PATH | Node 路径 | ~/.nvm/versions/node/v22.22.0/bin/node |
 
-## 节点信息
+## 节点命名
 
-| 节点 | Node ID |
-|------|---------|
-| 中央 | 从配置获取 |
-| 硅谷 | 从配置获取 |
-| 东京 | 从配置获取 |
+| 代号 | 说明 |
+|------|------|
+| 深海 | 中央节点 |
+| 天空 | 硅谷节点 |
+| 泰拉 | 东京节点 |
 
 ## 启动节点
 
 ```bash
-# 中央节点
+# 深海
 ssh -i $CENTRAL_SSH_KEY root@$CENTRAL_IP "cd ~/.openclaw/evolver && A2A_HUB_URL=https://evomap.ai A2A_NODE_ID=<your_node_id> nohup $NODE_PATH index.js run --loop > ~/.openclaw/logs/evolver.log 2>&1 &"
 
-# 东京节点
+# 泰拉
 ssh -i $TOKYO_SSH_KEY root@$TOKYO_IP "cd ~/.openclaw/evolver && A2A_HUB_URL=https://evomap.ai A2A_NODE_ID=<your_node_id> nohup node index.js run --loop > ~/.openclaw/logs/evolver.log 2>&1 &"
 ```
 
 ## 检查节点状态
 
 ```bash
-# 中央
+# 深海
 ssh -i $CENTRAL_SSH_KEY root@$CENTRAL_IP "ps aux | grep 'node index.js' | grep -v grep"
 
-# 东京
+# 泰拉
 ssh -i $TOKYO_SSH_KEY root@$TOKYO_IP "ps aux | grep 'node index.js' | grep -v grep"
 
-# 本地
+# 天空
 ps aux | grep "node index.js" | grep -v grep
 ```
 
 ## 停止节点
 
 ```bash
-# 中央
+# 深海
 ssh -i $CENTRAL_SSH_KEY root@$CENTRAL_IP "pkill -f 'node index.js'"
 
-# 东京
+# 泰拉
 ssh -i $TOKYO_SSH_KEY root@$TOKYO_IP "pkill -f 'node index.js'"
 
-# 本地
+# 天空
 pkill -f "node index.js"
 ```
 
 ## 常见问题
 
-- **节点显示离线**: 检查 evolver 进程是否运行，确认 A2A_NODE_ID 正确
-- **Claim code 无效**: 使用 node_id 而非 claim code
-- **中央节点找不到 node**: 使用完整路径，如 `~/.nvm/versions/node/v22.22.0/bin/node`
+- **节点离线**: 检查 evolver 进程，确认 A2A_NODE_ID 正确
+- **Claim 无效**: 使用 node_id 而非 claim code
+- **找不到 node**: 使用完整路径
 
 ## EvoMap 连接
 
-- Hub URL: `https://evomap.ai`
+- Hub: `https://evomap.ai`
 - 注册: `POST /a2a/hello`
-- 绑定节点: 在 https://evomap.ai 账户中绑定
