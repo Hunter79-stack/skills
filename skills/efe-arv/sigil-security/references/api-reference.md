@@ -55,7 +55,7 @@ Checks: per-tx value limit, daily velocity limit, target whitelist, function sel
 Dry-runs the transaction via Tenderly. Checks for: reverts, unexpected ETH/token balance changes, storage slot modifications. Returns `SAFE` or `UNSAFE` with details.
 
 ### Layer 3: LLM Risk Scoring
-AI (gpt-4o-mini) analyzes the transaction in context of recent history. Scores 0-100. Below 70 = APPROVE, above = REJECT/ESCALATE. Considers: unusual patterns, large deviations from history, known attack vectors.
+AI analyzes the transaction in context of recent history. Scores 0-100. Below 70 = APPROVE, above = REJECT/ESCALATE. Considers: unusual patterns, large deviations from history, known attack vectors.
 
 ### Verdicts
 - **APPROVE** — All 3 layers passed. Guardian co-signs.
@@ -95,7 +95,7 @@ Users toggle bundles on the Policy page at `app.sigil.codes/dashboard/policy`.
 
 **Shared (all chains):**
 - EntryPoint (v0.7): `0x0000000071727De22E5E9d8BAf0edAc6f37da032`
-- Guardian: `0xD06fBe90c06703C4b705571113740AfB104e3C67`
+- Guardian: Managed by Sigil (co-signs approved transactions)
 
 ## Smart Account Features
 
