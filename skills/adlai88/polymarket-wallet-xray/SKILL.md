@@ -7,7 +7,7 @@ authors:
   - Simmer (@simmer_markets)
 inspired_by:
   - thejayden (@thejayden) - "Autopsy: How to Read the Mind of a Polymarket Whale"
-version: "1.0.1"
+version: "1.0.2"
 published: true
 ---
 
@@ -134,7 +134,7 @@ The skill returns comprehensive forensic metrics:
 2. **Compute profitability timeline** — When were they underwater vs. profitable?
 3. **Analyze entry quality** — Did they buy at optimal prices or chase?
 4. **Detect trading patterns** — Bot (inhuman speed) vs. human (deliberate timing)?
-5. **Check for arbitrage** — Combined YES+NO avg < $1.00? (Risk-free profit locked in)
+5. **Check for arbitrage** — Combined YES+NO avg < $1.00? (Potential structural edge — depends on execution and fees)
 6. **Assess behavior** — FOMO accumulation? Disciplined sizing? Rotating positions?
 7. **Generate recommendation** — Is this wallet worth following? What's the risk?
 
@@ -164,9 +164,9 @@ Average 45 seconds between trades. This is human. A bot would be <1 second.
 ### 💰 **Hedge Check** (e.g., combined avg 0.98)
 If they bought YES at $0.70 and NO at $0.30, combined = $1.00. This wallet spent exactly what they should to be neutral.
 
-If combined < $1.00, they locked in risk-free profit (arbitrage).
+If combined < $1.00, they may have entered with a structural edge (lower combined cost than $1 payout). Actual profit depends on execution, fees, and spread.
 
-- **< $0.95** = They found free money. Likely institutional/pro.
+- **< $0.95** = Strong potential edge. Likely institutional/pro.
 - **$0.95-1.00** = Slight edge detected.
 - **> $1.00** = No edge; betting on direction.
 
