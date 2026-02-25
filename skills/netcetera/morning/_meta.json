@@ -1,0 +1,11 @@
+{
+  "owner": "netcetera",
+  "slug": "morning",
+  "displayName": "Morning",
+  "latest": {
+    "version": "0.1.0",
+    "publishedAt": 1772006037345,
+    "commit": null
+  },
+  "history": []
+}
