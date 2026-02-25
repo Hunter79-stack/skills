@@ -1,5 +1,5 @@
 ---
-name: drain-mcp
+name: hs58
 description: >-
   MCP server for the Handshake58 AI marketplace. Agents discover providers,
   open USDC payment channels on Polygon, and call AI services — pay per use
@@ -9,7 +9,7 @@ homepage: https://github.com/kimbo128/DRAIN
 compatibility: Requires Node.js >= 18 and internet access
 metadata:
   author: Handshake58
-  version: "1.8"
+  version: "2.0"
   website: https://handshake58.com
   npm: drain-mcp
   source: https://github.com/kimbo128/DRAIN
@@ -71,6 +71,115 @@ to any server.
 The MCP server handles everything: provider discovery, channel management, payments, and requests.
 Package: https://www.npmjs.com/package/drain-mcp
 
+## MCP Tools Reference
+
+The server exposes the following tools. Agents call these directly through the MCP protocol.
+
+### `drain_providers`
+
+List available AI providers that accept DRAIN micropayments.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `onlineOnly` | boolean | No | Only return currently online providers |
+| `model` | string | No | Filter by model name (e.g. `"gpt-4o"`) |
+
+Returns: provider list with models, pricing, and status.
+
+### `drain_provider_info`
+
+Get detailed information about a specific provider.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `providerId` | string | Yes | The provider ID to look up |
+
+Returns: provider details including all available models and pricing.
+
+### `drain_balance`
+
+Check wallet balance, USDC allowance, and readiness for DRAIN payments.
+No parameters required.
+
+Returns: wallet address, USDC balance, POL balance, allowance status, and readiness indicators.
+
+### `drain_approve`
+
+Approve USDC spending for the DRAIN contract. Required before opening channels.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `amount` | string | No | USDC amount to approve (e.g. `"100"`). Omit for unlimited. |
+
+Returns: approval transaction hash.
+
+### `drain_open_channel`
+
+Open a payment channel with an AI provider. Deposits USDC into the smart contract.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `provider` | string | Yes | Provider ID (from `drain_providers`) or wallet address |
+| `amount` | string | Yes | USDC to deposit (e.g. `"5.00"`) |
+| `duration` | string | Yes | Channel duration (e.g. `"1h"`, `"24h"`, `"7d"`, or seconds) |
+
+Prerequisites: sufficient USDC balance, approved allowance, POL for gas.
+
+### `drain_chat`
+
+Send a chat completion request through an open payment channel.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `channelId` | string | Yes | Payment channel ID (`0x...`) |
+| `model` | string | Yes | Model ID (e.g. `"gpt-4o"`, `"gpt-4o-mini"`) |
+| `messages` | array | Yes | Chat messages in OpenAI format (`[{role, content}]`) |
+| `maxTokens` | number | No | Maximum tokens to generate |
+| `temperature` | number | No | Sampling temperature 0–2 |
+
+Automatically signs a payment voucher and deducts cost from channel balance.
+
+### `drain_channel_status`
+
+Check the current status of a payment channel.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `channelId` | string | Yes | Channel ID to check (`0x...`) |
+
+Returns: deposit, spending, remaining balance, expiry time.
+
+### `drain_close_channel`
+
+Close an expired channel and reclaim remaining funds.
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `channelId` | string | Yes | Channel ID to close (`0x...`) |
+
+Can only be called after expiry. Unused USDC is returned to your wallet.
+
+## MCP Resources
+
+The server also exposes read-only resources for passive context.
+
+| Resource URI | Name | Description |
+|---|---|---|
+| `drain://providers` | AI Providers | Live list of available providers (text/markdown) |
+| `drain://wallet` | Wallet Status | Current wallet address, USDC balance, and allowance (text/markdown) |
+
+## Typical Agent Workflow
+
+```
+1. drain_providers          → discover available models and pricing
+2. drain_balance            → verify wallet has USDC + POL
+3. drain_approve            → approve USDC spending (once)
+4. drain_open_channel       → deposit USDC, get channelId
+5. drain_chat (repeat)      → send requests, pay per use
+6. drain_channel_status     → monitor balance / expiry
+7. drain_close_channel      → reclaim unused funds after expiry
+```
+
 ## Discover Providers
 
 ```
@@ -108,7 +217,7 @@ a wallet programmatically using any Ethereum library (ethers.js, viem, web3.py).
 1. **Pay Session Fee** — Transfer $0.01 USDC to the marketplace fee wallet
 2. **Open Channel** — Deposit USDC into smart contract (~$0.02 gas)
 3. **Use AI Services** — Each request signs a payment voucher (off-chain, $0 gas). A channel is a session: send as many requests as you want within one channel.
-4. **Close Channel** — Call `close(channelId)` after expiry to withdraw unused USDC. Funds do NOT return automatically.
+4. **Close Channel** — Call `drain_close_channel` after expiry to withdraw unused USDC. Funds do NOT return automatically.
 
 **Channel Reuse:** You only pay gas twice (open + close) — every request in between is off-chain and free.
 
@@ -169,7 +278,7 @@ for any provider that is not a simple LLM chat (e.g. VPN leases, web scraping to
 
 ## Settlement (Closing Channels)
 
-After a channel expires, call `close(channelId)` to reclaim your unspent USDC. Funds do NOT return automatically.
+After a channel expires, call `drain_close_channel` to reclaim your unspent USDC. Funds do NOT return automatically.
 
 ```typescript
 // Check channel status
@@ -221,7 +330,7 @@ The key is never transmitted to Handshake58 servers, AI providers, or any third 
 - Your signing key (never transmitted)
 - All cryptographic operations
 
-**Spending is capped by design.** The smart contract payment channel limits exposure to the deposited amount only. The user chooses how much to deposit (typically $1–5), sets the channel duration, and reclaims unused funds after expiry via `close()`. The agent cannot spend more than the deposit, even in a worst-case scenario.
+**Spending is capped by design.** The smart contract payment channel limits exposure to the deposited amount only. The user chooses how much to deposit (typically $1–5), sets the channel duration, and reclaims unused funds after expiry via `drain_close_channel`. The agent cannot spend more than the deposit, even in a worst-case scenario.
 
 **Recommended safeguards:**
 - Use a **dedicated ephemeral wallet** with $1–5 USDC. Never reuse your main wallet.
