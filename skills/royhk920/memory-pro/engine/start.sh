@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# --- Environment Setup ---
+# --- 環境變數設定 ---
 export PATH="$HOME/.local/bin:$PATH"
 export MEMORY_PRO_WORKSPACE_DIR="${MEMORY_PRO_WORKSPACE_DIR:-$HOME/.openclaw/workspace/}"
 export MEMORY_PRO_DATA_DIR="${MEMORY_PRO_DATA_DIR:-$MEMORY_PRO_WORKSPACE_DIR/memory/}"
@@ -9,10 +9,10 @@ export MEMORY_PRO_PORT="${MEMORY_PRO_PORT:-8001}"
 export MEMORY_PRO_INDEX_DIR="${MEMORY_PRO_INDEX_DIR:-$(pwd)}"
 export MEMORY_PRO_INDEX_PATH="${MEMORY_PRO_INDEX_PATH:-$MEMORY_PRO_INDEX_DIR/memory.index}"
 
-# --- Pre-flight Checks & Setup ---
+# --- 啟動前檢查與環境準備 ---
 echo "🔄 Starting Memory Pro Service..."
 
-# Use uv if available
+# 使用 uv 如果可用
 if command -v uv &> /dev/null; then
     echo "📦 Using uv to run python..."
     PYTHON_CMD="uv run python"
@@ -25,6 +25,6 @@ fi
 echo "🔨 Rebuilding Index to ensure consistency..."
 $PYTHON_CMD build_index.py
 
-# --- Start Service ---
+# --- 啟動服務 ---
 echo "🚀 Starting Uvicorn on port $MEMORY_PRO_PORT..."
 exec $UVICORN_CMD main:app --host 127.0.0.1 --port "$MEMORY_PRO_PORT" --log-level info

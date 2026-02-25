@@ -7,30 +7,29 @@ import os
 import logging
 from typing import List
 
-# --- Logging Setup ---
+# --- 日誌設定 ---
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("memory-pro")
 
-# --- Environment Setup ---
+# --- 環境變數設定 ---
 base_dir = os.path.dirname(os.path.abspath(__file__))
 index_dir = os.getenv("MEMORY_PRO_INDEX_DIR", base_dir)
 
 MEMORY_PRO_PORT = int(os.getenv("MEMORY_PRO_PORT", "8001"))
 MEMORY_PRO_INDEX_PATH = os.getenv("MEMORY_PRO_INDEX_PATH", os.path.join(index_dir, "memory.index"))
 
-# --- Initialization ---
-VERSION = "2.0.0"
+# --- 初始化 ---
 app = FastAPI(title="Memory Pro API", description="Semantic Search Service for OpenClaw Memory")
 
-# Global variables (lazy load)
+# 全局變數 (延遲初始化)
 model = None
 index = None
 sentences = []
 
-# --- Pydantic Models ---
+# --- Pydantic 模型 ---
 class SearchRequest(BaseModel):
-    query: str = Field(..., description="Search query string", min_length=1)
-    top_k: int = Field(3, ge=1, le=20, description="Number of results to return")
+    query: str = Field(..., description="搜尋查詢字串", min_length=1)
+    top_k: int = Field(3, ge=1, le=20, description="返回結果數量")
 
 class SearchResult(BaseModel):
     score: float
@@ -40,30 +39,30 @@ class SearchResponse(BaseModel):
     query: str
     results: List[SearchResult]
 
-# --- Startup Event ---
+# --- 啟動事件 ---
 @app.on_event("startup")
 async def startup_event():
     global model, index, sentences
     try:
         logger.info("Starting Memory Pro service...")
         
-        # Load Model
+        # 載入模型
         logger.info("Loading SentenceTransformer model...")
         model = SentenceTransformer("all-MiniLM-L6-v2")
         
-        # Load FAISS Index
+        # 載入索引
         index_path = MEMORY_PRO_INDEX_PATH
         if not os.path.exists(index_path):
             raise FileNotFoundError(f"FAISS index not found at {index_path}")
         logger.info(f"Loading FAISS index from {index_path}...")
         index = faiss.read_index(index_path)
         
-        # Load Sentences
+        # 載入句子
         logger.info("Loading sentences via preprocess_directory()...")
         from preprocess import preprocess_directory
         sentences = preprocess_directory()
         
-        # Validate Consistency
+        # 驗證同步
         if index.ntotal != len(sentences):
             error_msg = f"Index size mismatch: FAISS has {index.ntotal}, sentences list has {len(sentences)}"
             logger.error(error_msg)
@@ -75,14 +74,14 @@ async def startup_event():
         logger.critical(f"Startup failed: {e}")
         raise e
 
-# --- Health Check ---
+# --- 健康檢查 ---
 @app.get("/health")
 async def health_check():
     if model is None or index is None or not sentences:
         raise HTTPException(status_code=503, detail="Service not initialized")
-    return {"status": "ok", "version": VERSION, "indexed_items": len(sentences)}
+    return {"status": "ok", "indexed_items": len(sentences)}
 
-# --- Search Endpoint ---
+# --- 搜尋端點 ---
 @app.post("/search", response_model=SearchResponse)
 async def search(request: SearchRequest):
     try:
@@ -92,13 +91,13 @@ async def search(request: SearchRequest):
         if not query:
             raise HTTPException(status_code=400, detail="Query cannot be empty")
 
-        # Encode query
+        # 向量化
         query_embedding = model.encode([query])
 
-        # FAISS search
+        # FAISS 搜尋
         distances, indices = index.search(query_embedding, top_k)
 
-        # Build results
+        # 組裝結果
         results = []
         for distance, idx in zip(distances[0], indices[0]):
             if idx != -1:

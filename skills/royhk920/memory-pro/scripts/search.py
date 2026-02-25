@@ -77,7 +77,6 @@ def main():
     parser.add_argument("--top_k", "-k", type=int, default=3, help="Number of results to return.")
     parser.add_argument("--json", "-j", action="store_true", help="Output raw JSON.")
     parser.add_argument("--url", help="Override API URL", default=None)
-    parser.add_argument("--version", "-v", action="version", version="Memory Pro Client v2.0.0")
     
     args = parser.parse_args()
     

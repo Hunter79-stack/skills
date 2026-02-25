@@ -4,7 +4,7 @@ import os
 
 def clean_text(text):
     """
-    Clean text: remove code blocks, markdown links, headers, etc.
+    清理文本：移除代碼塊、Markdown 鏈接、標題等
     """
     text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
     text = re.sub(r'\[.*?\]\(.*?\)', '', text)
@@ -26,7 +26,6 @@ def preprocess_directory():
         raise FileNotFoundError(f"Directory not found: {data_dir}")
     
     sentences = []
-    # Process memory directory (.md files)
     for filename in os.listdir(data_dir):
         if filename.endswith(".md"):
             filepath = os.path.join(data_dir, filename)
@@ -35,7 +34,6 @@ def preprocess_directory():
             cleaned = clean_text(content)
             sentences.extend(sent_tokenize(cleaned))
     
-    # Process core files
     core_files_env = os.getenv("MEMORY_PRO_CORE_FILES", "MEMORY.md,SOUL.md,STATUS.md,AGENTS.md,USER.md")
     core_files = [f.strip() for f in core_files_env.split(',') if f.strip()]
     
@@ -47,6 +45,5 @@ def preprocess_directory():
             cleaned = clean_text(content)
             sentences.extend(sent_tokenize(cleaned))
     
-    # Filter out empty or very short sentences
     valid_sentences = [s for s in sentences if s.strip() and len(s.split()) > 3]
     return sorted(list(set(valid_sentences)))
