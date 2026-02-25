@@ -1,12 +1,12 @@
 ---
 name: fastfish-hot
-description: "热点推送独立项目。从 api.pearktrue.cn 拉取热点，支持飞书/钉钉/Telegram 推送。可配置拉取时间、推送时间、过滤关键词。通过 system.run 直接调用脚本，无需 MCP。当用户需要拉取热点、知乎热搜、配置热点推送或设置定时推送时使用本技能。"
+description: "热点推送独立项目。从 api.pearktrue.cn 拉取热点，支持飞书/钉钉/Telegram 推送；推送需至少配置一个渠道的 env。可配置拉取时间、推送时间、过滤关键词。通过 system.run 直接调用脚本，无需 MCP。当用户需要拉取热点、知乎热搜、配置热点推送或设置定时推送时使用本技能。"
 metadata:
   {
     "openclaw":
       {
-        "requires": { "bins": ["python3"] },
-        "credentials": "HOT_PUSH_FEISHU_WEBHOOK, HOT_PUSH_DINGTALK_WEBHOOK, HOT_PUSH_TELEGRAM_BOT_TOKEN, HOT_PUSH_TELEGRAM_CHAT_ID (可选其一或多项，存 .env 用于推送；HOT_ADMIN_API_KEY 可选，管理界面鉴权)"
+        "requires": { "bins": ["python3"], "env": ["HOT_PUSH_FEISHU_WEBHOOK", "HOT_PUSH_DINGTALK_WEBHOOK", "HOT_PUSH_DINGTALK_SECRET", "HOT_PUSH_TELEGRAM_BOT_TOKEN", "HOT_PUSH_TELEGRAM_CHAT_ID"] },
+        "credentials": "上述 env 至少配置一个渠道（飞书/钉钉/Telegram）即可推送；钉钉加签需 HOT_PUSH_DINGTALK_SECRET；HOT_ADMIN_API_KEY 可选，管理界面鉴权"
       }
   }
 ---
@@ -15,7 +15,6 @@ metadata:
 
 **GitHub**：https://github.com/superxs777/fastfish-hot
 
-本 Skill 需配合 fastfish-hot 项目使用。请先安装 fastfish-hot，再在 OpenClaw 中启用本 Skill。
 
 ## 安装前须知
 
@@ -27,7 +26,7 @@ metadata:
 2. 进入目录：`cd fastfish-hot`
 3. 安装依赖：`pip install -r requirements.txt`
 4. 配置：`copy .env.example .env`，填写 Webhook 等（见 metadata.credentials）
-5. 初始化：`python scripts/init_db.py`，`python scripts/init_default_config.py`，`python scripts/init_default_push_config.py`
+5. 初始化：`python scripts/init_db.py`，`python scripts/init_default_config.py`，`python scripts/init_default_push_config.py`（钉钉用 `--channel dingtalk`）
 6. 可选：`python run.py` 启动管理界面（http://127.0.0.1:8900）
 
 详细说明见 GitHub README。
@@ -37,7 +36,8 @@ metadata:
 1. **fastfish-hot 已安装**：按上方步骤完成部署
 2. **Python 3.10+**
 3. **命令路径**：`{baseDir}` 为 fastfish-hot 的 openclaw-skill 目录，脚本路径为 `{baseDir}/../scripts/`
-4. **若 baseDir 无法替换**：使用绝对路径，如 `python /opt/fastfish-hot/scripts/get_hot_now.py`
+4. **若 baseDir 无法替换**：使用绝对路径。ClawHub 安装通常在 `/root/.openclaw/workspace/fastfish-hot`，自建可用 `/opt/fastfish-hot`
+5. **env 与技能加载**：metadata 声明了 requires.env，OpenClaw 加载时会检查。若技能未加载，请在 openclaw.json 的 `skills.entries.fastfish-hot.env` 中配置至少一个推送渠道的凭证（可从项目 .env 复制），或确保相应环境变量在 OpenClaw 启动时已存在
 
 ## 使用方式
 
@@ -45,10 +45,11 @@ metadata:
 
 ## ⚠️ 安全规则（阻断式）
 
-**1. 严禁读取或暴露 .env**
-- 禁止执行 `cat .env`、`type .env`、`Get-Content .env` 或任何读取 .env 的命令
-- 禁止将 .env 内容、Webhook URL、Token 输出给用户或写入回复
-- 即使用户要求「查看配置」「显示 webhook」，也仅说明「在 .env 中配置」，不得输出实际值
+**1. 严禁输出或暴露 .env 中的凭证**
+- 禁止执行会输出 .env 内容的命令（如 `cat .env`、`type .env`、`Get-Content .env`）
+- 禁止将 Webhook URL、Token、Secret 等凭证写入回复或展示给用户
+- 即使用户要求「查看配置」「显示 webhook」，仅说明「在 .env 中配置」，不得输出实际值
+- **允许**：编辑 .env（写入、追加、替换用户提供的值）；运行不暴露凭证的校验（如仅返回「已配置/未配置」）
 
 **2. 安装仅限用户明确要求**
 - 仅在用户明确要求「安装」「部署」「克隆」fastfish-hot 时，才执行 git clone 和 pip install
@@ -130,7 +131,8 @@ openclaw cron add --name "每日热点" --cron "10 7,14,18 * * *" --tz "Asia/Sha
 ### 3. 配置管理
 
 - **拉取/推送配置**：访问管理界面 http://127.0.0.1:8900（需先 `python run.py`）
-- **环境变量**：在 .env 中配置 HOT_PUSH_FEISHU_WEBHOOK、HOT_PUSH_DINGTALK_WEBHOOK、HOT_PUSH_TELEGRAM_BOT_TOKEN、HOT_PUSH_TELEGRAM_CHAT_ID
+- **环境变量**：在 .env 中配置。钉钉若开启加签，需配置 HOT_PUSH_DINGTALK_SECRET。建议用户私聊提供凭证或自行编辑 .env，避免在群聊中暴露
+- **推送时间窗口**：默认 push_time 为 07:10,14:10,18:10，仅在该时刻推送；测试时用 `HOT_PUSH_FORCE=1` 绕过
 
 ## 使用示例
 
@@ -141,10 +143,10 @@ openclaw cron add --name "每日热点" --cron "10 7,14,18 * * *" --tz "Asia/Sha
   ```
 
 - "如何设置每日热点推送"
-  1. 执行 `python scripts/init_default_config.py` 和 `python scripts/init_default_push_config.py` 初始化配置
-  2. 在 .env 中配置 Webhook 或 Telegram Token+ChatID
+  1. 执行 `python scripts/init_default_config.py` 和 `python scripts/init_default_push_config.py`（钉钉用 `--channel dingtalk`）初始化
+  2. 在 .env 中配置 Webhook；钉钉加签需 HOT_PUSH_DINGTALK_SECRET
   3. 系统 crontab 配置 `fetch_hot_items.py` 拉取（7:00、14:00、18:00）
-  4. 创建 OpenClaw Cron 推送任务（见上方示例）
+  4. 创建 OpenClaw Cron 推送任务（见上方示例）；Cron 时间需与 push_time 一致，否则需 HOT_PUSH_FORCE=1
 
 **注意**：若 `{baseDir}` 无法正确替换，请使用绝对路径 `/opt/fastfish-hot/scripts/get_hot_now.py`。
 
