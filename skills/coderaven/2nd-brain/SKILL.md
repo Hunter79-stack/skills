@@ -1,6 +1,6 @@
 ---
 name: brain
-version: 1.2.1
+version: 1.3.0
 description: |
   Personal knowledge base for capturing and retrieving information about people,
   places, restaurants, games, tech, events, media, ideas, and organizations.
@@ -8,6 +8,22 @@ description: |
   event, book/show, idea, or company. Trigger phrases: "remember", "note that",
   "met this person", "visited", "played", "what do I know about", etc.
   Brain entries take precedence over daily logs for named entities.
+setup: |
+  This skill uses OpenClaw's built-in memory_search and memory_get tools for
+  search and retrieval — no external dependencies required.
+
+  Optional: For richer BM25 + vector + reranking search, enable the QMD backend:
+    1. Install QMD CLI: bun install -g https://github.com/tobi/qmd
+    2. Set memory.backend = "qmd" in openclaw.json
+    3. Add brain/ to memory.qmd.paths in openclaw.json:
+         paths: [{ name: "brain", path: "~/.openclaw/workspace/brain", pattern: "**/*.md" }]
+
+  The skill degrades gracefully to OpenClaw's built-in search if QMD is not configured.
+permissions:
+  paths:
+    - "~/.openclaw/workspace/brain/**"
+  write: true
+  attachments: true
 ---
 
 # Brain Skill — 2nd Brain Knowledge Base
@@ -47,30 +63,59 @@ brain/
   orgs/         # Companies, communities, groups
 ```
 
-## File Naming Convention
+## Search & Retrieval
 
-- Slugified lowercase: `raven-duran.md`, `house-of-lechon-cebu.md`
-- For disambiguation: `john-smith-symph.md` vs `john-smith-ateneo.md`
-- Always propose disambiguator to user before creating if name clash is possible
+This skill uses OpenClaw's built-in `memory_search` and `memory_get` tools, which work out of the box with any configured memory backend.
+
+### Searching
+
+Use `memory_search` for all brain lookups:
+
+```
+memory_search("Raven Duran")              # find a person
+memory_search("Mamou Prime restaurant")   # find a place
+memory_search("what games has Raven played") # natural language
+```
+
+`memory_search` works transparently whether the backend is the built-in SQLite indexer or QMD. No direct CLI calls needed.
+
+### Reading a File
+
+Use `memory_get` to read a specific brain file once you know its path:
+
+```
+memory_get("brain/people/raven-duran.md")
+memory_get("brain/places/mamou-prime-sm-podium/mamou-prime-sm-podium.md")
+```
+
+### Direct CLI (Optional / Advanced Only)
+
+Only use the `qmd` CLI directly when searching a non-workspace collection (e.g., the `skills` collection). For all brain lookups, use `memory_search`.
+
+```bash
+# Only for skills collection or non-workspace paths:
+export PATH="$HOME/.bun/bin:$PATH"
+qmd search "keyword" -c skills
+```
 
 ## Operational Rules
 
 ### Creating a New Entry
 
-1. **Search first** — Run `qmd search "<name or topic>"` to check for existing entries
+1. **Search first** — Run `memory_search("<name or topic>")` to check for existing entries
 2. **No match** — Create new file using the appropriate template from `skills/brain/templates/`
 3. **Possible clash** — List all potential matches and ask user to confirm before creating
 
 ### Updating an Existing Entry
 
-1. **Find the file** — Use `qmd search` or direct path if known
+1. **Find the file** — Use `memory_search` or direct path if known
 2. **Surgical edit** — Update only the relevant section, don't rewrite the whole file
 3. **Log the date** — Add timestamp to Notes or Interactions section
 4. **Update frontmatter** — Bump `last_updated` field
 
 ### Searching / Retrieving
 
-1. **Query QMD** — `qmd query "<natural language question>"` for semantic search
+1. **Query memory_search** — `memory_search("<natural language question>")` for semantic search
 2. **Ambiguous results** — Surface all candidates to user, ask which one
 3. **No results** — Tell user nothing found, offer to create entry
 
@@ -78,7 +123,7 @@ brain/
 
 When user references something ambiguous (e.g., "John"):
 
-1. Search brain for all matches
+1. Search brain for all matches using `memory_search("John")`
 2. If multiple results: list them with context
    ```
    Found 2 matches for "John":
@@ -127,7 +172,7 @@ This makes relationships explicit and searchable.
 **User says:** "Hey, I just met this guy called Raven Duran. He's positioning himself as an Agentic coder, met him at GeeksOnABeach PH last February."
 
 **Agent does:**
-1. `qmd search "Raven Duran"` → no results
+1. `memory_search("Raven Duran")` → no results
 2. Read `skills/brain/templates/person.md`
 3. Create `brain/people/raven-duran.md` with filled template
 4. Optionally check/create `brain/events/geeksonabeach-ph-2026.md` and link
@@ -135,8 +180,8 @@ This makes relationships explicit and searchable.
 **User says:** "The Raven Duran guy, he's still 26 years old"
 
 **Agent does:**
-1. `qmd search "Raven Duran"` → finds `brain/people/raven-duran.md`
-2. Read file, update `age: 26` in frontmatter
+1. `memory_search("Raven Duran")` → finds `brain/people/raven-duran.md`
+2. Read file via `memory_get("brain/people/raven-duran.md")`, update `age: 26` in frontmatter
 3. Add note: `- **2026-02-21**: Confirmed still 26 years old`
 4. Update `last_updated` field
 
@@ -193,13 +238,13 @@ brain/places/mamou-prime-sm-podium/
 | storefront.mp4 | Quick video of the entrance | 2026-02-21 |
 ```
 
-QMD indexes this file, making attachments searchable by description.
+QMD (if enabled) indexes this file, making attachments searchable by description.
 
 ### Adding Attachments
 
 When user sends media about an entity (e.g., "Here's the menu for Mamou Prime"):
 
-1. **Find the entry** — `qmd search "Mamou Prime"` → `brain/places/mamou-prime-sm-podium.md`
+1. **Find the entry** — `memory_search("Mamou Prime")` → `brain/places/mamou-prime-sm-podium.md`
 
 2. **Convert to folder structure (if flat file):**
    ```bash
@@ -246,7 +291,7 @@ Be descriptive — the index provides context:
 **User sends:** 2 photos with message "Menu at Mamou Prime"
 
 **Agent does:**
-1. Find `brain/places/mamou-prime-sm-podium.md`
+1. Find `brain/places/mamou-prime-sm-podium.md` via `memory_search("Mamou Prime")`
 2. Convert to folder structure (if needed)
 3. **Analyze photos** → transcribe menu items, prices into markdown tables
 4. **Update profile** with transcribed menu section
