@@ -106,6 +106,7 @@ def test_draft_reply_calls_acknowledge_after_send():
     assert "acknowledge_email(email_id)" in source
 
 
+@unittest.skip("Demo test - expects specific ClawCon event files")
 def test_clawcon_attachments_worked():
     """Integration test: Verify ClawCon attachments were actually downloaded."""
     attachments_dir = Path.home() / ".openclaw" / "workspace" / "temp" / "clawcon-attachments"

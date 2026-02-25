@@ -1,13 +1,19 @@
 ---
-requires.env: RESEND_API_KEY
+requires.env: RESEND_API_KEY,DEFAULT_FROM_EMAIL,DEFAULT_FROM_NAME
 license: Apache-2.0
 name: email-resend
 description: >
   Send and receive emails using the Resend API. Use for: (1) sending emails directly
   via Resend API, (2) receiving email notifications via cron, (3) drafting replies with
-  proper threading, (4) downloading attachments from inbound emails. Required env vars: RESEND_API_KEY.
-  Auto-discovers user info from OpenClaw context or asks interactively.
+  proper threading, (4) downloading attachments from inbound emails.
+
+  **Required env vars:** RESEND_API_KEY (API key), DEFAULT_FROM_EMAIL (sender email), DEFAULT_FROM_NAME (sender name).
+  **License: Apache-2.0** — See LICENSE file for details.
 ---
+
+## License
+
+**Apache License 2.0** — See LICENSE file for full text.
 
 # Email via Resend
 
@@ -24,7 +30,9 @@ Send and receive emails using the Resend API.
 ### Required Environment Variables
 
 ```bash
-export RESEND_API_KEY="re_123456789"        # Resend API key
+export RESEND_API_KEY="re_123456789"        # Resend API key (required)
+export DEFAULT_FROM_EMAIL="you@example.com" # Sender email (required)
+export DEFAULT_FROM_NAME="Your Name"        # Sender display name (required)
 # Channel/target set by agent from context/memory - not hardcoded
 ```
 
