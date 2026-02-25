@@ -46,6 +46,32 @@ HTML_RE = re.compile(r'<[^>]+>')
 URL_RE = re.compile(r'https?://\S+')
 
 
+from urllib.parse import urlparse
+
+# ── Allowed Endpoints (Exfiltration Guard) ──────────────────────────────────
+
+ALLOWED_DOMAINS = {
+    "openai": ["api.openai.com"],
+    "gemini": ["generativelanguage.googleapis.com"],
+    "ollama": ["localhost", "127.0.0.1"],
+}
+
+
+def validate_url(url: str, provider_name: str) -> None:
+    """Ensure the URL matches the expected official endpoint for the provider."""
+    parsed = urlparse(url)
+    domain = parsed.netloc.split(':')[0]
+    
+    allowed = ALLOWED_DOMAINS.get(provider_name, [])
+    if allowed and domain not in allowed:
+        # If it's a known provider but unknown domain, check if it's explicitly allowed in config
+        # For now, we raise a security warning and exit unless it's a local/custom case.
+        print(f"⚠️  Security Warning: Provider '{provider_name}' is using an unofficial endpoint: {domain}")
+        print(f"   Official domains: {', '.join(allowed)}")
+        print("   To bypass this, use a custom provider name in config or verify the URL.")
+        sys.exit(1)
+
+
 # ── Text cleaning ────────────────────────────────────────────────────────────
 
 def clean_text(content: str) -> str:
@@ -65,6 +91,8 @@ def clean_text(content: str) -> str:
 def embed_ollama(text: str, model: str, provider: dict) -> list[float]:
     """Embed text via Ollama local API."""
     url = provider["url"].rstrip("/") + "/api/embeddings"
+    validate_url(url, "ollama")
+    
     payload = json.dumps({"model": model, "prompt": text}).encode()
     req = urllib.request.Request(
         url,
@@ -77,14 +105,41 @@ def embed_ollama(text: str, model: str, provider: dict) -> list[float]:
         return data["embedding"]
 
 
+def get_api_key(env_var_name: str) -> str:
+    """Try to get API key from environment, then from .env file."""
+    # 1. Try environment
+    key = os.environ.get(env_var_name, "")
+    if key:
+        return key
+    
+    # 2. Try .env file in the skill root
+    script_dir = Path(__file__).parent
+    skill_root = script_dir.parent
+    env_file = skill_root / ".env"
+    
+    if env_file.exists():
+        try:
+            with open(env_file, "r") as f:
+                for line in f:
+                    if line.strip().startswith(f"{env_var_name}="):
+                        return line.split("=", 1)[1].strip().strip('"').strip("'")
+        except Exception:
+            pass
+            
+    return ""
+
+
 def embed_openai(text: str, model: str, provider: dict) -> list[float]:
     """Embed text via OpenAI-compatible API."""
-    api_key = os.environ.get(provider.get("api_key_env", "OPENAI_API_KEY"), "")
+    env_var = provider.get("api_key_env", "OPENAI_API_KEY")
+    api_key = get_api_key(env_var)
     if not api_key:
-        print(f"❌ API key not set: {provider.get('api_key_env', 'OPENAI_API_KEY')}")
+        print(f"❌ API key not set: {env_var}")
         sys.exit(1)
 
     url = provider["url"].rstrip("/") + "/embeddings"
+    validate_url(url, "openai")
+    
     payload = json.dumps({"model": model, "input": text}).encode()
     req = urllib.request.Request(
         url,
@@ -102,20 +157,26 @@ def embed_openai(text: str, model: str, provider: dict) -> list[float]:
 
 def embed_gemini(text: str, model: str, provider: dict) -> list[float]:
     """Embed text via Google Gemini API."""
-    api_key = os.environ.get(provider.get("api_key_env", "GEMINI_API_KEY"), "")
+    env_var = provider.get("api_key_env", "GEMINI_API_KEY")
+    api_key = get_api_key(env_var)
     if not api_key:
-        print(f"❌ API key not set: {provider.get('api_key_env', 'GEMINI_API_KEY')}")
+        print(f"❌ API key not set: {env_var}")
         sys.exit(1)
 
     base_url = provider["url"].rstrip("/")
-    url = f"{base_url}/models/{model}:embedContent?key={api_key}"
+    url = f"{base_url}/v1beta/models/{model}:embedContent"
+    validate_url(url, "gemini")
+
     payload = json.dumps({
         "content": {"parts": [{"text": text}]},
     }).encode()
     req = urllib.request.Request(
         url,
         data=payload,
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "x-goog-api-key": api_key,
+        },
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=60) as resp:

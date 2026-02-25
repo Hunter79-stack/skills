@@ -7,6 +7,10 @@ description: This skill maintains the Note Embeddings for Zettelkasten, to searc
 
 This skill provides a suite of idempotent Python scripts to embed, search, and link notes in an Obsidian vault using semantic similarity. All scripts live in `scripts/` and support multiple embedding providers.
 
+The skill should be triggered when the user wants to search notes, retrieve notes, or discover connections between notes.
+
+If the search directory is indexed with embeddings, the skill should prompt the user if they want to create new embeddings.
+
 ## Dependencies
 
 - uv 0.10.0+
@@ -121,5 +125,5 @@ When using this skill:
 
 1. Always run `config.py` first if `config/config.json` does not exist.
 2. Run `embed.py` before `search.py` or `link.py` — the cache must exist.
-3. For remote providers (openai, gemini), ensure the API key environment variable is set.
+3. For remote providers (openai, gemini), ensure the API key environment variable is set (or provide a local `.env` file in the skill directory).
 4. All scripts are idempotent and safe to re-run.
