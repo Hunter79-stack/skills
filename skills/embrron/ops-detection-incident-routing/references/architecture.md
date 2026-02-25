@@ -34,6 +34,7 @@ Example guard state entry:
 - `context_high`: Sev-2
 - `context_crit`: Sev-2 + manual approval path
 - `cron_failure`: Sev-2 when failures > 0 in lookback
+- `heartbeat_gap`: Sev-2 when critical job run gap exceeds threshold
 - `dangling_sessions`: Sev-2 when count > 0
 - `token_spike`: Sev-3 when daily usage > 2x prior snapshot
 

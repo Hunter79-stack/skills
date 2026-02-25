@@ -10,12 +10,12 @@ CRON_RUNS_DIR=""
 SNAPSHOT_FILE=""
 OUTPUT_FILE=""
 LOOKBACK_MIN=120
-PAYMASTER_GAP_MIN=35
+HEARTBEAT_GAP_MIN="${HEARTBEAT_GAP_MIN:-${PAYMASTER_GAP_MIN:-35}}"
 CONTEXT_WARN=80
 CONTEXT_HIGH=90
 CONTEXT_CRIT=100
 CRITICAL_JOBS="${CRITICAL_JOBS:-}"
-PAYMASTER_JOB="${PAYMASTER_JOB:-}"
+HEARTBEAT_JOB="${HEARTBEAT_JOB:-${PAYMASTER_JOB:-}}"
 
 usage() {
   cat <<USAGE
@@ -29,9 +29,11 @@ Options:
   --snapshot-file <file>      Daily snapshot JSONL file
   --output-file <file>        Detector output JSONL file
   --critical-jobs <csv>       Comma-separated job IDs/prefixes to monitor
-  --paymaster-job <id>        Job ID/prefix used for run-gap checks
+  --heartbeat-job <id>        Job ID/prefix used for run-gap checks
   --lookback-min <n>          Lookback window for cron failure checks (default: 120)
-  --paymaster-gap-min <n>     Gap threshold in minutes (default: 35)
+  --heartbeat-gap-min <n>     Gap threshold in minutes (default: 35)
+  --paymaster-job <id>        Deprecated alias for --heartbeat-job
+  --paymaster-gap-min <n>     Deprecated alias for --heartbeat-gap-min
   --context-warn <n>          Context warning threshold (default: 80)
   --context-high <n>          Context high threshold (default: 90)
   --context-crit <n>          Context critical threshold (default: 100)
@@ -48,9 +50,9 @@ while [[ $# -gt 0 ]]; do
     --snapshot-file) SNAPSHOT_FILE="$2"; shift 2 ;;
     --output-file) OUTPUT_FILE="$2"; shift 2 ;;
     --critical-jobs) CRITICAL_JOBS="$2"; shift 2 ;;
-    --paymaster-job) PAYMASTER_JOB="$2"; shift 2 ;;
+    --heartbeat-job|--paymaster-job) HEARTBEAT_JOB="$2"; shift 2 ;;
     --lookback-min) LOOKBACK_MIN="$2"; shift 2 ;;
-    --paymaster-gap-min) PAYMASTER_GAP_MIN="$2"; shift 2 ;;
+    --heartbeat-gap-min|--paymaster-gap-min) HEARTBEAT_GAP_MIN="$2"; shift 2 ;;
     --context-warn) CONTEXT_WARN="$2"; shift 2 ;;
     --context-high) CONTEXT_HIGH="$2"; shift 2 ;;
     --context-crit) CONTEXT_CRIT="$2"; shift 2 ;;
@@ -60,9 +62,13 @@ while [[ $# -gt 0 ]]; do
 done
 
 command -v jq >/dev/null 2>&1 || { echo "jq is required" >&2; exit 2; }
+[[ "$LOOKBACK_MIN" =~ ^[0-9]+$ ]] || { echo "--lookback-min must be an integer" >&2; exit 2; }
+[[ "$HEARTBEAT_GAP_MIN" =~ ^[0-9]+$ ]] || { echo "--heartbeat-gap-min must be an integer" >&2; exit 2; }
 [[ "$CONTEXT_WARN" =~ ^[0-9]+$ ]] || { echo "--context-warn must be an integer" >&2; exit 2; }
 [[ "$CONTEXT_HIGH" =~ ^[0-9]+$ ]] || { echo "--context-high must be an integer" >&2; exit 2; }
 [[ "$CONTEXT_CRIT" =~ ^[0-9]+$ ]] || { echo "--context-crit must be an integer" >&2; exit 2; }
+(( LOOKBACK_MIN > 0 )) || { echo "--lookback-min must be > 0" >&2; exit 2; }
+(( HEARTBEAT_GAP_MIN > 0 )) || { echo "--heartbeat-gap-min must be > 0" >&2; exit 2; }
 (( CONTEXT_WARN < CONTEXT_HIGH && CONTEXT_HIGH < CONTEXT_CRIT )) || {
   echo "context thresholds must satisfy warn < high < crit" >&2
   exit 2
@@ -111,6 +117,17 @@ append_gap() {
   gaps=$(jq -c --arg trigger "$trigger" --arg reason "$reason" '. + [{"trigger":$trigger,"reason":$reason}]' <<<"$gaps")
 }
 
+# Guard against path traversal when IDs are used as path components.
+is_safe_path_token() {
+  local token="$1"
+  [[ -n "$token" ]] || return 1
+  [[ "$token" =~ ^[A-Za-z0-9._:-]+$ ]] || return 1
+  [[ "$token" != *..* ]] || return 1
+  [[ "$token" != */* ]] || return 1
+  [[ "$token" != *\\* ]] || return 1
+  return 0
+}
+
 # 1) Cron failures for critical jobs.
 checks=$((checks + 1))
 if [[ -n "$CRITICAL_JOBS" ]]; then
@@ -120,6 +137,10 @@ if [[ -n "$CRITICAL_JOBS" ]]; then
   for raw_job in "${critical_list[@]}"; do
     job="$(echo "$raw_job" | xargs)"
     [[ -z "$job" ]] && continue
+    if ! is_safe_path_token "$job"; then
+      append_gap "cron_failure" "invalid_job_id"
+      continue
+    fi
     files=("$CRON_RUNS_DIR/${job}"*.jsonl)
     if (( ${#files[@]} == 0 )); then
       append_gap "cron_failure" "no_run_log_for_${job}"
@@ -133,23 +154,29 @@ if [[ -n "$CRITICAL_JOBS" ]]; then
   shopt -u nullglob
 fi
 
-# 2) Paymaster/job run gap.
+# 2) Heartbeat/job run gap.
 checks=$((checks + 1))
-if [[ -n "$PAYMASTER_JOB" ]]; then
-  shopt -s nullglob
-  pfiles=("$CRON_RUNS_DIR/${PAYMASTER_JOB}"*.jsonl)
-  shopt -u nullglob
-  if (( ${#pfiles[@]} > 0 )); then
-    mapfile -t run_times < <(cat "${pfiles[@]}" 2>/dev/null | jq -r 'select((.action//"")=="finished") | (.runAtMs // .ts // empty)' | sort -n | tail -2)
-    if (( ${#run_times[@]} == 2 )); then
-      gap_ms=$(( run_times[1] - run_times[0] ))
-      gap_min=$(( gap_ms / 60000 ))
-      if (( gap_min > PAYMASTER_GAP_MIN )); then
-        append_alert "Sev-2" "paymaster_gap" "$gap_min" "$PAYMASTER_GAP_MIN" "$PAYMASTER_JOB"
-      fi
-    fi
+if [[ -n "$HEARTBEAT_JOB" ]]; then
+  if ! is_safe_path_token "$HEARTBEAT_JOB"; then
+    append_gap "heartbeat_gap" "invalid_job_id"
   else
-    append_gap "paymaster_gap" "no_run_log_for_${PAYMASTER_JOB}"
+    shopt -s nullglob
+    pfiles=("$CRON_RUNS_DIR/${HEARTBEAT_JOB}"*.jsonl)
+    shopt -u nullglob
+    if (( ${#pfiles[@]} > 0 )); then
+      run_times="$(cat "${pfiles[@]}" 2>/dev/null | jq -r 'select((.action//"")=="finished") | (.runAtMs // .ts // empty)' | sort -n | tail -2)"
+      run_prev="$(printf '%s\n' "$run_times" | sed -n '1p')"
+      run_cur="$(printf '%s\n' "$run_times" | sed -n '2p')"
+      if [[ "$run_prev" =~ ^[0-9]+$ ]] && [[ "$run_cur" =~ ^[0-9]+$ ]]; then
+        gap_ms=$(( run_cur - run_prev ))
+        gap_min=$(( gap_ms / 60000 ))
+        if (( gap_min > HEARTBEAT_GAP_MIN )); then
+          append_alert "Sev-2" "heartbeat_gap" "$gap_min" "$HEARTBEAT_GAP_MIN" "$HEARTBEAT_JOB"
+        fi
+      fi
+    else
+      append_gap "heartbeat_gap" "no_run_log_for_${HEARTBEAT_JOB}"
+    fi
   fi
 fi
 
@@ -177,6 +204,10 @@ if [[ -f "$SESSIONS_FILE" ]]; then
   dangling=0
   while IFS= read -r sid; do
     [[ -z "$sid" ]] && continue
+    if ! is_safe_path_token "$sid"; then
+      append_gap "dangling_sessions" "invalid_session_id"
+      continue
+    fi
     if [[ ! -f "$SESSIONS_DIR/${sid}.jsonl" ]]; then
       dangling=$((dangling + 1))
     fi

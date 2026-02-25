@@ -31,6 +31,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ -n "$CHECK_ID" ]] || { echo "--check-id is required" >&2; exit 2; }
+[[ "$COOLDOWN_MIN" =~ ^[0-9]+$ ]] || { echo "--cooldown-min must be an integer" >&2; exit 2; }
+(( COOLDOWN_MIN >= 0 )) || { echo "--cooldown-min must be >= 0" >&2; exit 2; }
 
 python3 - "$STATE_FILE" "$CHECK_ID" "$SEVERITY" "$COOLDOWN_MIN" <<'PY'
 import json

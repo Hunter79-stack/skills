@@ -35,6 +35,8 @@ done
 
 [[ -n "$ACTION" ]] || { echo "--action is required" >&2; exit 2; }
 [[ -n "$CHECK_ID" ]] || { echo "--check-id is required" >&2; exit 2; }
+[[ "$COOLDOWN_MIN" =~ ^[0-9]+$ ]] || { echo "--cooldown-min must be an integer" >&2; exit 2; }
+(( COOLDOWN_MIN >= 0 )) || { echo "--cooldown-min must be >= 0" >&2; exit 2; }
 
 case "$ACTION" in
   start|complete|fail) ;;

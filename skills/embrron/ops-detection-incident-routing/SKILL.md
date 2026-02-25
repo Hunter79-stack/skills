@@ -33,6 +33,8 @@ Use this skill when you need a production-safe ops loop for agent systems and do
   detector + router cycle runner
 - `scripts/setup.sh`
   dependency checks + local example scaffold
+- `scripts/clean-generated.sh`
+  removes generated `.jsonl` and lock artifacts before republishing from a used folder
 
 ## Setup
 

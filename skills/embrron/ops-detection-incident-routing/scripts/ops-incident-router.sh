@@ -63,7 +63,7 @@ fi
 map_trigger_to_check_id() {
   case "$1" in
     cron_failure) echo "cron_failure" ;;
-    paymaster_gap) echo "paymaster_gap" ;;
+    heartbeat_gap|paymaster_gap) echo "heartbeat_gap" ;;
     context_crit|context_100pct) echo "context_crit" ;;
     context_high|context_90pct) echo "context_high" ;;
     context_warn|context_80pct) echo "context_warn" ;;

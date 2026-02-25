@@ -42,8 +42,6 @@ if [[ ! -f "$EXAMPLES_DIR/incident-state.json" ]]; then
   echo '{}' > "$EXAMPLES_DIR/incident-state.json"
 fi
 
-touch "$EXAMPLES_DIR/ops-detector.jsonl" "$EXAMPLES_DIR/router-actions.jsonl"
-
 chmod +x "$ROOT_DIR/scripts"/*.sh
 
 echo "setup_complete root=$ROOT_DIR"
