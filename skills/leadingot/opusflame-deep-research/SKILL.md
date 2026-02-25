@@ -1,15 +1,69 @@
 ---
 name: deep-research
-description: "Autonomous multi-step deep research that produces comprehensive cited reports. Use when: (1) user asks for in-depth research on any topic, (2) user says 'research X' or 'deep dive on X', (3) complex questions requiring multiple sources and cross-validation, (4) market/competitor/stock/industry analysis. NOT for: simple factual lookups (just web_search), or questions answerable in one search."
+description: "Autonomous multi-model deep research with framework-driven reasoning. Spawns 4 parallel model agents (Gemini 2.5 Pro, o3, Opus, MiniMax), each applies best-practice frameworks to the question, then merges into a cross-validated final report. Use when: (1) user asks for in-depth research, (2) 'research X' or 'deep dive on X', (3) complex questions requiring multiple sources. NOT for: simple factual lookups."
 ---
 
-# Deep Research
+# Deep Research (Multi-Model + Framework-Driven)
 
-Autonomous research agent that iteratively searches, reads, discovers, and synthesizes — producing a structured, cited report.
+Autonomous research system that runs 4 AI models in parallel, each applying relevant analytical frameworks, then cross-validates and merges findings into a comprehensive cited report.
 
-## Workflow
+## Architecture
 
-### Phase 1: Decompose (30s)
+```
+User Question
+     │
+     ▼
+┌─ Phase 0: Framework Selection ─┐
+│  Identify best-practice         │
+│  framework(s) for this question │
+└────────────┬────────────────────┘
+             │
+     ┌───────┼───────┐───────┐
+     ▼       ▼       ▼       ▼
+  Gemini    o3     Opus   MiniMax
+  2.5 Pro         4       M2.5
+  (search  (deep  (nuance (China/
+  heavy)   logic) +balance)alt view)
+     │       │       │       │
+     └───────┼───────┘───────┘
+             ▼
+      Phase 5: Merge & Cross-Validate
+             │
+             ▼
+       Final Report (PDF)
+```
+
+## Phase 0: Framework Selection (MANDATORY — before any research)
+
+Before researching, ask: **"Is there a best-practice framework for answering this type of question?"**
+
+### Framework Lookup Table
+
+| Question Type | Frameworks to Apply |
+|---|---|
+| **Competitive strategy** | Porter's Five Forces, 7 Powers (Helmer), Schwerpunkt/High Ground (Packy), SWOT |
+| **Market entry / sizing** | TAM/SAM/SOM, Blue Ocean Strategy, Jobs-to-be-Done |
+| **Business model evaluation** | Business Model Canvas, Unit Economics, Ramp vs Route test (point solution vs platform?) |
+| **Investment / valuation** | DCF, Comparable Analysis, Venture method, Power Law thesis |
+| **Product strategy** | JTBD, Kano Model, Value Prop Canvas, Hook Model |
+| **Growth / GTM** | AARRR Pirate Metrics, Bullseye Framework, STP (Segmentation-Targeting-Positioning) |
+| **Technology assessment** | Gartner Hype Cycle, Wardley Maps, Build vs Buy matrix |
+| **Risk analysis** | Pre-Mortem, FMEA, Scenario Planning |
+| **Organizational / ops** | OKR analysis, RACI, Theory of Constraints |
+| **Pricing** | Van Westendorp, Conjoint, Value-based pricing framework |
+| **Industry analysis** | Value Chain Analysis, Industry Lifecycle, Winner-Takes-More thesis |
+| **Person / hiring** | Track Record Analysis, Reference Triangle, Founder-Market Fit |
+
+**If a framework applies:**
+- Include it in the prompt to each model
+- Structure the model's analysis around the framework's components
+- The final report should explicitly reference which framework(s) were used and why
+
+**If no standard framework applies:**
+- State "No standard framework identified — using first-principles analysis"
+- Each model reasons from first principles with explicit assumptions stated
+
+## Phase 1: Decompose (30s)
 
 Break the topic into 5-8 research sub-questions. Think like an investigative journalist:
 - What are the key facts?
@@ -18,90 +72,184 @@ Break the topic into 5-8 research sub-questions. Think like an investigative jou
 - What data/evidence exists?
 - What are the unknowns or controversies?
 
-### Phase 2: Iterative Search (3-8 min)
+## Phase 2: Spawn 4 Model Agents (Parallel)
 
-For each sub-question, run **multiple search rounds**:
+Spawn 4 sub-agents using `sessions_spawn`, each with a different model:
 
 ```
-Round 1: Broad search → read top 3-5 results via web_fetch
-Round 2: Follow leads discovered in Round 1 → targeted searches
-Round 3: Fill gaps, verify claims, find contradicting sources
+Model 1: gemini       (google/gemini-2.5-pro)  — Search-heavy, broad coverage
+Model 2: o3           (openai/o3)              — Deep logical reasoning, contrarian
+Model 3: opus         (anthropic/claude-opus-4-6) — Nuanced, balanced synthesis
+Model 4: minimax      (minimax/MiniMax-M2.5)   — Alternative perspectives, China/grey-area
 ```
 
-**Key behaviors:**
-- After each fetch, extract NEW leads (names, companies, dates, claims) and search for those
-- Cross-reference claims across 2+ independent sources
-- When you find a primary source (official report, SEC filing, press release), always prefer it over secondary coverage
-- Track source quality: official > reputable media > blog > forum
-- Use `web_fetch` to read full articles, not just search snippets
-- Try different search queries for the same sub-question (rephrase, use quotes, add site: filters)
-- Minimum 15 unique sources for a standard research task, 25+ for complex ones
+### Prompt Template for Each Model
 
-### Phase 3: Synthesize
+```
+## Research Task
+[Topic]
 
-Produce a structured report:
+## Framework
+You MUST structure your analysis using: [Framework Name]
+Apply each component of the framework systematically to the topic.
+If data is missing for a component, note it explicitly.
+
+## Sub-Questions
+[List of 5-8 sub-questions]
+
+## Instructions
+1. Use web_search extensively (minimum 10 unique searches)
+2. Use web_fetch to read full articles for key sources
+3. Cross-reference claims across 2+ sources
+4. Structure findings around the framework components
+5. Flag disagreements, unknowns, and low-confidence claims
+6. Minimum 15 unique source URLs
+7. Output format: markdown with inline citations [1][2]...
+8. End with a Sources section listing all URLs
+
+## Quality Rules
+- Every factual claim needs a source
+- Prefer primary sources (filings, official reports) over secondary
+- Note source freshness — flag anything >6 months old
+- Include opposing viewpoints
+- State confidence level (high/medium/low) for key conclusions
+```
+
+### Model-Specific Instructions
+
+- **Gemini**: "You are the primary search engine. Cast the widest net. Find obscure sources others would miss. Prioritize data and numbers."
+- **o3**: "You are the deep reasoner. Challenge assumptions. Look for logical flaws in conventional wisdom. Apply the framework with maximum rigor. If the consensus is wrong, explain why."
+- **Opus**: "You are the synthesizer. Balance multiple perspectives fairly. Identify nuance others miss. Connect dots across disciplines."
+- **MiniMax**: "You are the alternative perspective agent. Consider non-Western viewpoints, grey areas, unconventional strategies. What would a Chinese entrepreneur or contrarian investor do differently?"
+
+## Phase 3: Wait for Completion
+
+All 4 models run in parallel via `sessions_spawn` with `mode="run"`. Do NOT poll in a loop — they auto-announce when done.
+
+## Phase 4: Collect Individual Reports
+
+Save each model's output:
+```
+memory/research/[topic]-gemini-[date].md
+memory/research/[topic]-o3-[date].md
+memory/research/[topic]-opus-[date].md
+memory/research/[topic]-minimax-[date].md
+```
+
+## Phase 5: Cross-Validate & Merge
+
+This is the most critical phase. The primary agent (you) must:
+
+### 5a. Agreement Matrix
+Create a matrix of key claims and which models agree/disagree:
+
+```markdown
+| Claim | Gemini | o3 | Opus | MiniMax | Confidence |
+|-------|--------|----|----|---------|------------|
+| [claim 1] | ✅ | ✅ | ✅ | ❌ | High (3/4) |
+| [claim 2] | ✅ | ❌ | ✅ | ✅ | High (3/4) |
+| [claim 3] | ✅ | ✅ | ❓ | ❓ | Medium (2/4) |
+```
+
+### 5b. Conflict Resolution
+For each disagreement:
+- Identify the root cause (different data? different logic? different framework interpretation?)
+- Check which model has the stronger source
+- If genuinely uncertain, present both sides in the final report
+
+### 5c. Framework Synthesis
+- Map findings back to the framework structure
+- Ensure every framework component has been addressed
+- Note which components had strong consensus vs. disagreement
+
+### 5d. Error Catching
+From experience, models commonly get wrong:
+- Platform-specific limits (posting frequency, API limits)
+- Pricing (especially for niche tools — often 10-30x off)
+- Regulatory details
+- Recency of data
+
+**Verify any quantitative claim that only one model makes.**
+
+## Phase 6: Final Report
 
 ```markdown
 # [Topic] — Deep Research Report
 
+**Framework Used**: [Name] — [why this framework]
+**Models**: Gemini 2.5 Pro, o3, Opus 4, MiniMax M2.5
+**Date**: [date]
+**Total Searches**: [count across all models]
+
 ## Executive Summary
-3-5 sentence overview of key findings.
+3-5 sentence overview. Note consensus level.
 
-## Key Findings
+## Framework Analysis
 
-### [Finding 1 Title]
-Analysis with inline citations [1][2].
+### [Framework Component 1]
+Analysis with model consensus noted. [1][2]
 
-### [Finding 2 Title]
+### [Framework Component 2]
 ...
 
-## Data & Evidence
-Tables, numbers, comparisons where applicable.
+## Key Findings (Beyond Framework)
+Discoveries that don't fit neatly into the framework.
 
-## Risks / Unknowns / Controversies
-What we couldn't confirm, conflicting information, gaps.
+## Model Disagreements
+Where models diverged and why.
+
+## Agreement Matrix
+[The table from 5a]
+
+## Data & Evidence
+Tables, numbers, comparisons.
+
+## Risks / Unknowns
+What we couldn't confirm. Low-confidence areas.
 
 ## Conclusion & Recommendations
-Actionable takeaways.
+Actionable takeaways ranked by confidence.
 
 ## Sources
-[1] Title — URL (date accessed)
+[1] Title — URL
 [2] ...
 ```
 
-### Phase 4: Store
+## Phase 7: Deliver
 
-- Save report to `memory/research/[topic-slug]-[date].md`
-- If the research is related to an active project or investment, cross-reference in relevant memory files
+1. Save final report to `memory/research/[topic]-终极版-[date].md`
+2. Generate PDF via pymupdf and save to `~/.openclaw/media/outbound/`
+3. Send PDF to user via message tool
 
 ## Quality Standards
 
-- **Minimum sources**: 15 unique URLs for standard topics, 25+ for complex
-- **Source diversity**: No more than 3 citations from same domain
+- **Minimum sources**: 15 unique URLs per model (60+ total across 4 models)
+- **Source diversity**: No more than 3 citations from same domain per model
 - **Freshness**: Prefer sources < 6 months old; flag older data
-- **Cross-validation**: Key claims must appear in 2+ independent sources
-- **Bias check**: Include opposing viewpoints when they exist
-- **No hallucination**: Every factual claim must have a source. If unsure, say "unverified" or "could not confirm"
+- **Cross-validation**: Key claims must appear in 2+ models' findings
+- **Framework compliance**: Every framework component must be addressed
+- **Confidence scoring**: High (3-4 models agree + strong sources), Medium (2 models or weak sources), Low (1 model or no source)
+- **No hallucination**: Every factual claim must have a source
 
 ## Adaptation by Topic Type
 
 ### Financial / Stock Research
-- Check SEC/regulatory filings, earnings transcripts, analyst reports
-- Include key financial metrics (revenue, margins, P/E, debt)
-- Note insider transactions, institutional holdings
+- Frameworks: DCF, Comparable Analysis, Power Law
+- Check SEC/regulatory filings, earnings transcripts
+- Include key metrics (revenue, margins, P/E, debt)
 - See `references/financial-research.md`
 
 ### Market / Industry Research
-- TAM/SAM/SOM when available
+- Frameworks: Porter's Five Forces, TAM/SAM/SOM, 7 Powers
 - Competitive landscape, key players, market share
-- Trends, growth rates, inflection points
+- Apply Winner-Takes-More thesis where relevant
+
+### Strategy / Business Model
+- Frameworks: Schwerpunkt/High Ground, Business Model Canvas, JTBD
+- Identify the constraint, the scarce asset, expansion path
+- Compare to historical precedents (Rockefeller, Ramp, etc.)
 
 ### Technical / Product Research
-- Architecture, tech stack, benchmarks
-- Alternatives comparison matrix
-- Community sentiment (GitHub stars, HN/Reddit discussions)
-
-### Person / Company Research
-- Background, track record, key decisions
-- Public statements, interviews
-- Red flags, controversies
+- Frameworks: Wardley Maps, Build vs Buy, Gartner Hype Cycle
+- Architecture, benchmarks, alternatives matrix
+- Community sentiment (GitHub, HN, Reddit)
