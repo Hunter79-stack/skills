@@ -1,14 +1,42 @@
 {
-  "name": "cue",
-  "version": "1.0.0",
-  "description": "AI-powered financial research assistant with multi-user support and intelligent monitoring",
-  "author": "cuecue",
-  "license": "MIT",
-  "homepage": "https://cuecue.cn",
-  "repository": "https://github.com/cuecue/openclaw-skill-cue",
-  "keywords": ["finance", "research", "ai", "monitoring", "investment"],
-  "openclaw": {
-    "minVersion": "0.5.0",
-    "skills": ["cue"]
-  }
+  "name": "Cue",
+  "version": "1.0.3",
+  "description": "Cue - 你的专属调研助理 / Your AI Research Assistant. A multi-agent deep research tool with persistent monitoring capabilities. Creates local storage at ~/.cuecue, runs background cron jobs for monitoring, and requires external API access.",
+  "tags": [
+    "deep-research",
+    "finance",
+    "business",
+    "industry",
+    "company-analysis",
+    "multi-agent",
+    "monitoring"
+  ],
+  "requiredEnvVars": [
+    "CUECUE_API_KEY"
+  ],
+  "optionalEnvVars": [
+    "TAVILY_API_KEY",
+    "FEISHU_APP_ID",
+    "FEISHU_APP_SECRET",
+    "OPENCLAW_CHANNEL",
+    "CHAT_ID"
+  ],
+  "externalEndpoints": [
+    "https://cuecue.cn",
+    "https://api.tavily.com"
+  ],
+  "persistentStorage": [
+    "$HOME/.cuecue"
+  ],
+  "backgroundJobs": [
+    "monitor-daemon (every 30 minutes via cron)"
+  ],
+  "installType": "script-package",
+  "source": "https://github.com/openclaw/skills/cue",
+  "warnings": [
+    "Creates persistent local storage at ~/.cuecue",
+    "Installs cron job for periodic monitoring",
+    "Requires external API credentials",
+    "May reuse OpenClaw channel tokens for notifications"
+  ]
 }

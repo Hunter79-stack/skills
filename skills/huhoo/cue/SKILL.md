@@ -1,253 +1,391 @@
----
-name: cue
-description: AI-powered financial research assistant with "White-Box" evidence engineering. Multi-Agent architecture for automated information collection, verification, and analysis. From "AI chat" to "Skill Partner" - building trust foundations for financial digital decisions.
-description-zh: 「白盒」深度调研助理，采用 Multi-Agent 架构实现信息搜集、处理与验证分析的自动化。不只提供答案，更提供支撑答案的完整证据链。从「AI对话」进化为「技能伙伴」，构建金融数字化决策的信任基石。
-metadata:
-  {
-    "openclaw":
-      {
-        "requires": { 
-          "bins": ["cuecue-research", "python3", "jq"],
-          "env": ["CUECUE_API_KEY", "CUECUE_BASE_URL"]
-        }
-      }
-  }
----
+# Cue - 你的专属调研助理 / Your AI Research Assistant
 
-# Cue - 智能投研助手 | AI-Powered Financial Research Assistant
+统一入口和智能路由中心，自动识别用户意图并路由到相应技能。基于 Cue 产品设计，提供专业化的深度研究体验。
 
-> **English**: Your "White-Box" deep research assistant. From "AI Chat" to "Skill Partner" - building trust foundations for financial digital decisions.
->
-> **中文**: 你的「白盒」深度调研助理。从「AI对话」进化为「技能伙伴」，构建金融数字化决策的信任基石。
+> A unified entry and intelligent routing center that automatically recognizes user intent and routes to appropriate skills. Based on Cue product design, providing professional deep research experience.
 
----
+## ⚠️ 安全声明 / Security Notice
 
-## 💡 为什么选择 Cue | Why Cue
+**安装前请仔细阅读 / Please read before installing:**
 
-### 🎯 终结三大痛点 | Solve 3 Key Pain Points
+本 Skill 是一个具有持久化状态和后台行为的金融研究+监控工具：
+- 🔐 **本地存储 / Local Storage**: 会在 `$HOME/.cuecue` 创建持久化数据目录（用户数据、任务、监控配置、日志）
+- ⏰ **后台任务 / Background Jobs**: 安装后会添加 cron 定时任务（每30分钟运行监控守护进程）
+- 🌐 **外部 API / External APIs**: 需要访问 https://cuecue.cn 和可选的 https://api.tavily.com
+- 🔑 **环境变量 / Environment Variables**: 需要 CUECUE_API_KEY（必需），可选 TAVILY_API_KEY
+- 📢 **通知权限 / Notification**: 可能复用 OpenClaw 渠道令牌（如 FEISHU_*）发送通知
 
-| 传统方式 Traditional | Cue 方案 Cue Solution |
-|---------------------|----------------------|
-| 跨站搜索、机械下载、低效比对<br>Endless searching, manual downloads | 自动化信息搜集与验证<br>Automated info collection & verification |
-| LLM 幻觉、无法溯源的黑盒输出<br>LLM hallucinations, black-box outputs | 「白盒」证据工程，每结论都有据可查<br>White-box evidence engineering, every conclusion traceable |
-| 调研经验难以复用<br>Hard to reuse research experience | 沉淀为可复用的技能搭子<br>Reusable skill partners (SOPs) |
+**This Skill is a financial research + monitoring tool with persistent state and background behavior:**
+- Creates persistent local storage at `$HOME/.cuecue` (user data, tasks, monitors, logs)
+- Installs cron job running every 30 minutes for monitoring
+- Requires external API access to https://cuecue.cn
+- Requires CUECUE_API_KEY (required), optional TAVILY_API_KEY
+- May reuse OpenClaw channel tokens (e.g., FEISHU_*) for notifications
 
-### 🔍 核心差异 | Core Differentiation
+## Tags
 
-**不只是工具，更是伙伴 | Not Just a Tool, But a Partner**
-
-- **低幻觉 Low Hallucination**: 全局事实校验体系，长程多步任务误差率极低
-- **可溯源 Traceable**: 每个结论都附带完整证据链与原始来源
-- **可复用 Reusable**: 优秀调研路径自动沉淀为技能搭子 (SOP)
-- **个性化 Personalized**: 从任务规划到结果呈现，成为你的专属数字分身
+deep-research, finance, business, industry, company-analysis, multi-agent, monitoring
 
 ---
 
-## 🚀 快速开始 | Quick Start
+## 中文说明 / Description
 
-```bash
-# 深度研究 | Deep Research
-/cue Tesla 2024 Financial Analysis
+### 核心定位 / Core Positioning
 
-# 指定研究模式 | Specify Research Mode
-/cue --mode fund-manager CATL Investment Analysis
+**Cue** 是一款面向专业场景的 AI 调研助理，不只是给答案，还提供完整的证据链和可溯源的研究过程。
 
-# 自然语言输入 | Natural Language
-分析一下新能源汽车行业竞争格局
-Analyze the competitive landscape of the EV industry
-```
+> **Cue** is an AI research assistant for professional scenarios. It doesn't just provide answers, but also offers complete evidence chains and traceable research processes.
 
----
+### 核心价值 / Core Values
 
-## 📚 命令列表 | Command Reference
+- 🔍 **低幻觉 / Low Hallucination** - 全局事实校验，多源交叉验证 / Global fact-checking with multi-source cross-validation
+- 🔗 **可溯源 / Traceable** - 每个结论都有来源和证据链 / Every conclusion has sources and evidence chains
+- 🤖 **Multi-Agent** - 自动搜集、验证、分析 / Automatic collection, verification, and analysis
+- 💾 **可复用 / Reusable** - 优秀调研路径能沉淀为模板 / Excellent research paths can be templated
 
-| 命令 Command | 功能 Function | 配额 Quota |
-|--------------|---------------|------------|
-| `/cue <topic>` | 深度研究 Deep Research | 3/day guest, unlimited registered |
-| `/cue --mode <role> <topic>` | 指定模式研究 Mode-specific Research | Same as above |
-| `/monitor generate` | 从报告生成监控 Generate monitors from report | Unlimited |
-| `/register <api_key>` | 绑定 API Key Bind API Key | Unlimited |
-| `/usage` | 查看配额 Check quota | Unlimited |
-| `/help` | 显示帮助 Show help | Unlimited |
+### 核心功能 / Core Functions
 
----
+#### 1. 深度研究（Deep Research）
 
-## 🎭 研究模式 | Research Modes
+直接输入研究主题，AI 自动进行多 Agent 并行深度研究，40-60 分钟生成专业分析报告。
 
-| 模式 Mode | 说明 Description | 适用场景 Use Case |
-|-----------|------------------|-------------------|
-| `理财顾问` / `advisor` | 投资建议、配置方案 Investment advice & portfolio | 个人投资决策 Personal investment |
-| `研究员` / `researcher` | 产业链分析、竞争格局 Industry analysis & competition | 行业研究 Industry research |
-| `基金经理` / `fund-manager` | 估值模型、投资策略 Valuation & investment strategy | 专业投资分析 Professional analysis |
+> Enter a research topic directly, and AI will automatically conduct multi-agent parallel deep research, generating professional analysis reports in 40-60 minutes.
 
----
-
-## 📊 监控功能 | Monitoring Features
-
-### 从研究报告生成监控 | Generate Monitors from Research
-
-```bash
-# 完成研究后，生成监控项
-# After completing research, generate monitors
-/monitor generate
-```
-
-**工作流程 Workflow:**
-1. 完成深度研究 Complete deep research
-2. 输入 `/monitor generate`
-3. 系统自动提取关键信号 System extracts key signals
-4. 监控项激活并定期执行 Monitors activate and run periodically
-
----
-
-## 👤 用户类型 | User Types
-
-### 体验用户 Guest User
-- 使用默认 API Key Uses default API Key
-- 每日 3 次深度研究配额 3 research sessions/day
-- 独立工作空间 Independent workspace
-
-### 注册用户 Registered User
-- 绑定自己的 Cue API Key Bind personal API Key
-- 无本地配额限制 No local quota limits
-- 独立工作空间 Independent workspace
-
-**注册流程 Registration:**
-1. 访问 Visit https://cuecue.cn → 注册账号 Register
-2. 获取 API Key Get API Key (Settings → API Keys)
-3. 输入 Enter `/register sk-your-key`
-
----
-
-## ⚙️ 环境变量 | Environment Variables
-
-```bash
-export CUECUE_API_KEY="sk-xxx"          # Cue API 密钥
-export CUECUE_BASE_URL="https://cuecue.cn"  # Cue 服务地址
-```
-
----
-
-## 📖 使用示例 | Usage Examples
-
-### 自然语言（推荐）| Natural Language (Recommended)
+**示例 / Examples:**
 ```
 分析宁德时代竞争优势
-Analyze CATL's competitive advantages
-
-新能源汽车行业投资前景如何？
-What's the investment outlook for the EV industry?
-
-基金经理视角分析茅台投资价值
-Analyze Moutai's investment value from fund manager perspective
+新能源汽车行业前景如何？
 ```
 
-### 显式命令 | Explicit Commands
+#### 2. 研究视角模式 / Research Perspective Modes
+
+系统根据主题自动匹配最适合的研究视角，生成结构化的调研指令（rewritten_mandate 格式）：
+
+> System automatically matches the best research perspective and generates structured research mandate:
+
+| 模式 / Mode | 自动匹配关键词 / Auto-match Keywords | 研究框架 / Framework |
+|------------|-------------------------------------|---------------------|
+| 短线交易 / Trader | 龙虎榜、涨停、游资、资金流向、换手率 | 市场微观结构与资金流向分析（Timeline Reconstruction） |
+| 基金经理 / Fund Manager | 财报、估值、业绩、年报、ROE、PE | 基本面分析与估值模型框架 |
+| 研究员 / Researcher | 产业链、竞争格局、技术路线、供应链 | 产业链拆解与竞争力评估（Peer Benchmarking） |
+| 理财顾问 / Advisor | 投资建议、资产配置、风险控制、定投 | 资产配置与风险收益评估框架 |
+
+**提示词格式 / Prompt Format:**
+系统自动生成包含以下字段的深度调研指令：
+- **【调研目标】** - 明确专家角色与研究目的
+- **【信息搜集与整合框架】** - 指定搜索方法论（Timeline/Triangulation/Benchmarking/Evidence Chaining）
+- **【信源与边界】** - 白名单/黑名单信源、时间窗口
+- **【核心关注】** - 该视角下的重点分析维度
+
+**使用方式 / Usage:**
+```
+/cue 今日龙虎榜分析           # 自动识别为短线交易视角
+/cue --mode trader 涨停分析   # 手动指定短线交易视角
+/cue 宁德时代2024财报          # 自动识别为基金经理视角
+```
+
+**示例输出 / Example Output:**
+```
+**【调研目标】**
+以短线交易分析师的专业视角，针对"今日龙虎榜分析"进行全网深度信息搜集与分析...
+
+**【信息搜集与整合框架】**
+1. **市场微观结构与资金流向分析框架（Timeline Reconstruction）**：追踪龙虎榜席位动向...
+2. **关键证据锚定**：针对核心争议点，查找并引用权威信源...
+3. **多维视角交叉**：汇总不同利益相关方的观点差异...
+
+**【信源与边界】**
+- 优先信源：交易所龙虎榜、Level-2行情数据...
+- 时间窗口：优先近6个月内的最新动态
+```
+
+#### 3. 智能路由 / Intelligent Routing
+
+直接输入自然语言，系统自动判断最佳方案：
+
+> Enter natural language directly, and the system automatically determines the best approach:
+
+- 投资/产业关键词 → 深度研究 / Investment/industry keywords → Deep research
+- 简单查询 → 快速搜索 / Simple queries → Quick search
+- 估值关键词 → 基金经理模式 / Valuation keywords → Fund manager mode
+
+### 可用命令 / Available Commands
+
+| 命令 / Command | 功能 / Function | 耗时 / Duration |
+|---------------|----------------|----------------|
+| `/cue <主题>` | 智能调研（自动匹配研究视角）/ Smart research (auto-matches perspective) | 40-60 分钟 / mins |
+| `/cue --mode <模式> <主题>` | 指定视角深度研究 / Deep research with specific perspective | 40-60 分钟 / mins |
+| `/ct` | 查看所有研究任务状态 / View all research task statuses | 即时 / Instant |
+| `/cm` | 查看监控项列表 / View all monitors | 即时 / Instant |
+| `/cn [天数]` | 查看监控触发通知（默认3日）/ View monitor notifications | 即时 / Instant |
+| `/cs <任务ID>` | 查看特定任务详情 / View specific task details | 即时 / Instant |
+| `/ch` | 显示帮助 / Show help | 即时 / Instant |
+| `/config` | 配置 API Key / Configure API keys | 即时 / Instant |
+
+### 使用示例 / Usage Examples
+
+**自然语言（推荐）/ Natural Language (Recommended):**
+```
+分析一下新能源行业竞争格局
+基金经理视角分析茅台投资价值
+```
+
+**显式命令 / Explicit Commands:**
 ```
 /cue 特斯拉 2024 财务分析
-/cue Tesla 2024 Financial Analysis
-
-/cue --mode 研究员 锂电池产业链
-/cue --mode researcher Lithium battery industry chain
-
-/cue --mode 基金经理 特斯拉2024投资分析
-/cue --mode fund-manager Tesla 2024 Investment Analysis
+/cue --mode researcher 锂电池产业链
 ```
 
----
+### 工作流程 / Workflow
 
-## 🔄 工作流程 | Workflows
-
-### 深度研究工作流 | Research Workflow
 ```
-User Input
+用户输入 / User Input
     ↓
-[Cue Router]
+[Cue 智能路由 / Intelligent Routing]
     ↓
-├─ Explicit command? → Execute directly
-└─ Natural language? → Intent recognition
+深度研究启动 / Research Started
     ↓
-Deep Research → CueCue API
+├─ 立即返回：任务ID + 进度链接 / Return: Task ID + Progress Link
+├─ 每5分钟推送进度更新 / Progress update every 5 minutes
+└─ 60分钟超时保护 / 60-minute timeout protection
     ↓
-Async execution + Auto-push results
-```
-
-### 监控生成工作流 | Monitor Generation Workflow
-```
-Research Report Complete
+研究完成 / Research Completed
     ↓
-/monitor generate
-    ↓
-Parse report → Extract key signals
-    ↓
-Generate monitor configuration
-    ↓
-Activate monitor tasks
-    ↓
-Periodic execution + Trigger notifications
+自动推送结果 / Auto-push results
+├─ 分享链接（分享对话/转发报告）/ Share links
+├─ 核心结论摘要 / Core conclusion summary
+└─ 监控项建议（回复 Y/N 创建）/ Monitor suggestions (Reply Y/N to create)
 ```
 
+### 用户体验特性 / User Experience Features
+
+**首次使用引导 / First-time User Guide:**
+- 自动识别新用户并发送欢迎消息 / Auto-detects new users and sends welcome message
+- 检测 API Key 配置状态，引导注册流程 / Detects API Key status and guides registration
+
+**异步体验 / Asynchronous Experience:**
+- 研究启动后立即返回进度链接 / Returns progress link immediately after starting
+- 每 5 分钟推送进度更新 / Progress updates every 5 minutes
+- 无需等待，可继续其他工作 / No need to wait, can continue other work
+- 完成后自动推送结果到对话 / Auto-pushes results to conversation when completed
+
+**详细进度追踪 / Detailed Progress Tracking:**
+```
+🔬 正在深度研究：[主题]
+
+研究阶段：
+• 0-10分钟：全网信息搜集与初步筛选
+• 10-30分钟：多源交叉验证与事实核查
+• 30-50分钟：深度分析与逻辑推理
+• 50-60分钟：报告生成与质量检查
+
+预计剩余时间：XX 分钟
+```
+
+**完成通知 / Completion Notification:**
+研究完成后自动发送简洁通知：
+> Auto-sends concise notification when research completes:
+```
+✅ 研究完成：[主题]
+
+⏱️ 耗时：XX 分钟
+📝 任务ID：xxx
+
+🔗 https://cuecue.cn/c/xxx
+
+🔔 建议监控：XX 等 N 项
+💡 回复 Y 创建，N 跳过
+```
+
+### 部署方式 / Deployment Methods
+
+**方式一：使用公共机器人服务 / Method 1: Use Public Bot Service**
+
+使用他人部署的 Cue 机器人（如飞书群里的公共机器人），直接开始对话即可。
+
+> Use Cue bot deployed by others (e.g., in Feishu groups), just start chatting.
+
+**方式二：自建 OpenClaw + Cue Skill / Method 2: Self-host OpenClaw + Cue Skill**
+
+在自己的 OpenClaw 实例中安装 Cue skill：
+
+> Install Cue skill in your own OpenClaw instance:
+
+```bash
+clawhub install cue
+```
+
+**首次使用流程 / First-time Setup:**
+
+1. **发送任意消息** → 触发欢迎消息
+2. **获取 API Key** → 按提示访问 cuecue.cn 注册
+3. **配置环境变量** → 设置 `CUECUE_API_KEY`
+4. **开始研究** → 发送研究主题
+
+```bash
+# 配置环境变量
+export CUECUE_API_KEY="your-api-key"
+```
+
+**推荐 / Recommended**：自建部署获得完整功能和最佳体验。
+> Self-hosting for full functionality and best experience.
+
+### 超时设置 / Timeout Settings
+
+- **研究超时 / Research Timeout**：60 分钟 / minutes
+- **进度推送间隔 / Progress Push Interval**：5 分钟 / minutes
+- 超时后自动标记失败，支持重试 / Auto-marked as failed after timeout, supports retry
+
+### 环境变量 / Environment Variables
+
+```bash
+CUECUE_API_KEY      # CueCue API 密钥（必需）/ API Key (Required)
+```
+
+### 智能监控 / Smart Monitoring
+
+**监控建议生成 / Monitor Suggestion Generation:**
+- 🤖 **AI 分析**：从报告中提取关键监控信号
+- 📊 **量化指标**：提取可量化的监控维度
+- 🔔 **自动创建**：回复 Y 自动创建监控项
+
+**监控执行与触发 / Monitor Execution & Trigger:**
+```
+监控创建 → 监控执行 → 条件评估 → 触发通知
+    ↓           ↓           ↓           ↓
+ create    monitor    condition   notify
+-monitor   -daemon    -evaluator  -trigger
+```
+
+**执行层级 / Execution Layers:**
+1. **Search 层**：通过搜索获取信息（快速）
+2. **Browser 层**：通过浏览器获取信息（深度）
+3. **触发评估**：判断是否满足触发条件
+4. **通知推送**：自动发送触发通知
+
+**调度配置 / Scheduling:**
+- 监控守护进程每30分钟执行一次
+- 支持 Cron 表达式自定义频率
+- 自动清理7天前的旧日志
+
+### 脚本说明 / Script Descriptions
+
+**核心脚本 / Core Scripts:**
+- `scripts/cue.sh` - 主入口脚本，智能路由 / Main entry, intelligent routing
+- `scripts/research.sh` - 深度研究执行（60分钟超时）/ Deep research execution (60min timeout)
+- `scripts/notifier.sh` - 完成通知（含分享链接提取）/ Completion notification (with share link extraction)
+- `scripts/cuecue-client.js` - 内置 API 客户端（Node.js，无额外依赖）/ Built-in API client (Node.js, no external deps)
+
+**监控相关 / Monitoring:**
+- `scripts/create-monitor.sh` - 监控项创建 / Monitor item creation
+- `scripts/monitor-daemon.sh` - 监控守护进程（调度执行）/ Monitor daemon (scheduling)
+- `scripts/monitor-notify.sh` - 监控触发通知 / Monitor trigger notification
+
+**执行引擎 / Execution Engine:**
+- `scripts/executor/monitor-engine.sh` - 监控执行主控 / Monitor execution controller
+- `scripts/executor/search-executor.sh` - 搜索执行器 / Search executor
+- `scripts/executor/browser-executor.sh` - 浏览器执行器 / Browser executor
+
 ---
 
-## 🏢 典型应用场景 | Use Cases
+## 环境变量与权限 / Environment Variables & Permissions
 
-### 场景一：消失的重复劳动 | Eliminate Repetitive Work
-- **财富管理** | Wealth Management: 一键对比全市场竞品，生成深度解读报告
-- **信贷审查** | Credit Review: 自动交叉验证企业信披、工商司法、行业政策
-- **营销情报** | Marketing Intelligence: 定时收集行业异动，精准提取相关条款
+### 必需环境变量 / Required
 
-### 场景二：捕捉水面下的商机 | Capture Hidden Opportunities
-- **股权激励监控** | Equity Incentive Monitoring: 锁定激励计划到期公司，定位高净值客户需求
-- **投行/固收前瞻** | Investment Banking/Fixed Income: 监测发债意向、并购传闻，抢先建立连接
-- **动态风险穿透** | Dynamic Risk Analysis: 关联路径分析，提前发现传导风险
+| 变量名 | 说明 | 获取方式 |
+|--------|------|---------|
+| `CUECUE_API_KEY` | CueCue 深度研究 API 密钥 | https://cuecue.cn |
 
-### 场景三：高质内容的策展工厂 | Content Curation Factory
-- **AEO 深度适配** | AEO Optimized: 输出自带结构化数据与引用，天然适配 AI 搜索
-- **多维模块化输出** | Multi-dimensional Output: 自动生成竞品矩阵、事件时序等多维度分析
+### 可选环境变量 / Optional
 
----
+| 变量名 | 说明 | 用途 |
+|--------|------|------|
+| `TAVILY_API_KEY` | Tavily 搜索 API 密钥 | 监控功能的新闻搜索 |
+| `FEISHU_APP_ID` | 飞书应用 ID | 飞书渠道通知 |
+| `FEISHU_APP_SECRET` | 飞书应用密钥 | 飞书渠道通知 |
+| `OPENCLAW_CHANNEL` | OpenClaw 渠道标识 | 消息发送渠道选择 |
+| `CHAT_ID` | 当前对话 ID | 用户识别和数据隔离 |
 
-## ✨ 核心特性 | Core Features
+### 权限说明 / Permissions
 
-### 🔬 白盒证据工程 | White-Box Evidence Engineering
-- ✅ **低幻觉 Low Hallucination**: 全局事实校验，误差率极低
-- 🔗 **完整证据链 Full Evidence Chain**: 每个结论都有据可查、可溯源
-- 📋 **原始来源引用** | Original Source Citations: 过滤网络噪声，只给真实干货
+**本 Skill 需要以下权限 / This Skill requires:**
 
-### 🤖 Multi-Agent 自动化 | Multi-Agent Automation
-- 🔄 **大规模信息搜集** | Large-scale Info Collection: 自动化搜索、下载、比对
-- ✔️ **验证分析** | Verification & Analysis: 多 Agent 并行验证，确保准确性
-- ⏱️ **5-10 分钟完成** | 5-10 Min Completion: 将调研从「手工时代」推向「自动化时代」
+1. **文件系统权限 / Filesystem**
+   - 读写 `$HOME/.cuecue` 目录及其子目录
+   - 创建用户数据、任务、监控配置和日志文件
 
-### 👤 个性化与复用 | Personalization & Reusability
-- 🎭 **专属数字分身** | Digital Twin: 从任务规划到结果呈现，完全个性化
-- 💾 **技能搭子沉淀** | Skill Partner (SOP): 优秀调研路径自动沉淀为可复用模板
-- 📈 **持续进化** | Continuous Improvement: 越用越懂你，决策分析更有针对性
+2. **网络权限 / Network**
+   - 出站访问 https://cuecue.cn (深度研究 API)
+   - 出站访问 https://api.tavily.com (可选，监控搜索)
 
-### 🔧 技能功能 | Skill Capabilities
-- 📝 **深度研究** | Deep Research: `/cue <topic>` 一键生成专业报告
-- 🎭 **多模式支持** | Multi-mode: 理财顾问/研究员/基金经理三种视角
-- 📊 **智能监控** | Intelligent Monitoring: `/monitor generate` 从报告自动提取监控信号
-- 👥 **多用户管理** | Multi-user: 体验用户 3次/天，注册用户无限制
-- 🔔 **自动推送** | Auto-push: 研究完成自动通知结果
+3. **定时任务权限 / Cron**
+   - 安装 cron 作业（每30分钟执行监控检查）
+   - 运行后台研究进程（60分钟超时）
 
----
+4. **环境变量访问 / Environment**
+   - 读取 OpenClaw 环境变量（如 FEISHU_APP_ID, CHAT_ID）
+   - 读取用户配置的 API Key
 
-## 🔗 相关链接 | Links
-
-- **CueCue Platform**: https://cuecue.cn
-- **OpenClaw Docs**: https://docs.openclaw.ai
-- **ClawHub Skills**: https://clawhub.com/skills
+**安装建议 / Installation Recommendation:**
+- 初次安装请在测试环境验证
+- 检查并批准 cron 作业和文件系统写入权限
+- 确认 API Key 和网络访问策略
+- 了解监控功能会定期产生外部 API 调用
 
 ---
 
-## 📌 关于 Cue | About Cue
+*Cue - 让 AI 成为你的调研助理 / Let AI be your research assistant (Powered by CueCue)*
 
-**Cue** 采用 Multi-Agent 架构，实现大规模信息搜集处理与验证分析的自动化，构建起行业首个「白盒」证据工程。
+### 数据隔离 / Data Isolation
 
-> 不只提供答案，更提供支撑答案的完整证据链。
-> Not just answers, but the complete evidence chain supporting those answers.
+**多用户数据安全隔离**
+
+每个用户的数据存储在独立目录：
+```
+~/.cuecue/users/${chat_id}/
+├── .initialized     # 用户初始化标记
+├── tasks/           # 用户专属研究任务
+└── monitors/        # 用户专属监控配置
+```
+
+**安全特性**：
+- ✅ 用户数据完全隔离
+- ✅ 多用户共享实例时互不干扰
+- ✅ 通过 chat_id 识别用户身份
 
 ---
 
-*Powered by [CueCue](https://cuecue.cn) | [OpenClaw](https://openclaw.ai) Skill v1.0*
+## 版本历史 / Version History
+
+### v1.0.3 (2026-02-25)
+- ✨ 新增：自动角色匹配 - 根据主题关键词智能选择研究视角（trader/fund-manager/researcher/advisor）
+- ✨ 新增：rewritten_mandate 提示词格式 - 结构化调研指令（目标/框架/信源/关注）
+- ✨ 新增：/cn 命令 - 查看监控触发通知（默认最近3日）
+- ✨ 新增：/key 命令 - 交互式 API Key 配置，自动识别服务类型
+- ✨ 新增：智能状态检测 - 首次使用/版本更新/正常使用三种状态
+- 🔧 修复：监控触发通知自动保存到用户目录
+- 🔧 优化：trader 模式支持龙虎榜、资金流向等短线交易分析
+- 📚 更新：SKILL.md 文档，添加新功能说明
+
+### v1.0.2 (2026-02-24)
+- 🔧 修复：API 调用错误（使用内置 cuecue-client.js）
+- 🔧 修复：PID 获取污染问题
+- 🔧 修复：输出文件分离导致的 notifier 错误
+- 🔧 修复：退出码标记格式不一致
+- ✨ 新增：内置 Node.js API 客户端（无额外依赖）
+
+### v1.0.1 (2026-02-24)
+- ✨ 产品定位："投研搭子" → "调研助理"
+- 🏷️ 新增 7 个 Tags
+- ⏱️ 优化：超时 30min → 60min
+- 🔔 增强：5分钟进度推送
+- 🔗 新增：自动提取分享链接
+- 🤖 智能：回复 Y 自动创建监控
+- 🌐 新增：多 Channel 支持
+- 📝 新增：详细日志系统
+
+### v1.0.0 (2026-02-23)
+- 🎉 初始发布
+- 深度研究功能
+- 监控管理功能
+

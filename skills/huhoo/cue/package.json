@@ -1,0 +1,49 @@
+{
+  "name": "cue",
+  "version": "1.0.3",
+  "description": "Cue - 你的专属调研助理。基于 Multi-Agent 架构的深度研究工具，支持金融、商业、产业多领域调研。注意：本工具会创建本地持久化存储(~/.cuecue)、安装cron定时任务，并需要外部API访问权限。请查阅SECURITY.md了解安全详情。/ Cue - Your AI Research Assistant. Multi-Agent deep research tool with persistent monitoring capabilities. NOTE: Creates local storage at ~/.cuecue, installs cron jobs, and requires external API access. See SECURITY.md for details.",
+  "main": "scripts/cue.sh",
+  "scripts": {
+    "test": "bash scripts/test.sh",
+    "security-check": "cat SECURITY.md"
+  },
+  "keywords": [
+    "research",
+    "deep-research",
+    "finance",
+    "business",
+    "industry",
+    "company-analysis",
+    "analysis",
+    "multi-agent",
+    "monitoring",
+    "investment"
+  ],
+  "author": "OpenClaw",
+  "license": "MIT",
+  "dependencies": {
+    "@playwright/test": "^1.40.0"
+  },
+  "optionalDependencies": {
+    "@playwright/test": "^1.40.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openclaw/skills/cue"
+  },
+  "homepage": "https://cuecue.cn",
+  "bugs": {
+    "url": "https://github.com/openclaw/skills/cue/issues"
+  },
+  "files": [
+    "manifest.json",
+    "SKILL.md",
+    "SECURITY.md",
+    "README.md",
+    "scripts/",
+    "package.json"
+  ]
+}

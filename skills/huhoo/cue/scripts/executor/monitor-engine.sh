@@ -6,8 +6,8 @@ set -e
 
 MONITOR_ID="$1"
 CONFIG_FILE="$2"
-WORKSPACE="/root/workspaces/feishu-feishu-ou_5facd87f11cb35d651c435a4c1c7c4bc"
-EXECUTOR_DIR="$WORKSPACE/skills/cuecue-monitor/scripts/executor"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+EXECUTOR_DIR="$SCRIPT_DIR"
 
 if [ -z "$MONITOR_ID" ] || [ -z "$CONFIG_FILE" ]; then
     echo '{"error": "Monitor ID and config file required"}'
@@ -19,11 +19,12 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
 fi
 
-# 加载监控配置
+# 加载监控配置（支持多种字段名格式）
 TITLE=$(jq -r '.title // "未命名监控"' "$CONFIG_FILE")
-SOURCE=$(jq -r '.target_source // ""' "$CONFIG_FILE")
-TRIGGER_CONDITION=$(jq -r '.semantic_trigger // ""' "$CONFIG_FILE")
+SOURCE=$(jq -r '.target_source // .source // ""' "$CONFIG_FILE")
+TRIGGER_CONDITION=$(jq -r '.semantic_trigger // .trigger_condition // ""' "$CONFIG_FILE")
 CATEGORY=$(jq -r '.category // "Data"' "$CONFIG_FILE")
+SYMBOL=$(jq -r '.symbol // ""' "$CONFIG_FILE")
 
 echo "🔔 监控执行: $TITLE"
 echo "   监控ID: $MONITOR_ID"
@@ -36,11 +37,19 @@ EXECUTION_RESULT=""
 CONFIDENCE=0
 
 # ===========================================
-# Layer 1: Search Executor
+# Layer 1: Integrated Search (Tavily + QVeris)
 # ===========================================
-echo "📡 Layer 1: 尝试通过 Search 获取信息..."
-LAYER1_RESULT=$($EXECUTOR_DIR/search-executor.sh "$SOURCE" "$TRIGGER_CONDITION" 2>&1)
-LAYER1_EXIT=$?
+echo "📡 Layer 1: 尝试通过智能搜索获取信息..."
+
+# 优先使用整合执行器（根据类别自动选择数据源）
+if [ -f "$EXECUTOR_DIR/integrated-search.sh" ]; then
+    LAYER1_RESULT=$($EXECUTOR_DIR/integrated-search.sh "$SOURCE" "$TRIGGER_CONDITION" "$CATEGORY" "$SYMBOL" 2>&1)
+    LAYER1_EXIT=$?
+else
+    # 回退到传统 search-executor
+    LAYER1_RESULT=$($EXECUTOR_DIR/search-executor.sh "$SOURCE" "$TRIGGER_CONDITION" 2>&1)
+    LAYER1_EXIT=$?
+fi
 
 if [ $LAYER1_EXIT -eq 0 ] && [ -n "$LAYER1_RESULT" ]; then
     echo "✅ Layer 1 成功获取信息"
