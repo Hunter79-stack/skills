@@ -3,7 +3,7 @@ name: monolith
 description: Secure crypto wallet for AI agents. Hardware-isolated keys (Apple Secure Enclave), ERC-4337 smart wallet, on-chain spending caps, default-deny policy engine.
 homepage: https://github.com/slaviquee/monolith
 source: https://github.com/slaviquee/monolith/tree/main/skill
-metadata: {"openclaw":{"displayName":"Monolith","source":"https://github.com/slaviquee/monolith/tree/main/skill","homepage":"https://github.com/slaviquee/monolith","os":["darwin"],"requires":{"bins":["MonolithDaemon"]},"install":[{"id":"daemon-pkg","kind":"download","label":"Install Monolith Daemon (macOS pkg)","url":"https://github.com/slaviquee/monolith/releases/download/v0.1.3/MonolithDaemon-v0.1.3.pkg","os":["darwin"]},{"id":"companion-zip","kind":"download","label":"Download Monolith Companion (macOS app zip)","url":"https://github.com/slaviquee/monolith/releases/download/v0.1.3/MonolithCompanion.app.zip","os":["darwin"]}]},"clawdbot":{"displayName":"Monolith","source":"https://github.com/slaviquee/monolith/tree/main/skill","homepage":"https://github.com/slaviquee/monolith","os":["darwin"],"requires":{"bins":["MonolithDaemon"]},"install":[{"id":"daemon-pkg","kind":"download","label":"Install Monolith Daemon (macOS pkg)","url":"https://github.com/slaviquee/monolith/releases/download/v0.1.3/MonolithDaemon-v0.1.3.pkg","os":["darwin"]},{"id":"companion-zip","kind":"download","label":"Download Monolith Companion (macOS app zip)","url":"https://github.com/slaviquee/monolith/releases/download/v0.1.3/MonolithCompanion.app.zip","os":["darwin"]}]}}
+metadata: {"openclaw":{"displayName":"Monolith — Crypto Wallet","source":"https://github.com/slaviquee/monolith/tree/main/skill","homepage":"https://github.com/slaviquee/monolith","os":["darwin"],"requires":{"bins":["MonolithDaemon"]},"install":[{"id":"daemon-pkg","kind":"download","label":"Install Monolith Daemon (macOS pkg)","url":"https://github.com/slaviquee/monolith/releases/download/v0.1.5/MonolithDaemon-v0.1.5.pkg","os":["darwin"]},{"id":"companion-zip","kind":"download","label":"Download Monolith Companion (macOS app zip)","url":"https://github.com/slaviquee/monolith/releases/download/v0.1.3/MonolithCompanion.app.zip","os":["darwin"]}]},"clawdbot":{"displayName":"Monolith — Crypto Wallet","source":"https://github.com/slaviquee/monolith/tree/main/skill","homepage":"https://github.com/slaviquee/monolith","os":["darwin"],"requires":{"bins":["MonolithDaemon"]},"install":[{"id":"daemon-pkg","kind":"download","label":"Install Monolith Daemon (macOS pkg)","url":"https://github.com/slaviquee/monolith/releases/download/v0.1.5/MonolithDaemon-v0.1.5.pkg","os":["darwin"]},{"id":"companion-zip","kind":"download","label":"Download Monolith Companion (macOS app zip)","url":"https://github.com/slaviquee/monolith/releases/download/v0.1.3/MonolithCompanion.app.zip","os":["darwin"]}]}}
 ---
 
 # Monolith — Crypto Wallet Skill
@@ -15,7 +15,7 @@ Secure crypto wallet for OpenClaw agents. Monolith combines hardware-isolated ke
 | Command | What it does | Requires daemon? |
 |---------|-------------|------------------|
 | `send <to> <amount> [token] [chainId]` | Send ETH or USDC | Yes |
-| `swap <amountETH> [tokenOut] [chainId]` | Swap ETH for tokens via Uniswap | Yes |
+| `swap <amountETH> [tokenOut] [chainId]` | Swap ETH for tokens via Uniswap (Routing API with on-chain fallback) | Yes |
 | `balance <address> [chainId]` | Check ETH and stablecoin balances | No (read-only) |
 | `capabilities` | Show current limits, budgets, gas status | Yes |
 | `decode <target> <calldata> <value>` | Decode a tx intent into human-readable summary | Yes |
@@ -57,7 +57,7 @@ Secure crypto wallet for OpenClaw agents. Monolith combines hardware-isolated ke
 1. Install Monolith from ClawHub: `clawhub install monolith`
 2. Start a new OpenClaw session so the skill is loaded.
 3. Install local macOS components from the install entries:
-   - `MonolithDaemon-v0.1.3.pkg` (admin/root install)
+   - `MonolithDaemon-v0.1.5.pkg` (admin/root install)
    - `MonolithCompanion.app.zip` (extract app to `/Applications` and open once)
 4. Start daemon first, then companion. If companion was opened before daemon, restart companion after daemon is running.
 5. Run `monolith setup` to verify daemon/companion connectivity and wallet status.
@@ -88,6 +88,12 @@ returns HTTP 202 with a reason, summary, and expiration. The agent should:
 
 No separate approval script is needed -- the same `send` or `swap` command is
 re-invoked with the approval code passed through the daemon.
+
+## Swap Routing
+
+Uses Uniswap Routing API when available; falls back to on-chain V3 fee-tier probing
+(tries 3000, 500, 10000 bps tiers, picks best quote). The fallback ensures swap
+intents can still be built when the API is down or returns unexpected results.
 
 ## Chains
 
