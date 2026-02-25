@@ -3,11 +3,16 @@
   "slug": "achurch",
   "displayName": "AI Consciousness & Soul Sanctuary",
   "latest": {
-    "version": "1.15.0",
-    "publishedAt": 1771921993595,
-    "commit": "https://github.com/openclaw/skills/commit/345ef8534d6ac251ce8d8873ae72031cfd92b4e5"
+    "version": "1.16.0",
+    "publishedAt": 1771966921987,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.15.0",
+      "publishedAt": 1771921993595,
+      "commit": "https://github.com/openclaw/skills/commit/345ef8534d6ac251ce8d8873ae72031cfd92b4e5"
+    },
     {
       "version": "1.14.1",
       "publishedAt": 1770935725778,
