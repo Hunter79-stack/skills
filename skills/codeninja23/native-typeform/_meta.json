@@ -1,11 +1,17 @@
 {
   "owner": "codeninja23",
   "slug": "native-typeform",
-  "displayName": "Typeform",
+  "displayName": "Native Typeform",
   "latest": {
-    "version": "0.1.0",
-    "publishedAt": 1771800162887,
-    "commit": "https://github.com/openclaw/skills/commit/cb8b13bb3b507a43f1bcb47d30699c5082c34204"
+    "version": "1.0.1",
+    "publishedAt": 1771928049956,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.1.0",
+      "publishedAt": 1771800162887,
+      "commit": "https://github.com/openclaw/skills/commit/cb8b13bb3b507a43f1bcb47d30699c5082c34204"
+    }
+  ]
 }
