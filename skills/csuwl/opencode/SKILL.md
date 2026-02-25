@@ -52,6 +52,76 @@ source ~/.zshrc
 
 ---
 
+## Core Operations (TUI Slash Commands)
+
+When running OpenCode in **TUI mode** (`opencode`), you can use these slash commands to control the AI workflow:
+
+### /sessions - Session Management
+```
+/sessions
+```
+- Opens session selector
+- Choose to continue an existing session
+- Create a new session (with user approval)
+- Recommended: Select existing session for current project
+
+### /agents - Agent (Mode) Control
+```
+/agents
+```
+Available agents:
+- **plan** - Planning mode (analyze and design)
+- **build** - Build mode (implement and code)
+- **explore** - Exploration mode (understand codebase)
+- **general** - General assistance
+
+**Best Practice**: Always select **plan** first, then switch to **build** after approval.
+
+### /models - Model Selection
+```
+/models
+```
+- Opens model selector
+- Filter by provider (OpenAI, Anthropic, Google, Z.AI, etc.)
+- Select preferred model for the task
+- If authentication required, follow the login link provided
+
+### Agent Workflow
+
+#### Plan Agent Behavior
+- Ask OpenCode to analyze the task
+- Request a clear step-by-step plan
+- Allow OpenCode to ask clarification questions
+- Review the plan carefully
+- If plan is incomplete, ask for revision
+- **Do not allow code generation in Plan mode**
+
+#### Build Agent Behavior
+- Switch to Build using `/agents`
+- Ask OpenCode to implement the approved plan
+- If OpenCode asks questions, switch back to Plan
+- Answer and confirm the plan, then switch back to Build
+
+#### Plan → Build Loop
+1. Select **plan** agent with `/agents`
+2. Describe the task
+3. Review and approve the plan
+4. Switch to **build** agent with `/agents`
+5. Implement the plan
+6. Repeat until satisfied
+
+**Key Rules**:
+- Never skip Plan
+- Never answer questions in Build mode (switch to Plan first)
+- Always show slash commands explicitly in output
+
+### Other Useful Commands
+- **/title** - Change session title
+- **/summary** - Generate session summary
+- **/compaction** - Compact conversation history
+
+---
+
 ## Core Commands
 
 ### 1. Quick Tasks (One-Shot)

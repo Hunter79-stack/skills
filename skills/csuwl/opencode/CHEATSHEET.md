@@ -37,6 +37,39 @@ opencode ~/path/to/project
 opencode -m anthropic/claude-sonnet-4
 ```
 
+### TUI Slash 命令（交互模式专用）
+
+在 TUI 模式下，使用以下命令控制 AI 工作流：
+
+```bash
+# 会话管理
+/sessions          # 选择/创建会话
+
+# Agent 控制
+/agents            # 切换 agent (plan/build/explore/general)
+
+# 模型选择
+/models            # 选择模型
+
+# 其他命令
+/title             # 修改会话标题
+/summary           # 生成会话摘要
+/compaction        # 压缩对话历史
+```
+
+**Agent 工作流**：
+1. `/agents` → 选择 **plan**
+2. 描述任务，审查计划
+3. `/agents` → 切换到 **build**
+4. 实现计划
+5. 如有问题，返回 plan
+
+**可用 Agents**：
+- `plan` - 规划模式（分析和设计）
+- `build` - 构建模式（实现和编码）
+- `explore` - 探索模式（理解代码库）
+- `general` - 通用助手
+
 ### 会话管理
 ```bash
 # 列出会话
