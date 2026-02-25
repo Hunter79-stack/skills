@@ -183,3 +183,25 @@ Content-based delta detection (hashes scan results, not just counts). Exits 1 on
 
 Built by [The Agent Wire](https://theagentwire.ai) — a weekly newsletter about AI agents for solopreneurs.
 Star ⭐ this skill if it saved you from leaking a secret.
+
+---
+
+## FAQ
+
+**What is this skill?**
+Agent Security Ops installs pre-commit hooks and runs 10-point security scans to prevent AI agents from leaking secrets. Catches API keys, tokens, passwords, and credentials before they reach git history.
+
+**What problem does it solve?**
+AI agents generate and handle credentials constantly — API keys, tokens, database URLs. Without guardrails, these end up in commits, logs, or chat messages. This skill adds automated scanning at commit-time and on-demand.
+
+**What are the requirements?**
+Bash, git, and TruffleHog (installed automatically). Works on macOS and Linux. No API keys or external services needed.
+
+**What does the 10-point scan check?**
+Git staged files, environment files (.env), config files, recent git history, high-entropy strings, known secret patterns, AWS/GCP/Azure credentials, private keys, database URLs, and API tokens.
+
+**Does it work with any AI agent framework?**
+Yes. It's framework-agnostic — operates at the git and filesystem level. Works with OpenClaw, Claude Code, Cursor, Aider, or any tool that writes files.
+
+**Can it run on a schedule?**
+Yes. Pair it with a cron job for periodic scans of your workspace. The scan outputs a structured report suitable for automated monitoring.
