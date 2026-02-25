@@ -3,11 +3,16 @@
   "slug": "danube",
   "displayName": "Danube Tools Marketplace",
   "latest": {
-    "version": "8.0.6",
-    "publishedAt": 1771910300624,
-    "commit": "https://github.com/openclaw/skills/commit/4d860c2ef9dbf7afc3ed9de35a95776bf0c54344"
+    "version": "8.0.7",
+    "publishedAt": 1771994066349,
+    "commit": null
   },
   "history": [
+    {
+      "version": "8.0.6",
+      "publishedAt": 1771910300624,
+      "commit": "https://github.com/openclaw/skills/commit/4d860c2ef9dbf7afc3ed9de35a95776bf0c54344"
+    },
     {
       "version": "8.0.5",
       "publishedAt": 1771300082993,

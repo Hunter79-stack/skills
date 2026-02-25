@@ -1,17 +1,17 @@
 ---
 name: danube
-description: Connect your agent to 100+ services and 21 tools across the internet. Search, authenticate, and execute tools from Gmail, Slack, GitHub, Notion, Google Calendar, and more — plus workflows, agent management, and the Agent Web directory — all through a single API key.
+description: Connect your agent to 100+ services and 30 tools across the internet. Search, authenticate, and execute tools from Gmail, Slack, GitHub, Notion, Google Calendar, and more — plus skills, workflows, agent management, and the Agent Web directory — all through a single API key.
 license: MIT
 compatibility: openclaw
 metadata:
   author: danube
-  version: "3.0.0"
-  tags: [danube, mcp, apis, tools, workflows, agents]
+  version: "4.0.0"
+  tags: [danube, mcp, apis, tools, workflows, agents, skills]
 ---
 
 # Danube — Connect Your Agent
 
-Danube gives your AI agent access to 100+ services and 21 tools through a single API key.
+Danube gives your AI agent access to 100+ services and 30 tools through a single API key.
 
 ## Quick Setup
 
@@ -60,7 +60,7 @@ Add this to your MCP config:
 
 ### Step 3: Use Tools
 
-Once connected, you have access to 21 MCP tools:
+Once connected, you have access to 30 MCP tools:
 
 **Discovery**
 - `list_services(query, limit)` — Browse available tool providers
@@ -74,14 +74,21 @@ Once connected, you have access to 21 MCP tools:
 **Credentials & Wallet**
 - `store_credential(service_id, credential_type, credential_value)` — Save API keys for services that need them
 - `get_wallet_balance()` — Check your credit balance before running paid tools
+- `get_spending_limits()` — View your current USDC per-call and daily spending limits
+- `update_spending_limits(max_per_call_usdc, daily_limit_usdc)` — Set per-call (up to $5) and daily USDC spending caps
 
 **Skills**
 - `search_skills(query, limit)` — Find reusable agent skills (instructions, scripts, templates)
 - `get_skill(skill_id, skill_name)` — Get full skill content by ID or name
+- `create_skill(name, skill_md_content, scripts, reference_files, assets, visibility, service_id)` — Create a new skill with SKILL.md content and optional files
+- `update_skill(skill_id, name, skill_md_content, scripts, reference_files, assets)` — Update an existing skill (owner only)
+- `delete_skill(skill_id)` — Delete a skill (owner only)
 
 **Workflows**
 - `list_workflows(query, limit)` — Browse public multi-tool workflows
 - `create_workflow(name, steps, description, visibility, tags)` — Create a new workflow
+- `update_workflow(workflow_id, name, description, steps, visibility, tags)` — Update an existing workflow (owner only)
+- `delete_workflow(workflow_id)` — Delete a workflow (owner only)
 - `execute_workflow(workflow_id, inputs)` — Run a multi-tool workflow
 - `get_workflow_execution(execution_id)` — Check workflow execution results
 
@@ -96,6 +103,8 @@ Once connected, you have access to 21 MCP tools:
 
 **Tool Quality**
 - `submit_rating(tool_id, rating, comment)` — Rate a tool 1-5 stars
+- `get_my_rating(tool_id)` — Check your own rating for a tool
+- `get_tool_ratings(tool_id)` — Get a tool's average rating and total rating count
 - `report_tool(tool_id, reason, description)` — Report a broken or degraded tool
 - `get_recommendations(tool_id, limit)` — Get tool recommendations based on co-usage patterns
 
@@ -200,6 +209,12 @@ create_workflow(
   ],
   tags=["digest", "github", "slack"]
 )
+
+# Update a workflow
+update_workflow(workflow_id="...", description="Updated daily digest", visibility="public")
+
+# Delete a workflow
+delete_workflow(workflow_id="...")
 ```
 
 ### Execute Tools in Batch
@@ -229,6 +244,39 @@ get_site_info(domain="stripe.com")
 → Returns: identity, products, team, pricing, docs, FAQ, contact info, and more
 ```
 
+### Manage Your Skills
+
+Create, update, and share reusable agent skills.
+
+```
+# Create a skill with SKILL.md content
+create_skill(
+  name="data-cleaning",
+  skill_md_content="# Data Cleaning\n\nStep-by-step guide for cleaning CSV data...",
+  scripts=[{"name": "clean.py", "content": "import pandas as pd\n..."}],
+  visibility="private"
+)
+
+# Update a skill you own
+update_skill(skill_id="...", skill_md_content="# Updated instructions...")
+
+# Delete a skill
+delete_skill(skill_id="...")
+```
+
+### Control Spending Limits
+
+Manage your USDC spending caps for paid tools.
+
+```
+# Check current limits
+get_spending_limits()
+→ Returns: max_per_call_usdc, daily_limit_usdc
+
+# Set a $2 per-call limit and $20 daily cap
+update_spending_limits(max_per_call_usdc=2.0, daily_limit_usdc=20.0)
+```
+
 ### Rate and Report Tools
 
 Help improve tool quality by providing feedback.
@@ -236,6 +284,13 @@ Help improve tool quality by providing feedback.
 ```
 # Rate a tool after using it
 submit_rating(tool_id="...", rating=5, comment="Fast and accurate")
+
+# Check your existing rating
+get_my_rating(tool_id="...")
+
+# See a tool's overall ratings
+get_tool_ratings(tool_id="...")
+→ Returns: average_rating, total_ratings
 
 # Report a broken tool
 report_tool(tool_id="...", reason="broken", description="Returns 500 error on all requests")
