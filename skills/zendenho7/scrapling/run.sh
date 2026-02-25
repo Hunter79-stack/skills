@@ -8,8 +8,8 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Ensure scrapling is installed
-pip show scrapling >/dev/null 2>&1 || pip install scrapling
+# Ensure scrapling is installed (use python3 -m pip)
+python3 -m pip show scrapling >/dev/null 2>&1 || python3 -m pip install scrapling
 
 # Default to fetch mode
 MODE="${1:-fetch}"
@@ -42,7 +42,7 @@ print(page.content[:2000])
         ;;
     install)
         echo "Installing Scrapling with all extras..."
-        pip install "scrapling[all]"
+        python3 -m pip install "scrapling[all]"
         scrapling install
         ;;
     *)

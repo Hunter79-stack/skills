@@ -3,7 +3,7 @@ name: scrapling
 description: "Adaptive web scraping framework with anti-bot bypass and spider crawling. Full features except MCP server."
 version: "1.2.0"
 metadata:
-  {"openclaw":{"emoji":"🕷️","requires":{"bins":["python3","pip"]}, "tags":["web-scraping", "crawling", "research", "automation"]}}
+  {"openclaw":{"emoji":"🕷️","requires":{"bins":["python3"]}, "tags":["web-scraping", "crawling", "research", "automation"]}}
 ---
 
 # Scrapling - Adaptive Web Scraping
