@@ -194,6 +194,13 @@
       "on_action": 0.15,
       "on_deprivation": -0.1,
       "note": "действую по ценностям → целостность"
+    },
+    {
+      "source": "understanding",
+      "target": "closure",
+      "on_action": 0.10,
+      "on_deprivation": 0,
+      "note": "learning creates things to close/conclude"
     }
   ]
 }

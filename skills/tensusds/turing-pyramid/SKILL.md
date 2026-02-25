@@ -1,6 +1,6 @@
 ---
 name: turing-pyramid
-version: 1.8.3
+version: 1.9.1
 description: "Decision framework for agent psychological health. 10 needs with decay, tension-based priority, cross-need cascades. Outputs action SUGGESTIONS — agent decides execution. No network access, local files only."
 requires:
   - jq
@@ -382,15 +382,19 @@ Idea → scratchpad/idea.md → develop → outcome
 ### What The Skill Scripts Actually Do
 
 **READ (local files only):**
-- `assets/needs-state.json` — satisfaction levels, timestamps
-- `assets/needs-config.json` — configuration
-- `MEMORY.md`, `memory/*.md` — pattern scanning (grep)
-- `SOUL.md`, `AGENTS.md` — existence checks
-- `research/`, `scratchpad/` — activity detection
+
+| Path | Script | Purpose |
+|------|--------|---------|
+| `assets/needs-state.json` | all | Satisfaction levels, timestamps |
+| `assets/needs-config.json` | run-cycle.sh | Configuration, actions |
+| `MEMORY.md` | scan_coherence.sh | Size check, pattern scan |
+| `memory/*.md` | scan_*.sh | Pattern scanning (grep for keywords) |
+| `memory/autonomous/DASHBOARD.md` | scan_coherence.sh | Stale item detection |
+| `SOUL.md`, `AGENTS.md` | scan_coherence.sh | Existence checks only |
+| `research/`, `scratchpad/` | scan_expression.sh | File count, modification dates |
 
 **WRITE (local files only):**
 - `assets/needs-state.json` — update timestamps/satisfaction
-- `memory/YYYY-MM-DD.md` — append action logs (optional)
 
 **NEVER:**
 - Network requests (no curl, wget, fetch)
@@ -398,39 +402,68 @@ Idea → scratchpad/idea.md → develop → outcome
 - System calls outside workspace
 - Direct execution of suggested actions
 
-### Privacy Considerations
+### Environment Variables & Path Resolution
 
-⚠️ **Scans grep through workspace files** to detect patterns (e.g., "confused", "learned", "TODO"). 
+Scripts use these environment variables with fallbacks:
 
-Before enabling:
-1. Review what's in your workspace
-2. Move sensitive files outside scanned paths if needed
-3. The skill sees text patterns, not semantic content
-
-### For Security-Conscious Users
-
-To verify the skill is safe:
 ```bash
-# Check for network commands in scripts
-grep -rn "curl\|wget\|fetch\|http" scripts/
-
-# Check what paths are accessed
-grep -rn "WORKSPACE\|HOME" scripts/
-
-# Run in test mode first
-./scripts/run-cycle.sh  # Just outputs text, executes nothing
+WORKSPACE="${WORKSPACE:-$HOME/.openclaw/workspace}"
 ```
+
+⚠️ **Risk:** If `WORKSPACE` is unset, scripts fall back to `$HOME/.openclaw/workspace`. If that path doesn't exist or points elsewhere, scans may access unintended locations.
+
+**Mitigation:** Always set `WORKSPACE` explicitly, or verify `$HOME/.openclaw/workspace` is your intended workspace before running.
+
+### Files That May Contain Secrets
+
+The skill scans these files which **may contain sensitive data**:
+
+| File | What skill does | Risk |
+|------|-----------------|------|
+| `MEMORY.md` | grep for patterns, size check | May contain personal notes |
+| `memory/*.md` | grep for keywords | May contain conversation logs |
+| `SOUL.md` | existence check only | Low risk |
+| `AGENTS.md` | existence check only | Low risk |
+
+**The skill does NOT read:**
+- Credential files (no `~/.config/`, no API keys)
+- Vault contents (only checks if backup exists via file modification date)
+- System files outside workspace
+
+### Trust Model for mark-satisfied.sh
+
+`mark-satisfied.sh` updates state based on caller input:
+
+```bash
+./scripts/mark-satisfied.sh <need> <impact>
+```
+
+⚠️ **No verification:** The script trusts that the caller actually completed the action. It does not verify whether "web search" was performed or "post to Moltbook" succeeded.
+
+**This is by design:** The skill is a decision framework, not an execution monitor. The agent (or human) calling mark-satisfied.sh is responsible for honest state updates.
+
+**Risk:** False-positive state updates if caller lies about completing actions. 
+**Mitigation:** This is an integrity issue for the agent, not a security issue. Dishonest updates only harm the agent's own psychological state accuracy.
 
 ### External Actions: Agent's Responsibility
 
 The config includes actions like:
 - "web search on topic from INTERESTS.md"
 - "post thought on Moltbook"  
+- "verify vault integrity"
 - "reach out to another agent"
 
-**These are suggestions, not commands.** The skill has no capability to execute them. Your agent runtime (OpenClaw, etc.) provides those capabilities, with its own permission model.
+**These are text suggestions, not commands.** The skill outputs strings; it cannot execute them.
 
-**Recommended practice:** If your agent shouldn't auto-post or auto-message, configure your agent's approval settings — not this skill.
+The **agent runtime** (OpenClaw, etc.) provides execution capabilities:
+- Agent reads suggestion text
+- Agent decides whether to act
+- Agent uses its own tools (web_search, APIs)
+- Agent's permission model governs execution
+
+**Recommended practice:** 
+- Configure agent-level approval for external actions
+- The skill has no execution capability to restrict
 
 ## Token Usage Estimate
 

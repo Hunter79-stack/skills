@@ -173,20 +173,36 @@ zero network access     →   uses its own web_search, APIs, etc
 ### What Scripts Actually Access
 
 **Reads** (local files only): 
-- `MEMORY.md`, `memory/*.md` — pattern scanning
-- `SOUL.md`, `AGENTS.md` — existence checks  
-- `research/`, `scratchpad/` — activity detection
+- `MEMORY.md`, `memory/*.md` — pattern scanning (grep for keywords)
+- `SOUL.md`, `AGENTS.md` — existence checks only
+- `research/`, `scratchpad/` — file counts, modification dates
+- `memory/autonomous/DASHBOARD.md` — stale item detection
 - `assets/*.json` — configuration and state
 
 **Writes** (local files only):
 - `assets/needs-state.json` — timestamps, satisfaction levels
-- `memory/YYYY-MM-DD.md` — action logs (optional)
 
-**Never accesses**: credentials, API keys, network, system paths
+**Never accesses**: credentials, API keys, network, system paths outside workspace
+
+### Environment Variables
+
+Scripts use `WORKSPACE` with fallback to `$HOME/.openclaw/workspace`:
+```bash
+WORKSPACE="${WORKSPACE:-$HOME/.openclaw/workspace}"
+```
+⚠️ Set `WORKSPACE` explicitly to control which directory is scanned.
+
+### Files That May Contain Secrets
+
+`MEMORY.md` and `memory/*.md` are scanned for patterns. These may contain personal notes or conversation logs. The skill sees text patterns only (grep), not semantic content.
+
+### Trust Model
+
+`mark-satisfied.sh` trusts caller input — no verification that suggested actions were actually performed. This is by design: the skill suggests, the agent decides and reports.
 
 ### External Actions Clarification
 
-Config includes actions like "post to Moltbook" or "web search". These are **suggestions for the agent**, not automated execution. The skill has no capability to perform them — your agent runtime provides those tools with its own permission model.
+Config includes actions like "post to Moltbook", "web search", "verify vault". These are **text suggestions**, not execution. The skill outputs strings; your agent runtime provides execution with its own permission model.
 
 ---
 

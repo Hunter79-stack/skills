@@ -179,6 +179,11 @@
           "name": "review: am I aligned with my active intentions?",
           "impact": 0.5,
           "weight": 15
+        },
+        {
+          "name": "scan autonomous dashboard — active/stale items?",
+          "impact": 0.6,
+          "weight": 30
         }
       ]
     },
@@ -244,6 +249,11 @@
           "name": "complete or drop a stale intention",
           "impact": 0.8,
           "weight": 20
+        },
+        {
+          "name": "evaluate dashboard item: complete? conclusions?",
+          "impact": 1.0,
+          "weight": 25
         }
       ]
     },
@@ -332,6 +342,11 @@
         {
           "name": "set a personal intention in intentions.md",
           "impact": 1.0,
+          "weight": 25
+        },
+        {
+          "name": "pick active thread from dashboard to advance",
+          "impact": 0.9,
           "weight": 25
         }
       ]
@@ -454,6 +469,11 @@
           "name": "log recent success to memory",
           "impact": 0.25,
           "weight": 25
+        },
+        {
+          "name": "make concrete progress on dashboard item",
+          "impact": 1.2,
+          "weight": 25
         }
       ]
     },
@@ -518,6 +538,11 @@
           "name": "re-read recent learning notes",
           "impact": 0.2,
           "weight": 25
+        },
+        {
+          "name": "explore next question in active research",
+          "impact": 1.4,
+          "weight": 30
         }
       ]
     },
@@ -647,6 +672,11 @@
           "name": "note one creative impulse for later",
           "impact": 0.2,
           "weight": 25
+        },
+        {
+          "name": "write up conclusions from completed research",
+          "impact": 1.8,
+          "weight": 20
         }
       ]
     }

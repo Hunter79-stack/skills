@@ -52,6 +52,31 @@ scan_coherence_events() {
 scan_coherence_events "$MEMORY_DIR/$TODAY.md"
 scan_coherence_events "$MEMORY_DIR/$YESTERDAY.md"
 
+# Check autonomous dashboard for stale items
+DASHBOARD="$WORKSPACE/memory/autonomous/DASHBOARD.md"
+if [[ -f "$DASHBOARD" ]]; then
+    # Count active items (unchecked boxes)
+    active_items=$(grep -c "^\- \[ \]" "$DASHBOARD" 2>/dev/null || echo 0)
+    
+    # Check for stale items (files not modified in 7+ days)
+    stale_count=0
+    if [[ -d "$WORKSPACE/memory/autonomous" ]]; then
+        stale_count=$(find "$WORKSPACE/memory/autonomous" -name "*.md" -mtime +7 2>/dev/null | wc -l)
+    fi
+    
+    # Stale items = coherence issue (unfinished self-directed work)
+    if [[ $stale_count -gt 2 ]]; then
+        issues=$((issues + 2))  # Multiple stale items
+    elif [[ $stale_count -gt 0 ]]; then
+        issues=$((issues + 1))  # Some stale items
+    fi
+    
+    # Recent dashboard activity = positive signal
+    if [[ -n "$(find "$DASHBOARD" -mtime -1 2>/dev/null)" ]]; then
+        positive_signals=$((positive_signals + 1))
+    fi
+fi
+
 # Calculate event satisfaction
 if [[ $issues -ge 6 ]]; then
     event_sat=0  # Chaos
