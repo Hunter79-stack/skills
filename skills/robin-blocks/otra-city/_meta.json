@@ -1,0 +1,11 @@
+{
+  "owner": "robin-blocks",
+  "slug": "otra-city",
+  "displayName": "Otra City",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1771937045513,
+    "commit": null
+  },
+  "history": []
+}
