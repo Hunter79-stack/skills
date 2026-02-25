@@ -3,9 +3,15 @@
   "slug": "delta-disclosure-auditor",
   "displayName": "Delta Disclosure Auditor",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1771843222948,
-    "commit": "https://github.com/openclaw/skills/commit/4ce4f85cf5e2e98add6b5d4c85d18d31b30a061d"
+    "version": "1.1.0",
+    "publishedAt": 1771988530746,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1771843222948,
+      "commit": "https://github.com/openclaw/skills/commit/4ce4f85cf5e2e98add6b5d4c85d18d31b30a061d"
+    }
+  ]
 }

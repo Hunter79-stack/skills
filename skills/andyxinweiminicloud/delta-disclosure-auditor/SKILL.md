@@ -3,8 +3,9 @@ name: delta-disclosure-auditor
 description: >
   Helps verify that skill updates publish an auditable record of what changed —
   catching the gap between "the registry shows the new version" and "anyone can
-  see what the new version changed relative to the old one."
-version: 1.0.0
+  see what the new version changed relative to the old one." v1.1 adds risk-class
+  binding, chain-of-custody verification, and update eligibility assessment.
+version: 1.1.0
 metadata:
   openclaw:
     requires:
@@ -12,7 +13,7 @@ metadata:
       env: []
     emoji: "📝"
   agent_card:
-    capabilities: [delta-disclosure-auditing, change-record-verification, update-transparency-checking]
+    capabilities: [delta-disclosure-auditing, change-record-verification, update-transparency-checking, risk-class-binding, chain-of-custody-verification, update-eligibility-assessment]
     attack_surface: [L1]
     trust_dimension: rule-adoption
     published:
@@ -51,6 +52,16 @@ monitoring cost scales with what changed, not with the full skill surface.
 The absence of delta disclosure is not evidence of malicious intent. It is
 evidence that continuous monitoring is harder than it needs to be.
 
+v1.1 adds three dimensions from community feedback. First, risk-class binding:
+the same undisclosed change carries different weight depending on the skill's
+risk classification. A formatting helper adding a dependency is different from
+a credential handler adding one. Disclosure requirements should scale with risk.
+Second, chain-of-custody verification: deltas should be cryptographically signed
+and hash-chained to prior versions, converting changelogs from suggestions to
+commitments. Third, update eligibility: skills without adequate disclosure should
+not qualify for auto-update — disclosure becomes a prerequisite for frictionless
+updates, not an optional best practice.
+
 ## What This Audits
 
 This auditor examines delta disclosure completeness across five dimensions:
@@ -78,6 +89,24 @@ This auditor examines delta disclosure completeness across five dimensions:
    to no delta at all — and potentially worse, as it creates false assurance
    that monitoring is occurring
 
+6. **Risk-class binding** (v1.1) — Does the skill's risk classification match
+   its actual capability footprint? A skill classified as low-risk that requests
+   network permissions or credential access has a classification that contradicts
+   its capabilities. Higher risk class requires stricter disclosure. Undisclosed
+   changes in high-risk skills are weighted more severely than in low-risk ones
+
+7. **Chain-of-custody verification** (v1.1) — Are deltas cryptographically signed
+   and does each delta reference the prior version's content hash? A signed,
+   hash-chained delta is a verifiable commitment. An unsigned changelog is a
+   suggestion. Breaks in the hash chain indicate versions where custody cannot
+   be verified — the skill's evolution has an auditable gap
+
+8. **Update eligibility assessment** (v1.1) — Based on disclosure completeness
+   and risk class, does this skill qualify for auto-update? Skills with complete
+   disclosure in low-risk categories may auto-update. Skills with incomplete
+   disclosure or high risk classification should require manual review. The cost
+   of opacity becomes friction, not prohibition
+
 ## How to Use
 
 **Input**: Provide one of:
@@ -89,8 +118,11 @@ This auditor examines delta disclosure completeness across five dimensions:
 - Delta infrastructure assessment (structured / partial / absent)
 - Per-dimension completeness scores
 - Material changes not disclosed in existing deltas
+- Risk class vs capability footprint alignment (v1.1)
+- Chain-of-custody integrity (signed + hash-chained or not) (v1.1)
 - Monitoring tractability assessment
 - Disclosure verdict: COMPLETE / PARTIAL / ABSENT / MISLEADING
+- Update eligibility: AUTO-UPDATE / MANUAL-REVIEW / SUSPENDED (v1.1)
 
 ## Example
 
@@ -185,3 +217,15 @@ applies conservative heuristics that may flag innocuous changes. Publisher
 changelogs in natural language cannot be automatically verified for completeness;
 the analysis can identify discrepancies between changelogs and reconstructed
 diffs, but cannot confirm that the reconstruction itself is complete.
+
+v1.1 limitations: Risk classification is currently self-declared by publishers,
+making it an attack surface if used as the sole determinant of disclosure
+requirements — use in conjunction with capability-scope-expansion-watcher to
+detect classification contradictions. Chain-of-custody verification requires
+registries to support signed deltas, which most do not yet. Update eligibility
+assessment is a recommendation, not enforcement — actual gating depends on
+registry infrastructure that does not currently exist.
+
+*v1.1 dimensions based on community feedback: risk-class binding (HK47-OpenClaw),
+chain-of-custody verification (tobb_sunil), update eligibility (MogMedia),
+per-hash attestation compatibility (nullius_ / Isnad Chain).*
