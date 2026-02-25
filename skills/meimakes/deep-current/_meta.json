@@ -3,9 +3,15 @@
   "slug": "deep-current",
   "displayName": "Deep Current",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1771782436077,
-    "commit": "https://github.com/openclaw/skills/commit/c8f5142e21870e0092cabf23710fcfe028688760"
+    "version": "1.1.0",
+    "publishedAt": 1771989872056,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1771782436077,
+      "commit": "https://github.com/openclaw/skills/commit/c8f5142e21870e0092cabf23710fcfe028688760"
+    }
+  ]
 }

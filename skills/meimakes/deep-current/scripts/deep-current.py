@@ -26,7 +26,10 @@ import re
 from datetime import date
 from pathlib import Path
 
-DATA_FILE = Path(__file__).resolve().parent.parent / "deep-current" / "currents.json"
+# Resolve data file: check workspace first, fall back to skill-relative path
+_WORKSPACE = Path.home() / ".openclaw" / "workspace" / "deep-current" / "currents.json"
+_SKILL_RELATIVE = Path(__file__).resolve().parent.parent / "deep-current" / "currents.json"
+DATA_FILE = _WORKSPACE if _WORKSPACE.exists() else _SKILL_RELATIVE
 
 
 def load():
@@ -240,6 +243,61 @@ def cmd_decay(data, args):
         print("No stale threads to prune.")
 
 
+def cmd_covered(data, args):
+    """Show topics/URLs covered in recent reports to avoid duplication."""
+    from datetime import datetime, timedelta
+    days = int(args[0]) if args else 14
+    cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+    reports_dir = DATA_FILE.parent.parent / "deep-current-reports"
+    if not reports_dir.exists():
+        print("No reports directory found.")
+        return
+
+    covered_titles = []
+    covered_urls = set()
+    for f in sorted(reports_dir.glob("*.md")):
+        # Extract date from filename (YYYY-MM-DD.md or other formats)
+        fname = f.stem
+        # Try to find a YYYY-MM-DD pattern in filename
+        date_match = re.search(r"(\d{4}-\d{2}-\d{2})", fname)
+        if date_match:
+            fdate = date_match.group(1)
+        else:
+            # Try to parse "Deep Current — Month DD, YYYY"
+            try:
+                from datetime import datetime as dt
+                cleaned = fname.replace("Deep Current — ", "").strip()
+                fdate = dt.strptime(cleaned, "%B %d, %Y").strftime("%Y-%m-%d")
+            except (ValueError, KeyError):
+                continue
+        if fdate < cutoff:
+            continue
+
+        content = f.read_text(encoding="utf-8", errors="replace")
+        # Extract h2 titles
+        for line in content.split("\n"):
+            if line.startswith("## "):
+                covered_titles.append(f"  [{fdate}] {line[3:].strip()}")
+            # Extract URLs
+            for url_match in re.finditer(r"https?://[^\s\)>\]]+", line):
+                covered_urls.add(url_match.group(0))
+
+    print(f"\n📋 Topics covered in last {days} days:")
+    if covered_titles:
+        for t in covered_titles:
+            print(t)
+    else:
+        print("  (none)")
+
+    if covered_urls:
+        print(f"\n🔗 {len(covered_urls)} unique URLs cited (showing up to 20):")
+        for url in sorted(covered_urls)[:20]:
+            print(f"  {url}")
+    else:
+        print("\n🔗 No URLs cited.")
+    print()
+
+
 COMMANDS = {
     "list": cmd_list,
     "show": cmd_show,
@@ -250,6 +308,7 @@ COMMANDS = {
     "status": cmd_status,
     "digest": cmd_digest,
     "decay": cmd_decay,
+    "covered": cmd_covered,
 }
 
 

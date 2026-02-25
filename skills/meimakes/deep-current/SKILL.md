@@ -49,9 +49,10 @@ Create an isolated cron job that runs nightly. The agent will use its own `web_s
 You are running a Deep Current research session.
 
 1. Run `python3 scripts/deep-current.py list` to see all active threads.
-2. Pick TWO threads based on current relevance — check recent context to decide.
-3. For each thread, use web_search and web_fetch to research the topic. Follow interesting links and cross-reference claims.
-4. Update each thread with notes/sources/findings using the deep-current.py CLI.
+2. Run `python3 scripts/deep-current.py covered` to see topics and URLs already covered in recent reports. AVOID repeating these.
+3. Pick TWO threads based on current relevance — check recent context to decide.
+4. For each thread, use web_search and web_fetch to research the topic. Follow interesting links and cross-reference claims. Find NEW angles, developments, or sources not already covered.
+5. Update each thread with notes/sources/findings using the deep-current.py CLI.
 
 ## Output Format
 Create a new file in deep-current-reports/ named YYYY-MM-DD.md:
@@ -82,6 +83,7 @@ Manage research threads with `scripts/deep-current.py`:
 | `status <id> <active\|paused\|resolved>` | Change thread status |
 | `digest` | Summary of all active threads |
 | `decay` | Prune stale threads (>90 days inactive + no recent notes) |
+| `covered [days]` | Show topics & URLs from recent reports (default 14 days) to avoid duplication |
 
 Thread IDs are auto-generated slugs from the title. Prefix matching works for short IDs.
 
