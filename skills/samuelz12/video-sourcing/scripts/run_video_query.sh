@@ -2,8 +2,7 @@
 set -euo pipefail
 
 PINNED_REPO_URL="https://github.com/Memories-ai-labs/video-sourcing-agent.git"
-PINNED_TAG="v0.2.1"
-PINNED_PYTHON_VERSION="3.12"
+PINNED_TAG="v0.2.3"
 
 OPENCLAW_HOME_DIR="${OPENCLAW_HOME:-${HOME}/.openclaw}"
 MANAGED_BASE_DIR="${OPENCLAW_HOME_DIR}/data/video-sourcing-agent"
@@ -78,11 +77,7 @@ bootstrap_managed_runtime() {
 
   (
     cd "${MANAGED_RELEASE_DIR}"
-    uv python install "${PINNED_PYTHON_VERSION}" >/dev/null 2>&1 || {
-      log_error "Failed to install Python ${PINNED_PYTHON_VERSION} via uv."
-      exit 2
-    }
-    uv sync --frozen --no-dev --python "${PINNED_PYTHON_VERSION}" >/dev/null 2>&1 || {
+    uv sync --frozen --no-dev >/dev/null 2>&1 || {
       log_error "Failed to install runtime dependencies with uv sync."
       exit 2
     }
@@ -126,7 +121,7 @@ main() {
   RUNTIME_ROOT="$(resolve_runtime_root)"
   cd "${RUNTIME_ROOT}"
 
-  uv run --python "${PINNED_PYTHON_VERSION}" python -m video_sourcing_agent.integrations.openclaw_runner "$@"
+  uv run python -m video_sourcing_agent.integrations.openclaw_runner "$@"
 }
 
 main "$@"
